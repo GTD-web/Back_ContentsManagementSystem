@@ -21,7 +21,7 @@ export interface EmployeeDto {
   /** 수정 일시 */
   updatedAt: Date;
   /** 삭제 일시 (소프트 삭제) */
-  deletedAt?: Date;
+  deletedAt?: Date | null;
   /** 생성자 ID */
   createdBy?: string;
   /** 수정자 ID */

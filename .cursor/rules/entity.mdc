@@ -2,364 +2,566 @@
 alwaysApply: true
 ---
 
+# 루미르 CMS 엔티티 정의
+
+## 구현 위치 매핑
+
+- **공통 타입**: `src/domain/core/common/types/`
+- **Core Domain**: `src/domain/core/`
+- **Sub Domain**: `src/domain/sub/`
+- **공통 도메인**: `src/domain/common/`
+
+---
+
+## 공통 타입 (Common Types)
+
+### Language (언어)
+
+**파일 위치**: `src/domain/core/common/types/language.types.ts`
+
+```typescript
 enum LanguageEnum {
-KOREAN = 'korean';
-ENGLISH = 'english';
-JAPANESE = 'japanese';
-CHINESE = 'chinese';
+  KOREAN = 'korean',
+  ENGLISH = 'english',
+  JAPANESE = 'japanese',
+  CHINESE = 'chinese',
 }
 
 enum LanguageCode {
-KOREAN = 'ko';
-ENGLISH = 'en';
-JAPANESE = 'ja';
-CHINESE = 'zh';
-
+  KOREAN = 'ko',
+  ENGLISH = 'en',
+  JAPANESE = 'ja',
+  CHINESE = 'zh',
 }
 
 interface Language {
-code: LanguageCode;
-label: string;
-name: LanguageEnum;
+  code: LanguageCode;
+  label: string;
+  name: LanguageEnum;
+}
+```
+
+### ContentStatus (콘텐츠 상태)
+
+**파일 위치**: `src/domain/core/common/types/status.types.ts`
+
+```typescript
+enum ContentStatus {
+  DRAFT = 'draft', // 초안
+  APPROVED = 'approved', // 승인됨
+  UNDER_REVIEW = 'under_review', // 검토중
+  REJECTED = 'rejected', // 거부됨
+  OPENED = 'opened', // 공개됨
 }
 
-interface BaseEntity {
-createdAt: string;
-updatedAt: string;
-version: number;
-}
+// 별칭 타입들
+type AnnouncementStatus = ContentStatus;
+type ElectronicDisclosureStatus = ContentStatus;
+type IRStatus = ContentStatus;
+type BrochureStatus = ContentStatus;
+type LumirStoryStatus = ContentStatus;
+type VideoGalleryStatus = ContentStatus;
+type NewsStatus = ContentStatus;
+type SurveyStatus = ContentStatus;
+```
 
+### Category (카테고리)
+
+**파일 위치**: `src/domain/core/common/types/category.types.ts`
+
+```typescript
 interface Category {
-id: string;
-name: string;
-description: string;
+  id: string;
+  name: string;
+  description: string;
 }
 
-// 매니저
-type Manager = Employee // SSO 내용 사용
-
-// 태그
-interface Tag {
-id: string;
-name: string;
-description: string;
-}
-
-enum AnnouncementStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-// 공지사항 카테고리
-type AnnouncementCategory = Category
-
-// 공지사항 태그
-interface AnnouncementTag {
-id: string;
-name: string;
-description: string;
-}
-
-// 공지사항 팝업
-interface AnnouncementPopupEntity extends BaseEntity {
-status: AnnouncementStatus;
-title: string;
-isPublic: boolean;
-category: AnnouncementCategory;
-language: Language;
-tag: Tag[];
-manager: Employee;
-attachments: string[]; // AWS S3 URL 목록
-releasedAt: string;
-}
-
-// 주주총회 의결 결과
-interface ResultOfVote {
-title: string;
-totalVote: number;
-yesVote: number;
-noVote: number;
-approvalRating: number;
-result: 'accepted' | 'rejected';
-}
-
-// 주주총회 카테고리
-type ShareholdersMeetingCategory = Category
-
-// 주주총회
-interface ShareholdersMeetingEntity extends BaseEntity {
-resultOfVote: ResultOfVote;
-title: string;
-resultText: string;
-summary: string;
-language: Language;
-category: ShareholdersMeetingCategory;
-isPublic: boolean;
-location: string;
-meetingDate: string; // 연월일시간
-manager: Manager;
-releasedAt: string;
-attachments: string[]; // AWS S3 URL 목록
-tags: Tag[];
-}
-
-// 전자공시 카테고리
-type ElectronicDisclosureCategory = Category
-
-// 전자공시 상태
-enum ElectornicDisclosureStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-// 전자공시
-interface ElectronicDisclosureEntity extends BaseEntity {
-title: string;
-manager: Manager;
-language: Language;
-category: ElectronicDisclosureCategory;
-isPublic: boolean;
-status: ElectornicDisclosureStatus;
-tags: Tag[];
-}
-
-// IR 카테고리
-type IRCategory = Category;
-
-// IR 상태
-enum IRStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-interface IREntity extends BaseEntity {
-title: string;
-manager: Manager;
-language: Language;
-category: IRCategory;
-isPublic: boolean;
-status: IRStatus;
-tags: Tag[];
-}
-
-// 브로슈어 카테고리
-type BrochureCategory = Category;
-
-// 브로슈어 상태
-enum BrochureStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-interface BrochureEntity extends BaseEntity {
-title: string;
-manager: Manager;
-language: Language;
-category: BrochureCategory;
-isPublic: boolean;
-status: BrochureStatus;
-tags: Tag[];
-}
-
-// 스토리 카테고리
-type LumirStoryCategory = Category;
-
-// 스토리 상태
-enum LumirStoryStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-interface LumirStoryEntity extends BaseEntity {
-title: string;
-manager: Manager;
-category: LumirStoryCategory;
-isPublic: boolean;
-status: LumirStoryStatus;
-tags: Tag[];
-}
-
-// 비디오 갤러리 카테고리
-type VideoGalleryCategory = Category;
-
-// 비디오 갤러리 상태
-enum VideoGalleryStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-interface VideoGalleryEntity extends BaseEntity {
-title: string;
-manager: Manager;
-category: VideoGalleryCategory;
-isPublic: boolean;
-status: VideoGalleryStatus;
-tags: Tag[];
-}
-
-// 뉴스 카테고리
-type NewsCategory = Category;
-
-// 뉴스 상태
-enum NewsStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
-}
-
-interface NewsEntity extends BaseEntity {
-title: string;
-manager: Manager;
-category:NewsCategory;
-isPublic: boolean;
-status: NewsStatus;
-tags: Tag[];
-}
-
-// 공지사항 카테고리
+// 별칭 타입들
 type AnnouncementCategory = Category;
+type ShareholdersMeetingCategory = Category;
+type ElectronicDisclosureCategory = Category;
+type IRCategory = Category;
+type BrochureCategory = Category;
+type LumirStoryCategory = Category;
+type VideoGalleryCategory = Category;
+type NewsCategory = Category;
+type SurveyCategory = Category;
+```
 
-// 공지사항 상태
-enum AnnouncementStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
+### Tag (태그)
+
+**파일 위치**: `src/domain/core/common/types/tag.types.ts`
+
+```typescript
+interface Tag {
+  id: string;
+  name: string;
+  description: string;
 }
 
-// 공지사항 받은 직원목록
+type AnnouncementTag = Tag;
+```
+
+### BaseEntity (기본 엔티티)
+
+**파일 위치**: `libs/database/base/base.entity.ts`
+
+```typescript
+abstract class BaseEntity<T> {
+  id: string; // UUID
+  createdAt: Date; // 생성 일시
+  updatedAt: Date; // 수정 일시
+  deletedAt?: Date | null; // 삭제 일시 (Soft Delete)
+  createdBy?: string; // 생성자 ID
+  updatedBy?: string; // 수정자 ID
+  version: number; // 낙관적 락 버전
+
+  abstract DTO로_변환한다(): T;
+}
+```
+
+---
+
+## Core Domain (핵심 비즈니스)
+
+### 1. AnnouncementPopup (공지사항 팝업)
+
+**파일 위치**: `src/domain/core/announcement-popup/`
+
+```typescript
+interface AnnouncementPopupEntity extends BaseEntity {
+  status: AnnouncementStatus;
+  title: string;
+  isPublic: boolean;
+  category: AnnouncementCategory;
+  language: Language;
+  tags: Tag[]; // 배열 이름 수정
+  manager: Employee;
+  attachments: string[]; // AWS S3 URL 목록
+  releasedAt?: Date; // Date 타입으로 수정
+}
+```
+
+**구현 파일**:
+
+- `announcement-popup.entity.ts` - TypeORM Entity
+- `announcement-popup.types.ts` - DTO 타입 정의
+- `announcement-popup.service.ts` - Domain Service
+- `announcement-popup.module.ts` - NestJS Module
+
+### 2. ShareholdersMeeting (주주총회)
+
+**파일 위치**: `src/domain/core/shareholders-meeting/`
+
+```typescript
+// 의결 결과
+interface ResultOfVote {
+  title: string;
+  totalVote: number;
+  yesVote: number;
+  noVote: number;
+  approvalRating: number;
+  result: 'accepted' | 'rejected';
+}
+
+interface ShareholdersMeetingEntity extends BaseEntity {
+  resultOfVote: ResultOfVote;
+  title: string;
+  resultText: string;
+  summary: string;
+  language: Language;
+  category: ShareholdersMeetingCategory;
+  isPublic: boolean;
+  location: string;
+  meetingDate: Date; // Date 타입
+  manager: Employee;
+  releasedAt?: Date; // Date 타입
+  attachments: string[];
+  tags: Tag[];
+}
+```
+
+**구현 파일**:
+
+- `vote-result.types.ts` - 의결 결과 타입
+- `shareholders-meeting.entity.ts`
+- `shareholders-meeting.types.ts`
+
+### 3. ElectronicDisclosure (전자공시)
+
+**파일 위치**: `src/domain/core/electronic-disclosure/`
+
+```typescript
+interface ElectronicDisclosureEntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  language: Language;
+  category: ElectronicDisclosureCategory;
+  isPublic: boolean;
+  status: ElectronicDisclosureStatus;
+  tags: Tag[];
+}
+```
+
+### 4. IR (투자자 관계)
+
+**파일 위치**: `src/domain/core/ir/`
+
+```typescript
+interface IREntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  language: Language;
+  category: IRCategory;
+  isPublic: boolean;
+  status: IRStatus;
+  tags: Tag[];
+}
+```
+
+### 5. Brochure (브로슈어)
+
+**파일 위치**: `src/domain/core/brochure/`
+
+```typescript
+interface BrochureEntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  language: Language;
+  category: BrochureCategory;
+  isPublic: boolean;
+  status: BrochureStatus;
+  tags: Tag[];
+}
+```
+
+### 6. News (뉴스)
+
+**파일 위치**: `src/domain/core/news/`
+
+```typescript
+interface NewsEntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  category: NewsCategory;
+  isPublic: boolean;
+  status: NewsStatus;
+  tags: Tag[];
+}
+```
+
+### 7. Announcement (공지사항)
+
+**파일 위치**: `src/domain/core/announcement/`
+
+```typescript
+// 공지사항 받은 직원 정보
 interface AnnouncementEmployee {
-id: string;
-name: string;
-isRead: boolean;
-isSubmitted: boolean;
-submittedAt: string;
-readAt: string;
-responseMessage?: string;
+  id: string;
+  name: string;
+  isRead: boolean;
+  isSubmitted: boolean;
+  submittedAt?: Date; // Date 타입
+  readAt?: Date; // Date 타입
+  responseMessage?: string;
 }
 
 interface AnnouncementEntity extends BaseEntity {
-title: string;
-content: string;
-isFixed: boolean;
-category: AnnouncementCategory;
-releasedAt: string;
-expiredAt: string;
-mustRead: boolean;
-manager: Manager;
-status: AnnouncementStatus;
-hits: number;
-attachments: string[]; // AWS S3 URL 목록
-employees: AnnouncementEmployee[];
+  title: string;
+  content: string;
+  isFixed: boolean; // 상단 고정 여부
+  category: AnnouncementCategory;
+  releasedAt?: Date; // Date 타입
+  expiredAt?: Date; // Date 타입
+  mustRead: boolean; // 필독 여부
+  manager: Employee;
+  status: AnnouncementStatus;
+  hits: number; // 조회수
+  attachments: string[];
+  employees: AnnouncementEmployee[];
 }
+```
 
-// 설문조사 카테고리
-type SurveyCategory = Category;
+**구현 파일**:
 
-// 설문조사 상태
-enum SurveyStatus = {
-DRAFT = 'draft';
-APPROVED = 'approved';
-UNDER_REVIEW = 'under_review';
-REJECTED = 'rejected';
-OPENED = 'opened';
+- `announcement-employee.types.ts` - 직원 응답 타입
+- `announcement.entity.ts`
+- `announcement.types.ts`
+
+---
+
+## Sub Domain (부가 기능)
+
+### 1. LumirStory (루미르 스토리)
+
+**파일 위치**: `src/domain/sub/lumir-story/`
+
+```typescript
+interface LumirStoryEntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  category: LumirStoryCategory;
+  isPublic: boolean;
+  status: LumirStoryStatus;
+  tags: Tag[];
 }
+```
 
+### 2. VideoGallery (비디오 갤러리)
+
+**파일 위치**: `src/domain/sub/video-gallery/`
+
+```typescript
+interface VideoGalleryEntity extends BaseEntity {
+  title: string;
+  manager: Employee;
+  category: VideoGalleryCategory;
+  isPublic: boolean;
+  status: VideoGalleryStatus;
+  tags: Tag[];
+}
+```
+
+### 3. Survey (설문조사)
+
+**파일 위치**: `src/domain/sub/survey/`
+
+```typescript
 // 질문 타입
-enum Inquery = {
-SHORT_ANSWER = 'short_answer'; // 단답형
-PARAGRAPH = 'paragraph'; // 장문형
-MULTIPLE_CHOICE = 'multiple_choice'; // 객관식
-DROPDOWN = 'dropdown'; // 드롭다운
-CHECKBOXES = 'checkboxes'; // 체크박스
-FILE_UPLOAD = 'file_upload'; // 파일 업로드
-DATETIME = 'datetime'; // 날짜/시간
-LINEAR_SCALE = 'linear_scale'; // 선형 척도
-GRID_SCALE = 'grid_scale'; // 그리드 척도
+enum InqueryType {
+  SHORT_ANSWER = 'short_answer', // 단답형
+  PARAGRAPH = 'paragraph', // 장문형
+  MULTIPLE_CHOICE = 'multiple_choice', // 객관식
+  DROPDOWN = 'dropdown', // 드롭다운
+  CHECKBOXES = 'checkboxes', // 체크박스
+  FILE_UPLOAD = 'file_upload', // 파일 업로드
+  DATETIME = 'datetime', // 날짜/시간
+  LINEAR_SCALE = 'linear_scale', // 선형 척도
+  GRID_SCALE = 'grid_scale', // 그리드 척도
+}
+
+// 질문 응답 데이터
+type InqueryResponseData =
+  | string // 단답형, 장문형, 객관식, 드롭다운
+  | string[] // 체크박스, 파일 업로드
+  | number // 선형 척도
+  | Record<string, string> // 그리드 (행-열 매핑)
+  | Record<string, string[]>; // 체크박스 그리드
+
+// 질문 폼 데이터
+type InqueryFormData =
+  | Map<string, string>
+  | Map<string, string[]>
+  | Map<string, number>
+  | Map<string, Record<string, string>>
+  | Map<string, Record<string, string[]>>;
+
+// 질문 응답
+interface InqueryResponse {
+  employee: Employee;
+  response: InqueryResponseData;
 }
 
 // 질문
 interface Inquery {
-id: string;
-title: string;
-type: INQUERY_TYPE
-form:
-| Map<string, string>
-| Map<string, string[]>
-| Map<string, number>
-| Map<string, Record<string, string>>
-| Map<string, Record<string, string[]>>
-isRequired: boolean;
-responses: InqueryResponse[];
-}
-
-// 질문 응답
-interface InqueryResponse {
-employee: Employee;
-response:
-| string // 단답형, 장문형, 객관식, 드롭다운
-| string[] // 체크박스, 파일 업로드
-| number // 선형 척도
-| Record<string, string> // 그리드 (행-열 매핑)
-| Record<string, string[]>; // 체크박스 그리드 (행-열 매핑)
+  id: string;
+  title: string;
+  type: InqueryType;
+  form: InqueryFormData;
+  isRequired: boolean;
+  responses: InqueryResponse[];
 }
 
 interface SurveyEntity extends BaseEntity {
-title: string;
-category: SurveyCategory;
-manager: Manager;
-description: string;
-inqueries: Inquery[];
+  title: string;
+  category: SurveyCategory;
+  manager: Employee;
+  description: string;
+  inqueries: Inquery[];
+  status: SurveyStatus; // 추가됨
+}
+```
+
+**구현 파일**:
+
+- `inquery.types.ts` - 질문 관련 타입
+- `survey.entity.ts`
+- `survey.types.ts`
+
+### 4. EducationManagement (교육 관리)
+
+**파일 위치**: `src/domain/sub/education-management/`
+
+```typescript
+// 수강 직원 상태
+enum AttendeeStatus {
+  PENDING = 'pending', // 대기중
+  IN_PROGRESS = 'in_progress', // 진행중
+  COMPLETED = 'completed', // 완료
+  OVERDUE = 'overdue', // 기한 초과
 }
 
-// 수강직원
+// 수강 직원
 interface Attendee {
-id: string;
-name: string;
-status: 'pending' | 'in_progress' | 'completed' | 'overdue';
-completedAt?: string;
-deadline: string;
+  id: string;
+  name: string;
+  status: AttendeeStatus;
+  completedAt?: Date; // Date 타입
+  deadline: Date; // Date 타입
 }
 
 interface EducationManagementEntity extends BaseEntity {
-title: string;
-content: string;
-isPublic: boolean;
-attendees: Attendee[];
-deadline: string;
-attachments: string[]; // AWS S3 URL 목록
-manager: Manager;
+  title: string;
+  content: string;
+  isPublic: boolean;
+  attendees: Attendee[];
+  deadline: Date; // Date 타입
+  attachments: string[];
+  manager: Employee;
+}
+```
+
+**구현 파일**:
+
+- `attendee.types.ts` - 수강 직원 타입
+- `education-management.entity.ts`
+- `education-management.types.ts`
+
+### 5. Wiki (위키)
+
+**파일 위치**: `src/domain/sub/wiki/`
+
+```typescript
+// 파일 시스템 타입
+enum WikiFileSystemType {
+  FOLDER = 'folder',
+  FILE = 'file',
 }
 
 interface WikiFileSystem {
-id: string;
-name: string;
-type: 'folder' | 'file';
-parentId: string | null;
-children?: WikiFileSystem[];
-updatedAt: string;
-createdAt: string;
-visibility: boolean;
-ownerId: string;
+  id: string;
+  name: string;
+  type: WikiFileSystemType;
+  parentId: string | null;
+  children?: WikiFileSystem[];
+  updatedAt: Date; // Date 타입
+  createdAt: Date; // Date 타입
+  visibility: boolean;
+  ownerId: string;
 }
+
+interface WikiEntity extends BaseEntity {
+  title: string;
+  content: string;
+  fileSystem: WikiFileSystem;
+  isPublic: boolean;
+  ownerId: string;
+  tags: string[]; // 단순 문자열 배열
+}
+```
+
+**구현 파일**:
+
+- `wiki-file-system.types.ts` - 파일 시스템 타입
+- `wiki.entity.ts`
+- `wiki.types.ts`
+
+---
+
+## Interface Layer 구현
+
+### REST API 구조
+
+**예시**: `src/interface/announcement-popup/`
+
+```
+announcement-popup/
+├── dto/
+│   └── announcement-popup.dto.ts      # CreateDto, UpdateDto, ResponseDto
+├── decorators/
+│   └── announcement-popup.decorators.ts  # API 데코레이터 (Swagger)
+├── announcement-popup.controller.ts   # REST 컨트롤러
+├── announcement-popup.module.ts       # NestJS 모듈
+└── index.ts
+```
+
+### API 엔드포인트 패턴
+
+- `GET /api/{resource}` - 전체 조회
+- `GET /api/{resource}/:id` - 단건 조회
+- `POST /api/{resource}` - 생성
+- `PUT /api/{resource}/:id` - 수정
+- `DELETE /api/{resource}/:id` - 삭제 (Soft Delete)
+
+---
+
+## 데이터베이스 스키마
+
+### 공통 필드 (모든 테이블)
+
+- `id` (UUID, Primary Key)
+- `created_at` (TIMESTAMP)
+- `updated_at` (TIMESTAMP)
+- `deleted_at` (TIMESTAMP, nullable) - Soft Delete
+- `created_by` (VARCHAR, nullable)
+- `updated_by` (VARCHAR, nullable)
+- `version` (INTEGER) - 낙관적 락
+
+### 날짜 타입
+
+- 모든 날짜 필드는 TypeScript에서 `Date` 타입 사용
+- 데이터베이스에서는 `TIMESTAMP` 또는 `DATE` 타입 사용
+
+### JSONB 필드
+
+- `category`, `language`, `tags` 등은 JSONB로 저장
+- PostgreSQL의 JSONB 타입 활용
+
+---
+
+## 변경 사항 요약 (원본 대비)
+
+1. **타입 변경**:
+   - 모든 날짜 필드: `string` → `Date`
+   - `tag` → `tags` (배열 이름 통일)
+
+2. **추가된 필드**:
+   - BaseEntity에 `deletedAt` 추가 (Soft Delete)
+   - `SurveyEntity`에 `status` 추가
+
+3. **타입 정의 개선**:
+   - `InqueryType` Enum 추가
+   - `AttendeeStatus` Enum 추가
+   - `WikiFileSystemType` Enum 추가
+   - `InqueryResponseData`, `InqueryFormData` 타입 명시
+
+4. **구현 구조**:
+   - 각 도메인별로 Entity, DTO, Service, Module 분리
+   - 공통 타입은 `src/domain/core/common/types/`에 중앙화
+   - Interface Layer는 별도 폴더로 구성
+
+---
+
+## 다음 구현 필요 사항
+
+### 우선순위 1
+
+- [ ] 나머지 11개 도메인의 Interface Layer (Controller, DTO)
+- [ ] 공용 데코레이터 (`@ToBoolean`, `@DateToUTC`, `@ParseUUID`)
+
+### 우선순위 2
+
+- [ ] Business Layer (DTO ↔ Entity 변환 로직)
+- [ ] Context Layer (CQRS Command/Query Handlers)
+
+### 우선순위 3
+
+- [ ] 인증/인가 (JWT, SSO 연동)
+- [ ] 파일 업로드 (AWS S3)
+- [ ] E2E 테스트
+
+---
+
+**문서 업데이트**: 2026년 1월 5일
+**구현 버전**: v1.0
+**구현 상태**: Domain Layer 100% 완료, Interface Layer 10% 완료 (공지사항 팝업 예시)
