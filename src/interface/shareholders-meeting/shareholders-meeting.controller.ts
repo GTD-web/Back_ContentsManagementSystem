@@ -45,8 +45,8 @@ import {
   DeleteAgendaItem,
 } from './decorators/shareholders-meeting.decorators';
 
-@ApiTags('shareholders-meetings')
-@Controller('shareholders-meetings')
+@ApiTags('주주총회')
+@Controller('shareholders-meeting')
 export class ShareholdersMeetingController {
   // ========== 주주총회 문서 CRUD ==========
   @Get()

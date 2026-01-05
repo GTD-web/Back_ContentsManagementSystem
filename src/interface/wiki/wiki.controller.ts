@@ -8,8 +8,8 @@ import {
 } from './dto/wiki.dto';
 import * as Decorators from './decorators/wiki.decorators';
 
-@ApiTags('wikis')
-@Controller('wikis')
+@ApiTags('위키')
+@Controller('wiki')
 export class WikiController {
   @Get()
   @Decorators.GetAllWikis()

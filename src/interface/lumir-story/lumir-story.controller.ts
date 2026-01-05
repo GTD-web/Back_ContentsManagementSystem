@@ -12,8 +12,8 @@ import {
 } from './dto/lumir-story.dto';
 import * as Decorators from './decorators/lumir-story.decorators';
 
-@ApiTags('lumir-stories')
-@Controller('lumir-stories')
+@ApiTags('루미르 스토리')
+@Controller('lumir-story')
 export class LumirStoryController {
   @Get()
   @Decorators.GetAllLumirStories()

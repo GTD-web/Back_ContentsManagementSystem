@@ -9,8 +9,8 @@ import {
 } from './dto/education-management.dto';
 import * as Decorators from './decorators/education-management.decorators';
 
-@ApiTags('education-managements')
-@Controller('education-managements')
+@ApiTags('교육 관리')
+@Controller('education-management')
 export class EducationManagementController {
   @Get()
   @Decorators.GetAllEducationManagements()

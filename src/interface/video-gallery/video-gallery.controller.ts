@@ -12,8 +12,8 @@ import {
 } from './dto/video-gallery.dto';
 import * as Decorators from './decorators/video-gallery.decorators';
 
-@ApiTags('video-galleries')
-@Controller('video-galleries')
+@ApiTags('비디오 갤러리')
+@Controller('video-gallery')
 export class VideoGalleryController {
   @Get()
   @Decorators.GetAllVideoGalleries()

@@ -12,8 +12,8 @@ import {
 } from './dto/electronic-notice.dto';
 import * as Decorators from './decorators/electronic-notice.decorators';
 
-@ApiTags('electronic-notices')
-@Controller('electronic-notices')
+@ApiTags('전자공시')
+@Controller('electronic-disclosure')
 export class ElectronicNoticeController {
   // ========== 전자공시 문서 CRUD ==========
   @Get()
