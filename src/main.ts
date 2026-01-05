@@ -27,9 +27,7 @@ async function bootstrap() {
   // Swagger 설정
   const config = new DocumentBuilder()
     .setTitle('루미르 컨텐츠 관리 시스템 API')
-    .setDescription(
-      '루미르 사내 컨텐츠 관리 시스템의 RESTful API 문서입니다.',
-    )
+    .setDescription('루미르 사내 컨텐츠 관리 시스템의 RESTful API 문서입니다.')
     .setVersion('1.0')
     .addTag('공지사항 팝업', '팝업 형태의 공지사항 관리')
     .addTag('주주총회', '주주총회 및 의결 결과 관리')
@@ -54,7 +52,7 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 4000;
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);

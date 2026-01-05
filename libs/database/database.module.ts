@@ -31,7 +31,7 @@ import { TransactionManagerService } from './transaction-manager.service';
         );
         const database = configService.get<string>(
           'DATABASE_NAME',
-          'lumir_cms_management',
+          'lumir_cms',
         );
         const needsSSL =
           configService.get<string>('DATABASE_SSL', 'false') === 'true';

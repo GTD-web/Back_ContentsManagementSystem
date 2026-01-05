@@ -27,7 +27,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5434
 DATABASE_USERNAME=lumir_admin
 DATABASE_PASSWORD=lumir_password_2024
-DATABASE_NAME=lumir_cms_management
+DATABASE_NAME=lumir_cms
 DB_SYNCHRONIZE=true
 DB_LOGGING=true
 
@@ -163,7 +163,7 @@ package.json에 다음 Docker 관련 스크립트가 추가되어 있습니다:
 
 - PostgreSQL 15 (Alpine)
 - 포트: 5434:5432 (호스트:컨테이너)
-- 데이터베이스: lumir_cms_management
+- 데이터베이스: lumir_cms
 - 사용자: lumir_admin
 - 비밀번호: lumir_password_2024
 - Health check 포함
@@ -260,7 +260,7 @@ DATABASE_PORT=5435
 4. 연결 테스트:
 
    ```bash
-   psql -h localhost -p 5434 -U lumir_admin -d lumir_cms_management
+   psql -h localhost -p 5434 -U lumir_admin -d lumir_cms
    ```
 
 ### 백엔드 연결 오류
@@ -297,20 +297,20 @@ docker volume rm lumir-cms-backend_postgres_data
 
 ```bash
 # 데이터베이스 덤프
-docker exec lumir-cms-postgres pg_dump -U lumir_admin lumir_cms_management > backup.sql
+docker exec lumir-cms-postgres pg_dump -U lumir_admin lumir_cms > backup.sql
 
 # 압축하여 백업
-docker exec lumir-cms-postgres pg_dump -U lumir_admin lumir_cms_management | gzip > backup.sql.gz
+docker exec lumir-cms-postgres pg_dump -U lumir_admin lumir_cms | gzip > backup.sql.gz
 ```
 
 ### 데이터베이스 복원
 
 ```bash
 # SQL 파일로 복원
-docker exec -i lumir-cms-postgres psql -U lumir_admin -d lumir_cms_management < backup.sql
+docker exec -i lumir-cms-postgres psql -U lumir_admin -d lumir_cms < backup.sql
 
 # 압축 파일로 복원
-gunzip -c backup.sql.gz | docker exec -i lumir-cms-postgres psql -U lumir_admin -d lumir_cms_management
+gunzip -c backup.sql.gz | docker exec -i lumir-cms-postgres psql -U lumir_admin -d lumir_cms
 ```
 
 ### 데이터 초기화
@@ -357,7 +357,7 @@ docker run -d \
 
 ```bash
 # PostgreSQL 컨테이너 접속
-docker exec -it lumir-cms-postgres psql -U lumir_admin -d lumir_cms_management
+docker exec -it lumir-cms-postgres psql -U lumir_admin -d lumir_cms
 
 # 컨테이너 로그 실시간 확인
 docker compose logs -f postgres

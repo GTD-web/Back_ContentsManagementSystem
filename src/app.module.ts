@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+
+// Database Module
+import { DatabaseModule } from '@libs/database/database.module';
 
 // Common Modules
 import { CmsCommonInterfaceModule } from '@interface/common';
@@ -15,7 +17,6 @@ import { ShareholdersMeetingModule } from '@interface/shareholders-meeting';
 import { ElectronicNoticeModule } from '@interface/electronic-notice';
 
 // Sub Domain Interface Modules
-import { PopupModule } from '@interface/popup';
 import { SurveyInterfaceModule } from '@interface/survey';
 import { LumirStoryModule } from '@interface/lumir-story';
 import { VideoGalleryModule } from '@interface/video-gallery';
@@ -38,22 +39,8 @@ import { WikiModule } from '@interface/wiki';
       envFilePath: '.env',
     }),
 
-    // 데이터베이스 연결 (TypeORM)
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST', 'localhost'),
-        port: configService.get('DB_PORT', 5432),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'postgres'),
-        database: configService.get('DB_DATABASE', 'lumir_cms'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
-        logging: configService.get('NODE_ENV') === 'development',
-        autoLoadEntities: true,
-      }),
-    }),
+    // 데이터베이스 연결 (DatabaseModule 사용)
+    DatabaseModule,
 
     // ========== 공통 모듈 ==========
     CmsCommonInterfaceModule,
@@ -67,8 +54,7 @@ import { WikiModule } from '@interface/wiki';
     ShareholdersMeetingModule,
     ElectronicNoticeModule,
 
-    // ========== Sub Domain 모듈 (6개) ==========
-    PopupModule,
+    // ========== Sub Domain 모듈 (5개) ==========
     SurveyInterfaceModule,
     LumirStoryModule,
     VideoGalleryModule,

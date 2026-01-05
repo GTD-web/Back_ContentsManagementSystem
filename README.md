@@ -152,35 +152,41 @@ libs/
 `.env` 파일 생성:
 
 ```bash
-cp .env.example .env
+cp .env.sample .env
 ```
 
-`.env` 파일 내용:
+`.env` 파일 내용 (주요 항목):
 ```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_DATABASE=lumir_cms
-
-# Application
-PORT=3000
+# Node 환경
 NODE_ENV=development
+PORT=4000
 
-# CORS
-CORS_ORIGIN=http://localhost:3000
+# 데이터베이스 설정 (Docker PostgreSQL)
+DATABASE_HOST=localhost
+DATABASE_PORT=5434
+DATABASE_USERNAME=lumir_admin
+DATABASE_PASSWORD=lumir_password_2024
+DATABASE_NAME=lumir_cms
+DB_SYNCHRONIZE=true  # 개발 환경에서만 true
+DB_LOGGING=true
+
+# SSO 설정
+SSO_BASE_URL=https://lsso.vercel.app
+SSO_CLIENT_ID=your-sso-client-id
+SSO_CLIENT_SECRET=your-sso-client-secret
 ```
 
 ### 2. 데이터베이스 실행 (Docker)
 
 ```bash
-docker run --name lumir-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=lumir_cms \
-  -p 5432:5432 \
-  -d postgres:16
+# PostgreSQL 컨테이너 시작
+docker compose up -d
+
+# 로그 확인
+docker compose logs -f postgres
 ```
+
+> 📖 상세한 데이터베이스 관리는 [DATABASE.md](./docs/DATABASE.md) 참고
 
 ### 3. 의존성 설치 (이미 완료됨)
 
@@ -336,6 +342,8 @@ Survey, EducationManagement, Wiki
 
 ## 📚 문서
 
+- [데이터베이스 관리 가이드](./docs/DATABASE.md) 🆕
+- [Docker 배포 가이드](./docs/DOCKER.md)
 - [빠른 시작 가이드](./docs/QUICKSTART.md)
 - [설치 가이드](./docs/INSTALLATION.md)
 - [프로젝트 상세 요약](./docs/PROJECT_SUMMARY.md)
@@ -343,8 +351,10 @@ Survey, EducationManagement, Wiki
 
 ## 🛠️ 개발 스크립트
 
+### 애플리케이션 실행
+
 ```bash
-# 개발 서버 실행
+# 개발 서버 실행 (Hot Reload)
 npm run start:dev
 
 # 프로덕션 빌드
@@ -352,7 +362,32 @@ npm run build
 
 # 프로덕션 실행
 npm run start:prod
+```
 
+### 데이터베이스 관리
+
+```bash
+# Docker PostgreSQL 시작
+docker compose up -d
+
+# 마이그레이션 생성 (dev/prod 환경)
+npm run migration:generate -- migrations/YourMigrationName
+
+# 마이그레이션 실행
+npm run migration:run
+
+# 마이그레이션 되돌리기
+npm run migration:revert
+
+# 마이그레이션 상태 확인
+npm run migration:show
+```
+
+> 📖 자세한 내용은 [DATABASE.md](./docs/DATABASE.md) 참고
+
+### 테스트 및 코드 품질
+
+```bash
 # 린트 검사
 npm run lint
 

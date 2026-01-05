@@ -4,7 +4,7 @@ services:
     container_name: lumir-cms-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: lumir_cms_management
+      POSTGRES_DB: lumir_cms
       POSTGRES_USER: lumir_admin
       POSTGRES_PASSWORD: lumir_password_2024
       POSTGRES_HOST_AUTH_METHOD: trust
@@ -15,7 +15,7 @@ services:
     networks:
       - lumir-cms-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U lumir_admin -d lumir_cms_management']
+      test: ['CMD-SHELL', 'pg_isready -U lumir_admin -d lumir_cms']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,7 +35,7 @@ services:
   #     DATABASE_PORT: 5432
   #     DATABASE_USERNAME: lumir_admin
   #     DATABASE_PASSWORD: lumir_password_2024
-  #     DATABASE_NAME: lumir_cms_management
+  #     DATABASE_NAME: lumir_cms
   #     # DATABASE_URL을 사용할 수도 있지만, 개별 환경 변수 사용을 권장합니다
   #     # DATABASE_URL: postgresql://lumir_admin:lumir_password_2024@postgres:5432/lumir_cms_management
   #
