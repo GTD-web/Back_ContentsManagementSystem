@@ -1,6 +1,9 @@
 import { BaseDto } from '@libs/database/base/base.dto';
 import { EmployeeDto } from '@domain/common/employee/employee.types';
-import { Attendee } from './attendee.types';
+import type { Attendee } from './attendee.types';
+
+// Re-export Attendee for external use
+export type { Attendee } from './attendee.types';
 
 /**
  * 교육 관리 DTO
