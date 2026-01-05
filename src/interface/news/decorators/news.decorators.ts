@@ -1,11 +1,6 @@
 import { applyDecorators, HttpCode, HttpStatus } from '@nestjs/common';
 import { Get, Post, Put, Delete } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import {
   CreateNewsDto,
   UpdateNewsDto,

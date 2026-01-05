@@ -26,11 +26,14 @@ export class WikiService {
   /**
    * 위키 목록을 조회한다
    */
-  async 위키_목록을_조회_한다(): Promise<ApiResponse<WikiDto[]>> {
+  async 위키_목록을_조회_한다(
+    filters?: Record<string, any>,
+  ): Promise<ApiResponse<WikiDto[]>> {
     const wikis = await this.wikiRepository.find({
       order: {
         updatedAt: 'DESC',
       },
+      where: filters,
     });
 
     const wikiDtos = wikis.map((wiki) => wiki.DTO로_변환한다());

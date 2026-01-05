@@ -39,9 +39,7 @@ export class BrochureService {
     }
 
     const brochures = await queryBuilder.getMany();
-    const brochureDtos = brochures.map((brochure) =>
-      brochure.DTO로_변환한다(),
-    );
+    const brochureDtos = brochures.map((brochure) => brochure.DTO로_변환한다());
 
     return successResponse(
       brochureDtos,
@@ -78,9 +76,11 @@ export class BrochureService {
   ): Promise<ApiResponse<BrochureDto>> {
     const brochure = this.brochureRepository.create(data as any);
     const savedBrochure = await this.brochureRepository.save(brochure);
-    
+
     // TypeORM save는 단일 엔티티 또는 배열을 반환할 수 있음
-    const result = Array.isArray(savedBrochure) ? savedBrochure[0] : savedBrochure;
+    const result = Array.isArray(savedBrochure)
+      ? savedBrochure[0]
+      : savedBrochure;
 
     return successResponse(
       result.DTO로_변환한다(),

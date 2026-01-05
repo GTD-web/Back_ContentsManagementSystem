@@ -125,7 +125,9 @@ export class OrganizationService {
     // 최대 깊이 계산
     const calculateMaxDepth = (node: OrganizationNode): number => {
       if (node.children.length === 0) return node.depth;
-      return Math.max(...node.children.map((child) => calculateMaxDepth(child)));
+      return Math.max(
+        ...node.children.map((child) => calculateMaxDepth(child)),
+      );
     };
 
     // 전체 부서 및 직원 수 계산
@@ -135,8 +137,7 @@ export class OrganizationService {
       const childCounts = node.children.map((child) => countNodes(child));
       return {
         departments:
-          1 +
-          childCounts.reduce((sum, count) => sum + count.departments, 0),
+          1 + childCounts.reduce((sum, count) => sum + count.departments, 0),
         employees:
           node.employees.length +
           childCounts.reduce((sum, count) => sum + count.employees, 0),

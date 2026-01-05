@@ -169,4 +169,50 @@ export class SurveyService {
       '질문이 성공적으로 삭제되었습니다.',
     );
   }
+
+  /**
+   * 설문조사를 공개한다
+   */
+  async 설문조사를_공개한다(surveyId: string): Promise<ApiResponse<SurveyDto>> {
+    const survey = await this.surveyRepository.findOne({
+      where: { id: surveyId },
+      relations: ['manager'],
+    });
+
+    if (!survey) {
+      throw new Error(`설문조사를 찾을 수 없습니다. ID: ${surveyId}`);
+    }
+
+    survey.공개한다();
+    const updatedSurvey = await this.surveyRepository.save(survey);
+
+    return successResponse(
+      updatedSurvey.DTO로_변환한다(),
+      '설문조사가 성공적으로 공개되었습니다.',
+    );
+  }
+
+  /**
+   * 설문조사를 비공개한다
+   */
+  async 설문조사를_비공개한다(
+    surveyId: string,
+  ): Promise<ApiResponse<SurveyDto>> {
+    const survey = await this.surveyRepository.findOne({
+      where: { id: surveyId },
+      relations: ['manager'],
+    });
+
+    if (!survey) {
+      throw new Error(`설문조사를 찾을 수 없습니다. ID: ${surveyId}`);
+    }
+
+    survey.비공개한다();
+    const updatedSurvey = await this.surveyRepository.save(survey);
+
+    return successResponse(
+      updatedSurvey.DTO로_변환한다(),
+      '설문조사가 성공적으로 비공개되었습니다.',
+    );
+  }
 }

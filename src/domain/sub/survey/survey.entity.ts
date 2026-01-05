@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
 import { Employee } from '@domain/common/employee/employee.entity';
 import type { SurveyStatus, SurveyCategory } from '@domain/core/common/types';
+import { ContentStatus } from '@domain/core/common/types';
 import type { Inquery } from './inquery.types';
 import type { SurveyDto } from './survey.types';
 
@@ -106,6 +107,20 @@ export class Survey extends BaseEntity<SurveyDto> {
    */
   질문을_제거한다(inqueryId: string): void {
     this.inqueries = this.inqueries.filter((inq) => inq.id !== inqueryId);
+  }
+
+  /**
+   * 설문조사를 공개한다
+   */
+  공개한다(): void {
+    this.status = ContentStatus.OPENED;
+  }
+
+  /**
+   * 설문조사를 비공개한다 (초안으로 변경)
+   */
+  비공개한다(): void {
+    this.status = ContentStatus.DRAFT;
   }
 
   /**

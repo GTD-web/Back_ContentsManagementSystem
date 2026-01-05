@@ -1,34 +1,79 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+// Common Modules
+import { CmsCommonInterfaceModule } from '@interface/common';
+
+// Core Domain Interface Modules
 import { AnnouncementPopupInterfaceModule } from '@interface/announcement-popup';
+import { AnnouncementInterfaceModule } from '@interface/announcement';
+import { NewsInterfaceModule } from '@interface/news';
+import { BrochureInterfaceModule } from '@interface/brochure';
+import { IrInterfaceModule } from '@interface/ir';
+import { ShareholdersMeetingModule } from '@interface/shareholders-meeting';
+import { ElectronicNoticeModule } from '@interface/electronic-notice';
+
+// Sub Domain Interface Modules
+import { PopupModule } from '@interface/popup';
+import { SurveyInterfaceModule } from '@interface/survey';
+import { LumirStoryModule } from '@interface/lumir-story';
+import { VideoGalleryModule } from '@interface/video-gallery';
+import { EducationManagementModule } from '@interface/education-management';
+import { WikiModule } from '@interface/wiki';
 
 /**
  * 루미르 CMS 애플리케이션 모듈
+ *
+ * @description
+ * - 모든 Interface Layer 모듈을 등록합니다.
+ * - Interface Layer는 Business Layer와 Context Layer를 자동으로 import합니다.
+ * - TypeORM을 통해 PostgreSQL 데이터베이스와 연결합니다.
  */
 @Module({
   imports: [
-    // 환경 변수 설정
+    // 환경 변수 설정 (전역)
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
 
-    // 데이터베이스 연결
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_DATABASE || 'lumir_cms',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production', // 프로덕션에서는 false로 설정
-      logging: process.env.NODE_ENV === 'development',
+    // 데이터베이스 연결 (TypeORM)
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 5432),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'postgres'),
+        database: configService.get('DB_DATABASE', 'lumir_cms'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: configService.get('NODE_ENV') !== 'production',
+        logging: configService.get('NODE_ENV') === 'development',
+        autoLoadEntities: true,
+      }),
     }),
 
-    // Interface Layer Modules
+    // ========== 공통 모듈 ==========
+    CmsCommonInterfaceModule,
+
+    // ========== Core Domain 모듈 (7개) ==========
     AnnouncementPopupInterfaceModule,
+    AnnouncementInterfaceModule,
+    NewsInterfaceModule,
+    BrochureInterfaceModule,
+    IrInterfaceModule,
+    ShareholdersMeetingModule,
+    ElectronicNoticeModule,
+
+    // ========== Sub Domain 모듈 (6개) ==========
+    PopupModule,
+    SurveyInterfaceModule,
+    LumirStoryModule,
+    VideoGalleryModule,
+    EducationManagementModule,
+    WikiModule,
   ],
 })
 export class AppModule {}
