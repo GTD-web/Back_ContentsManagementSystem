@@ -20,6 +20,14 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "@domain/*": ["src/domain/*"],
+      "@context/*": ["src/context/*"],
+      "@business/*": ["src/business/*"],
+      "@interface/*": ["src/interface/*"],
+      "@libs/*": ["libs/*"]
+    }
   }
 }

@@ -1,0 +1,365 @@
+---
+alwaysApply: true
+---
+
+enum LanguageEnum {
+KOREAN = 'korean';
+ENGLISH = 'english';
+JAPANESE = 'japanese';
+CHINESE = 'chinese';
+}
+
+enum LanguageCode {
+KOREAN = 'ko';
+ENGLISH = 'en';
+JAPANESE = 'ja';
+CHINESE = 'zh';
+
+}
+
+interface Language {
+code: LanguageCode;
+label: string;
+name: LanguageEnum;
+}
+
+interface BaseEntity {
+createdAt: string;
+updatedAt: string;
+version: number;
+}
+
+interface Category {
+id: string;
+name: string;
+description: string;
+}
+
+// 매니저
+type Manager = Employee // SSO 내용 사용
+
+// 태그
+interface Tag {
+id: string;
+name: string;
+description: string;
+}
+
+enum AnnouncementStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+// 공지사항 카테고리
+type AnnouncementCategory = Category
+
+// 공지사항 태그
+interface AnnouncementTag {
+id: string;
+name: string;
+description: string;
+}
+
+// 공지사항 팝업
+interface AnnouncementPopupEntity extends BaseEntity {
+status: AnnouncementStatus;
+title: string;
+isPublic: boolean;
+category: AnnouncementCategory;
+language: Language;
+tag: Tag[];
+manager: Employee;
+attachments: string[]; // AWS S3 URL 목록
+releasedAt: string;
+}
+
+// 주주총회 의결 결과
+interface ResultOfVote {
+title: string;
+totalVote: number;
+yesVote: number;
+noVote: number;
+approvalRating: number;
+result: 'accepted' | 'rejected';
+}
+
+// 주주총회 카테고리
+type ShareholdersMeetingCategory = Category
+
+// 주주총회
+interface ShareholdersMeetingEntity extends BaseEntity {
+resultOfVote: ResultOfVote;
+title: string;
+resultText: string;
+summary: string;
+language: Language;
+category: ShareholdersMeetingCategory;
+isPublic: boolean;
+location: string;
+meetingDate: string; // 연월일시간
+manager: Manager;
+releasedAt: string;
+attachments: string[]; // AWS S3 URL 목록
+tags: Tag[];
+}
+
+// 전자공시 카테고리
+type ElectronicDisclosureCategory = Category
+
+// 전자공시 상태
+enum ElectornicDisclosureStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+// 전자공시
+interface ElectronicDisclosureEntity extends BaseEntity {
+title: string;
+manager: Manager;
+language: Language;
+category: ElectronicDisclosureCategory;
+isPublic: boolean;
+status: ElectornicDisclosureStatus;
+tags: Tag[];
+}
+
+// IR 카테고리
+type IRCategory = Category;
+
+// IR 상태
+enum IRStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+interface IREntity extends BaseEntity {
+title: string;
+manager: Manager;
+language: Language;
+category: IRCategory;
+isPublic: boolean;
+status: IRStatus;
+tags: Tag[];
+}
+
+// 브로슈어 카테고리
+type BrochureCategory = Category;
+
+// 브로슈어 상태
+enum BrochureStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+interface BrochureEntity extends BaseEntity {
+title: string;
+manager: Manager;
+language: Language;
+category: BrochureCategory;
+isPublic: boolean;
+status: BrochureStatus;
+tags: Tag[];
+}
+
+// 스토리 카테고리
+type LumirStoryCategory = Category;
+
+// 스토리 상태
+enum LumirStoryStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+interface LumirStoryEntity extends BaseEntity {
+title: string;
+manager: Manager;
+category: LumirStoryCategory;
+isPublic: boolean;
+status: LumirStoryStatus;
+tags: Tag[];
+}
+
+// 비디오 갤러리 카테고리
+type VideoGalleryCategory = Category;
+
+// 비디오 갤러리 상태
+enum VideoGalleryStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+interface VideoGalleryEntity extends BaseEntity {
+title: string;
+manager: Manager;
+category: VideoGalleryCategory;
+isPublic: boolean;
+status: VideoGalleryStatus;
+tags: Tag[];
+}
+
+// 뉴스 카테고리
+type NewsCategory = Category;
+
+// 뉴스 상태
+enum NewsStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+interface NewsEntity extends BaseEntity {
+title: string;
+manager: Manager;
+category:NewsCategory;
+isPublic: boolean;
+status: NewsStatus;
+tags: Tag[];
+}
+
+// 공지사항 카테고리
+type AnnouncementCategory = Category;
+
+// 공지사항 상태
+enum AnnouncementStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+// 공지사항 받은 직원목록
+interface AnnouncementEmployee {
+id: string;
+name: string;
+isRead: boolean;
+isSubmitted: boolean;
+submittedAt: string;
+readAt: string;
+responseMessage?: string;
+}
+
+interface AnnouncementEntity extends BaseEntity {
+title: string;
+content: string;
+isFixed: boolean;
+category: AnnouncementCategory;
+releasedAt: string;
+expiredAt: string;
+mustRead: boolean;
+manager: Manager;
+status: AnnouncementStatus;
+hits: number;
+attachments: string[]; // AWS S3 URL 목록
+employees: AnnouncementEmployee[];
+}
+
+// 설문조사 카테고리
+type SurveyCategory = Category;
+
+// 설문조사 상태
+enum SurveyStatus = {
+DRAFT = 'draft';
+APPROVED = 'approved';
+UNDER_REVIEW = 'under_review';
+REJECTED = 'rejected';
+OPENED = 'opened';
+}
+
+// 질문 타입
+enum Inquery = {
+SHORT_ANSWER = 'short_answer'; // 단답형
+PARAGRAPH = 'paragraph'; // 장문형
+MULTIPLE_CHOICE = 'multiple_choice'; // 객관식
+DROPDOWN = 'dropdown'; // 드롭다운
+CHECKBOXES = 'checkboxes'; // 체크박스
+FILE_UPLOAD = 'file_upload'; // 파일 업로드
+DATETIME = 'datetime'; // 날짜/시간
+LINEAR_SCALE = 'linear_scale'; // 선형 척도
+GRID_SCALE = 'grid_scale'; // 그리드 척도
+}
+
+// 질문
+interface Inquery {
+id: string;
+title: string;
+type: INQUERY_TYPE
+form:
+| Map<string, string>
+| Map<string, string[]>
+| Map<string, number>
+| Map<string, Record<string, string>>
+| Map<string, Record<string, string[]>>
+isRequired: boolean;
+responses: InqueryResponse[];
+}
+
+// 질문 응답
+interface InqueryResponse {
+employee: Employee;
+response:
+| string // 단답형, 장문형, 객관식, 드롭다운
+| string[] // 체크박스, 파일 업로드
+| number // 선형 척도
+| Record<string, string> // 그리드 (행-열 매핑)
+| Record<string, string[]>; // 체크박스 그리드 (행-열 매핑)
+}
+
+interface SurveyEntity extends BaseEntity {
+title: string;
+category: SurveyCategory;
+manager: Manager;
+description: string;
+inqueries: Inquery[];
+}
+
+// 수강직원
+interface Attendee {
+id: string;
+name: string;
+status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+completedAt?: string;
+deadline: string;
+}
+
+interface EducationManagementEntity extends BaseEntity {
+title: string;
+content: string;
+isPublic: boolean;
+attendees: Attendee[];
+deadline: string;
+attachments: string[]; // AWS S3 URL 목록
+manager: Manager;
+}
+
+interface WikiFileSystem {
+id: string;
+name: string;
+type: 'folder' | 'file';
+parentId: string | null;
+children?: WikiFileSystem[];
+updatedAt: string;
+createdAt: string;
+visibility: boolean;
+ownerId: string;
+}
