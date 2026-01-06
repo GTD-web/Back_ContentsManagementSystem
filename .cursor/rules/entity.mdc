@@ -13,20 +13,13 @@ alwaysApply: true
 
 ---
 
-## 공통 타입 (Common Types)
+## 공통 엔티티 (Common Entities)
 
 ### Language (언어)
 
-**파일 위치**: `src/domain/core/common/types/language.types.ts`
+**파일 위치**: `src/domain/common/language/`
 
 ```typescript
-enum LanguageEnum {
-  KOREAN = 'korean',
-  ENGLISH = 'english',
-  JAPANESE = 'japanese',
-  CHINESE = 'chinese',
-}
-
 enum LanguageCode {
   KOREAN = 'ko',
   ENGLISH = 'en',
@@ -34,12 +27,84 @@ enum LanguageCode {
   CHINESE = 'zh',
 }
 
-interface Language {
+interface LanguageEntity extends BaseEntity {
   code: LanguageCode;
-  label: string;
-  name: LanguageEnum;
+  name: string; // 예: 한국어, English
+  isActive: boolean; // 활성화 여부
 }
 ```
+
+**구현 파일**:
+
+- `language.entity.ts` - TypeORM Entity
+- `language.types.ts` - DTO 타입 정의
+- `language.service.ts` - Domain Service
+- `language.module.ts` - NestJS Module
+
+### Attachment (첨부파일)
+
+**파일 위치**: `src/domain/common/attachment/`
+
+```typescript
+// 첨부파일이 속한 엔티티 타입
+enum AttachmentEntityType {
+  ANNOUNCEMENT_POPUP = 'announcement_popup',
+  SHAREHOLDERS_MEETING = 'shareholders_meeting',
+  ANNOUNCEMENT = 'announcement',
+  EDUCATION_MANAGEMENT = 'education_management',
+}
+
+interface AttachmentEntity extends BaseEntity {
+  entityType: AttachmentEntityType; // 어느 엔티티의 첨부파일인지
+  entityId: string; // 해당 엔티티의 ID
+  fileName: string; // 원본 파일명
+  fileSize: number; // 파일 크기 (bytes)
+  mimeType: string; // MIME 타입 (예: image/jpeg, application/pdf)
+  url: string; // AWS S3 URL
+  order: number; // 첨부파일 순서
+}
+```
+
+**구현 파일**:
+
+- `attachment.entity.ts` - TypeORM Entity
+- `attachment.types.ts` - DTO 타입 정의
+- `attachment.service.ts` - Domain Service
+- `attachment.module.ts` - NestJS Module
+
+### Category (카테고리)
+
+**파일 위치**: `src/domain/common/category/`
+
+```typescript
+enum CategoryEntityType {
+  ANNOUNCEMENT = 'announcement',
+  ANNOUNCEMENT_POPUP = 'announcement_popup',
+  SHAREHOLDERS_MEETING = 'shareholders_meeting',
+  ELECTRONIC_DISCLOSURE = 'electronic_disclosure',
+  IR = 'ir',
+  BROCHURE = 'brochure',
+  LUMIR_STORY = 'lumir_story',
+  VIDEO_GALLERY = 'video_gallery',
+  NEWS = 'news',
+  SURVEY = 'survey',
+}
+
+interface CategoryEntity extends BaseEntity {
+  entityType: CategoryEntityType; // 어느 도메인의 카테고리인지
+  name: string;
+  description: string;
+  isActive: boolean; // 활성화 여부
+  order: number; // 정렬 순서
+}
+```
+
+**구현 파일**:
+
+- `category.entity.ts` - TypeORM Entity
+- `category.types.ts` - DTO 타입 정의
+- `category.service.ts` - Domain Service
+- `category.module.ts` - NestJS Module
 
 ### ContentStatus (콘텐츠 상태)
 
@@ -63,43 +128,6 @@ type LumirStoryStatus = ContentStatus;
 type VideoGalleryStatus = ContentStatus;
 type NewsStatus = ContentStatus;
 type SurveyStatus = ContentStatus;
-```
-
-### Category (카테고리)
-
-**파일 위치**: `src/domain/core/common/types/category.types.ts`
-
-```typescript
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-}
-
-// 별칭 타입들
-type AnnouncementCategory = Category;
-type ShareholdersMeetingCategory = Category;
-type ElectronicDisclosureCategory = Category;
-type IRCategory = Category;
-type BrochureCategory = Category;
-type LumirStoryCategory = Category;
-type VideoGalleryCategory = Category;
-type NewsCategory = Category;
-type SurveyCategory = Category;
-```
-
-### Tag (태그)
-
-**파일 위치**: `src/domain/core/common/types/tag.types.ts`
-
-```typescript
-interface Tag {
-  id: string;
-  name: string;
-  description: string;
-}
-
-type AnnouncementTag = Tag;
 ```
 
 ### BaseEntity (기본 엔티티)
@@ -133,12 +161,12 @@ interface AnnouncementPopupEntity extends BaseEntity {
   status: AnnouncementStatus;
   title: string;
   isPublic: boolean;
-  category: AnnouncementCategory;
-  language: Language;
-  tags: Tag[]; // 배열 이름 수정
-  manager: Employee;
-  attachments: string[]; // AWS S3 URL 목록
+  categoryIds: string[]; // Category 엔티티 다대다 참조
+  languageId: string; // Language 엔티티 참조
+  managerId: string; // 외부 시스템 직원 ID 참조
   releasedAt?: Date; // Date 타입으로 수정
+  order: number; // 정렬 순서
+  // attachments는 Attachment 테이블로 관리 (entityType = 'announcement_popup')
 }
 ```
 
@@ -153,7 +181,7 @@ interface AnnouncementPopupEntity extends BaseEntity {
 
 **파일 위치**: `src/domain/core/shareholders-meeting/`
 
-```typescript
+````typescript
 // 의결 결과
 interface ResultOfVote {
   title: string;
@@ -164,22 +192,23 @@ interface ResultOfVote {
   result: 'accepted' | 'rejected';
 }
 
+```typescript
 interface ShareholdersMeetingEntity extends BaseEntity {
   resultOfVote: ResultOfVote;
   title: string;
   resultText: string;
   summary: string;
-  language: Language;
-  category: ShareholdersMeetingCategory;
+  languageId: string; // Language 엔티티 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   location: string;
   meetingDate: Date; // Date 타입
-  manager: Employee;
+  managerId: string; // 외부 시스템 직원 ID 참조
   releasedAt?: Date; // Date 타입
-  attachments: string[];
-  tags: Tag[];
+  order: number; // 정렬 순서
+  // attachments는 Attachment 테이블로 관리 (entityType = 'shareholders_meeting')
 }
-```
+````
 
 **구현 파일**:
 
@@ -194,12 +223,12 @@ interface ShareholdersMeetingEntity extends BaseEntity {
 ```typescript
 interface ElectronicDisclosureEntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  language: Language;
-  category: ElectronicDisclosureCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  languageId: string; // Language 엔티티 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: ElectronicDisclosureStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -210,12 +239,12 @@ interface ElectronicDisclosureEntity extends BaseEntity {
 ```typescript
 interface IREntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  language: Language;
-  category: IRCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  languageId: string; // Language 엔티티 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: IRStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -226,12 +255,12 @@ interface IREntity extends BaseEntity {
 ```typescript
 interface BrochureEntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  language: Language;
-  category: BrochureCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  languageId: string; // Language 엔티티 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: BrochureStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -242,11 +271,11 @@ interface BrochureEntity extends BaseEntity {
 ```typescript
 interface NewsEntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  category: NewsCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: NewsStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -254,11 +283,11 @@ interface NewsEntity extends BaseEntity {
 
 **파일 위치**: `src/domain/core/announcement/`
 
-```typescript
+`````typescript
 // 공지사항 받은 직원 정보
-interface AnnouncementEmployee {
-  id: string;
-  name: string;
+interface AnnouncementEmployeeEntity extends BaseEntity {
+  announcementId: string; // Announcement 엔티티 참조
+  employeeId: string; // 외부 시스템 직원 ID
   isRead: boolean;
   isSubmitted: boolean;
   submittedAt?: Date; // Date 타입
@@ -266,24 +295,26 @@ interface AnnouncementEmployee {
   responseMessage?: string;
 }
 
+````typescript
 interface AnnouncementEntity extends BaseEntity {
   title: string;
   content: string;
   isFixed: boolean; // 상단 고정 여부
-  category: AnnouncementCategory;
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   releasedAt?: Date; // Date 타입
   expiredAt?: Date; // Date 타입
   mustRead: boolean; // 필독 여부
-  manager: Employee;
+  managerId: string; // 외부 시스템 직원 ID 참조
   status: AnnouncementStatus;
   hits: number; // 조회수
-  attachments: string[];
-  employees: AnnouncementEmployee[];
+  order: number; // 정렬 순서
+  // attachments는 Attachment 테이블로 관리 (entityType = 'announcement')
 }
-```
+`````
 
 **구현 파일**:
 
+- `announcement-employee.entity.ts` - 직원 응답 엔티티 (독립 테이블)
 - `announcement-employee.types.ts` - 직원 응답 타입
 - `announcement.entity.ts`
 - `announcement.types.ts`
@@ -299,11 +330,11 @@ interface AnnouncementEntity extends BaseEntity {
 ```typescript
 interface LumirStoryEntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  category: LumirStoryCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: LumirStoryStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -314,11 +345,11 @@ interface LumirStoryEntity extends BaseEntity {
 ```typescript
 interface VideoGalleryEntity extends BaseEntity {
   title: string;
-  manager: Employee;
-  category: VideoGalleryCategory;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: VideoGalleryStatus;
-  tags: Tag[];
+  order: number; // 정렬 순서
 }
 ```
 
@@ -356,35 +387,43 @@ type InqueryFormData =
   | Map<string, Record<string, string>>
   | Map<string, Record<string, string[]>>;
 
-// 질문 응답
-interface InqueryResponse {
-  employee: Employee;
-  response: InqueryResponseData;
-}
-
-// 질문
-interface Inquery {
-  id: string;
+// 설문 질문 (독립 테이블)
+interface SurveyQuestionEntity extends BaseEntity {
+  surveyId: string; // Survey 엔티티 참조
   title: string;
   type: InqueryType;
-  form: InqueryFormData;
+  form: InqueryFormData; // JSONB - 질문 폼 구조
   isRequired: boolean;
-  responses: InqueryResponse[];
+  order: number; // 질문 순서
+}
+
+// 설문 응답 (독립 테이블)
+interface SurveyResponseEntity extends BaseEntity {
+  questionId: string; // SurveyQuestion 엔티티 참조
+  employeeId: string; // 외부 시스템 직원 ID
+  response: InqueryResponseData; // JSONB - 응답 데이터
+  submittedAt: Date;
 }
 
 interface SurveyEntity extends BaseEntity {
   title: string;
-  category: SurveyCategory;
-  manager: Employee;
+  categoryIds: string[]; // Category 엔티티 다대다 참조
+  managerId: string; // 외부 시스템 직원 ID 참조
   description: string;
-  inqueries: Inquery[];
-  status: SurveyStatus; // 추가됨
+  status: SurveyStatus;
+  startDate?: Date; // 시작일
+  endDate?: Date; // 종료일
+  order: number; // 정렬 순서
 }
 ```
 
 **구현 파일**:
 
-- `inquery.types.ts` - 질문 관련 타입
+- `survey-question.entity.ts` - 설문 질문 엔티티 (독립 테이블)
+- `survey-question.types.ts` - 설문 질문 타입
+- `survey-response.entity.ts` - 설문 응답 엔티티 (독립 테이블)
+- `survey-response.types.ts` - 설문 응답 타입
+- `inquery.types.ts` - 질문 관련 공통 타입
 - `survey.entity.ts`
 - `survey.types.ts`
 
@@ -392,7 +431,7 @@ interface SurveyEntity extends BaseEntity {
 
 **파일 위치**: `src/domain/sub/education-management/`
 
-```typescript
+````typescript
 // 수강 직원 상태
 enum AttendeeStatus {
   PENDING = 'pending', // 대기중
@@ -402,34 +441,36 @@ enum AttendeeStatus {
 }
 
 // 수강 직원
-interface Attendee {
-  id: string;
-  name: string;
+interface AttendeeEntity extends BaseEntity {
+  educationManagementId: string; // EducationManagement 엔티티 참조
+  employeeId: string; // 외부 시스템 직원 ID
   status: AttendeeStatus;
   completedAt?: Date; // Date 타입
   deadline: Date; // Date 타입
 }
 
+```typescript
 interface EducationManagementEntity extends BaseEntity {
   title: string;
   content: string;
   isPublic: boolean;
-  attendees: Attendee[];
   deadline: Date; // Date 타입
-  attachments: string[];
-  manager: Employee;
+  managerId: string; // 외부 시스템 직원 ID 참조
+  order: number; // 정렬 순서
+  // attachments는 Attachment 테이블로 관리 (entityType = 'education_management')
 }
-```
+````
 
 **구현 파일**:
 
+- `attendee.entity.ts` - 수강 직원 엔티티 (독립 테이블)
 - `attendee.types.ts` - 수강 직원 타입
 - `education-management.entity.ts`
 - `education-management.types.ts`
 
-### 5. Wiki (위키)
+### 5. WikiFileSystem (위키 파일 시스템)
 
-**파일 위치**: `src/domain/sub/wiki/`
+**파일 위치**: `src/domain/sub/wiki-file-system/`
 
 ```typescript
 // 파일 시스템 타입
@@ -438,33 +479,32 @@ enum WikiFileSystemType {
   FILE = 'file',
 }
 
-interface WikiFileSystem {
-  id: string;
+interface WikiFileSystemEntity extends BaseEntity {
   name: string;
   type: WikiFileSystemType;
-  parentId: string | null;
-  children?: WikiFileSystem[];
-  updatedAt: Date; // Date 타입
-  createdAt: Date; // Date 타입
-  visibility: boolean;
-  ownerId: string;
-}
-
-interface WikiEntity extends BaseEntity {
-  title: string;
-  content: string;
-  fileSystem: WikiFileSystem;
+  parentId: string | null; // 자기 참조 (부모 폴더)
+  content?: string; // 텍스트/마크다운 파일용 (선택적)
+  fileUrl?: string; // AWS S3 URL (바이너리 파일용)
+  fileSize?: number; // 파일 크기 (bytes)
+  mimeType?: string; // MIME 타입 (예: image/jpeg, application/pdf)
   isPublic: boolean;
-  ownerId: string;
-  tags: string[]; // 단순 문자열 배열
+  ownerId: string; // 외부 시스템 직원 ID 참조
+  order: number; // 정렬 순서
 }
 ```
 
+**파일 저장 방식**:
+
+- **FOLDER**: 모든 파일 관련 필드는 null
+- **FILE (텍스트)**: `content` 필드 사용 (마크다운, 텍스트 등)
+- **FILE (바이너리)**: `fileUrl`, `fileSize`, `mimeType` 사용 (이미지, PDF, 문서 등)
+
 **구현 파일**:
 
+- `wiki-file-system.entity.ts` - 파일 시스템 엔티티
 - `wiki-file-system.types.ts` - 파일 시스템 타입
-- `wiki.entity.ts`
-- `wiki.types.ts`
+- `wiki-file-system.service.ts` - Domain Service
+- `wiki-file-system.module.ts` - NestJS Module
 
 ---
 
@@ -514,54 +554,71 @@ announcement-popup/
 
 ### JSONB 필드
 
-- `category`, `language`, `tags` 등은 JSONB로 저장
+- 각 도메인의 `categoryIds`는 통합 Category 테이블의 ID 배열을 참조 (Many-to-Many)
+- `languageId`는 Language 테이블의 ID를 참조 (Foreign Key)
+- 복잡한 JSON 데이터는 JSONB로 저장
 - PostgreSQL의 JSONB 타입 활용
 
 ---
 
-## 변경 사항 요약 (원본 대비)
+## 변경 사항 요약
 
-1. **타입 변경**:
+1. **엔티티로 변경**:
+   - `Language`: 타입에서 엔티티로 변경, 관리자가 직접 관리 가능
+   - `Category`: 도메인별 독립 테이블에서 통합 테이블로 변경
+   - 하나의 `Category` 테이블에서 `entityType` 필드로 도메인 구분
+   - 모든 도메인 엔티티에서 `categoryIds` (JSONB 배열)로 다대다 관계 유지
+
+2. **제거된 기능**:
+   - `Tag` 관련 모든 기능 제거
+   - 모든 엔티티에서 `tags` 필드 제거
+   - `Employee` 객체 제거, 외부 시스템 ID 참조로 변경
+   - `Wiki` 엔티티 제거, `WikiFileSystem`으로 통합
+
+3. **타입 변경**:
    - 모든 날짜 필드: `string` → `Date`
-   - `tag` → `tags` (배열 이름 통일)
+   - 모든 직원 참조: `manager: Employee` → `managerId: string`
+   - 모든 카테고리 참조: 도메인별 `categoryId` → 통합 `categoryIds: string[]` (다대다 관계)
+   - 모든 첨부파일: `attachments: string[]` → `Attachment` 테이블 (1:N 관계)
+   - `AnnouncementEmployee`: JSONB 배열 → 독립 테이블 (1:N 관계)
+   - `Attendee`: JSONB 배열 → 독립 테이블 (1:N 관계)
+   - `SurveyQuestion`: JSONB 배열 → 독립 테이블 (1:N 관계)
+   - `SurveyResponse`: JSONB 중첩 → 독립 테이블 (1:N 관계)
+   - `WikiFileSystem`: JSONB 중첩 구조 → 자기 참조 테이블
 
-2. **추가된 필드**:
-   - BaseEntity에 `deletedAt` 추가 (Soft Delete)
-   - `SurveyEntity`에 `status` 추가
+4. **추가된 엔티티**:
+   - `AnnouncementEmployeeEntity`: 공지사항 직원 응답 관리
+   - `AttendeeEntity`: 교육 수강 직원 관리
+   - `WikiFileSystemEntity`: 파일/폴더 계층 구조
+   - `AttachmentEntity`: 첨부파일 메타데이터 관리
+   - `SurveyQuestionEntity`: 설문 질문 관리
+   - `SurveyResponseEntity`: 설문 응답 관리
 
-3. **타입 정의 개선**:
-   - `InqueryType` Enum 추가
-   - `AttendeeStatus` Enum 추가
-   - `WikiFileSystemType` Enum 추가
-   - `InqueryResponseData`, `InqueryFormData` 타입 명시
+5. **추가된 필드**:
+   - 모든 콘텐츠 엔티티에 `order` 필드 추가 (정렬 기능)
+   - `WikiFileSystem`에 `order` 필드 추가 (파일/폴더 정렬)
+   - `BaseEntity`에 기본 포함: `id`, `createdAt`, `updatedAt`, `deletedAt`, `createdBy`, `updatedBy`, `version`
 
-4. **구현 구조**:
+6. **구현 구조**:
    - 각 도메인별로 Entity, DTO, Service, Module 분리
+   - Language는 공통 도메인으로 분리 (`src/domain/common/`)
+   - Category는 공통 도메인으로 통합 관리 (`src/domain/common/category/`)
    - 공통 타입은 `src/domain/core/common/types/`에 중앙화
    - Interface Layer는 별도 폴더로 구성
+   - 직원 정보는 외부 시스템에서 관리 (ID만 참조, SSO 연동)
 
 ---
 
-## 다음 구현 필요 사항
+**문서 업데이트**: 2026년 1월 6일  
+**구현 버전**: v5.0  
+**주요 변경**:
 
-### 우선순위 1
-
-- [ ] 나머지 11개 도메인의 Interface Layer (Controller, DTO)
-- [ ] 공용 데코레이터 (`@ToBoolean`, `@DateToUTC`, `@ParseUUID`)
-
-### 우선순위 2
-
-- [ ] Business Layer (DTO ↔ Entity 변환 로직)
-- [ ] Context Layer (CQRS Command/Query Handlers)
-
-### 우선순위 3
-
-- [ ] 인증/인가 (JWT, SSO 연동)
-- [ ] 파일 업로드 (AWS S3)
-- [ ] E2E 테스트
-
----
-
-**문서 업데이트**: 2026년 1월 5일
-**구현 버전**: v1.0
-**구현 상태**: Domain Layer 100% 완료, Interface Layer 10% 완료 (공지사항 팝업 예시)
+- Category 통합 테이블로 변경 (entityType으로 도메인 구분)
+- 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가
+- Language 엔티티화
+- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment)
+- Wiki 제거, WikiFileSystem으로 통합 (AWS S3 저장 지원)
+- Tag 기능 제거
+- Employee 외부 시스템 연동 (SSO)
+- 설문조사 질문/응답 정규화
+- 첨부파일 메타데이터 관리
