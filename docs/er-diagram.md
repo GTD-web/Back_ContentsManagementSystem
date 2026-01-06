@@ -21,7 +21,7 @@ erDiagram
     %% 공통 엔티티 - Attachment (최상단 배치)
     Attachment {
         uuid id PK
-        varchar entityType "announcement_popup|shareholders_meeting|announcement|education_management"
+        varchar entityType "main_popup|shareholders_meeting|announcement|education_management"
         uuid entityId "참조할 엔티티 ID"
         varchar fileName "원본 파일명"
         bigint fileSize "파일 크기(bytes)"
@@ -39,7 +39,7 @@ erDiagram
     %% 카테고리 엔티티 (통합)
     Category {
         uuid id PK
-        varchar entityType "announcement|announcement_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
         varchar name
         text description
         boolean isActive
@@ -55,7 +55,6 @@ erDiagram
     %% 카테고리 매핑 중간 테이블
     CategoryMapping {
         uuid id PK
-        varchar entityType "CategoryEntityType enum"
         uuid entityId "엔티티 ID"
         uuid categoryId FK
         timestamp createdAt
@@ -67,7 +66,7 @@ erDiagram
     }
 
     %% Core Domain
-    AnnouncementPopup {
+    MainPopup {
         uuid id PK
         varchar status "draft|approved|under_review|rejected|opened"
         boolean isPublic
@@ -81,9 +80,9 @@ erDiagram
         int version
     }
 
-    AnnouncementPopupTranslation {
+    MainPopupTranslation {
         uuid id PK
-        uuid announcementPopupId FK
+        uuid mainPopupId FK
         uuid languageId FK
         varchar title
         timestamp createdAt
@@ -96,7 +95,6 @@ erDiagram
 
     ShareholdersMeeting {
         uuid id PK
-        jsonb resultOfVote "ResultOfVote"
         boolean isPublic
         varchar location
         date meetingDate
@@ -110,13 +108,46 @@ erDiagram
         int version
     }
 
+    VoteResult {
+        uuid id PK
+        uuid shareholdersMeetingId FK
+        int agendaNumber "안건 번호"
+        int totalVote
+        int yesVote
+        int noVote
+        float approvalRating "찬성률(%)"
+        varchar result "accepted|rejected"
+        int order
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    VoteResultTranslation {
+        uuid id PK
+        uuid voteResultId FK
+        uuid languageId FK
+        varchar title "안건 제목"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
     ShareholdersMeetingTranslation {
         uuid id PK
         uuid shareholdersMeetingId FK
         uuid languageId FK
         varchar title
-        text resultText
-        text summary
+        text description "간단한 설명"
+        text content "상세 내용"
+        text resultText "의결 결과 텍스트"
+        text summary "요약"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -143,6 +174,8 @@ erDiagram
         uuid electronicDisclosureId FK
         uuid languageId FK
         varchar title
+        text description "간단한 설명"
+        text content "상세 내용"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -169,6 +202,8 @@ erDiagram
         uuid irId FK
         uuid languageId FK
         varchar title
+        text description "간단한 설명"
+        text content "상세 내용"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -195,6 +230,8 @@ erDiagram
         uuid brochureId FK
         uuid languageId FK
         varchar title
+        text description "간단한 설명"
+        text content "상세 내용"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -205,23 +242,12 @@ erDiagram
 
     News {
         uuid id PK
+        varchar title
+        text content
+        varchar url "외부 링크 또는 상세 페이지 URL"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt "nullable"
-        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
-        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
-        int version
-    }
-
-    NewsTranslation {
-        uuid id PK
-        uuid newsId FK
-        uuid languageId FK
-        varchar title
-        text content
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -270,23 +296,12 @@ erDiagram
     %% Sub Domain
     LumirStory {
         uuid id PK
+        varchar title
+        text content
+        varchar imageUrl "nullable - AWS S3 URL (썸네일/대표 이미지)"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt "nullable"
-        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
-        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
-        int version
-    }
-
-    LumirStoryTranslation {
-        uuid id PK
-        uuid lumirStoryId FK
-        uuid languageId FK
-        varchar title
-        text content
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -297,24 +312,12 @@ erDiagram
 
     VideoGallery {
         uuid id PK
+        varchar title
+        text description
+        varchar videoUrl "AWS S3 URL 또는 외부 비디오 URL"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
-        timestamp createdAt
-        timestamp updatedAt
-        timestamp deletedAt "nullable"
-        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
-        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
-        int version
-    }
-
-    VideoGalleryTranslation {
-        uuid id PK
-        uuid videoGalleryId FK
-        uuid languageId FK
-        varchar title
-        text description
-        varchar videoUrl "AWS S3 URL"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -405,7 +408,6 @@ erDiagram
         varchar name
         varchar type "folder|file"
         uuid parentId "nullable, self-reference"
-        text content "nullable - 텍스트 파일용"
         varchar fileUrl "nullable - AWS S3 URL"
         bigint fileSize "nullable - 파일 크기(bytes)"
         varchar mimeType "nullable - MIME 타입"
@@ -421,13 +423,16 @@ erDiagram
     }
 
     %% Relationships (Many-to-Many via CategoryMapping)
-    AnnouncementPopup ||--o{ CategoryMapping : "has"
+    MainPopup ||--o{ CategoryMapping : "has"
     CategoryMapping }o--|| Category : "references"
-    AnnouncementPopup ||--o{ AnnouncementPopupTranslation : "has translations"
-    AnnouncementPopupTranslation }o--|| Language : "in language"
-    AnnouncementPopup ||--o{ Attachment : "has attachments"
+    MainPopup ||--o{ MainPopupTranslation : "has translations"
+    MainPopupTranslation }o--|| Language : "in language"
+    MainPopup ||--o{ Attachment : "has attachments"
     
     ShareholdersMeeting ||--o{ CategoryMapping : "has"
+    ShareholdersMeeting ||--o{ VoteResult : "has vote results"
+    VoteResult ||--o{ VoteResultTranslation : "has translations"
+    VoteResultTranslation }o--|| Language : "in language"
     ShareholdersMeeting ||--o{ ShareholdersMeetingTranslation : "has translations"
     ShareholdersMeetingTranslation }o--|| Language : "in language"
     ShareholdersMeeting ||--o{ Attachment : "has attachments"
@@ -445,20 +450,14 @@ erDiagram
     BrochureTranslation }o--|| Language : "in language"
     
     News ||--o{ CategoryMapping : "has"
-    News ||--o{ NewsTranslation : "has translations"
-    NewsTranslation }o--|| Language : "in language"
     
     Announcement ||--o{ CategoryMapping : "has"
     Announcement ||--o{ AnnouncementEmployee : "has many"
     Announcement ||--o{ Attachment : "has attachments"
     
     LumirStory ||--o{ CategoryMapping : "has"
-    LumirStory ||--o{ LumirStoryTranslation : "has translations"
-    LumirStoryTranslation }o--|| Language : "in language"
     
     VideoGallery ||--o{ CategoryMapping : "has"
-    VideoGallery ||--o{ VideoGalleryTranslation : "has translations"
-    VideoGalleryTranslation }o--|| Language : "in language"
     
     Survey ||--o{ CategoryMapping : "has"
     Survey ||--o{ SurveyQuestion : "has many"
@@ -473,10 +472,10 @@ erDiagram
 
 ## Core Domain 상세
 
-### 공지사항 팝업 (AnnouncementPopup)
+### 메인 팝업 (MainPopup)
 ```mermaid
 erDiagram
-    AnnouncementPopup {
+    MainPopup {
         uuid id PK
         varchar status "draft|approved|under_review|rejected|opened"
         boolean isPublic
@@ -484,23 +483,22 @@ erDiagram
         int order
     }
     
-    AnnouncementPopupTranslation {
+    MainPopupTranslation {
         uuid id PK
-        uuid announcementPopupId FK
+        uuid mainPopupId FK
         uuid languageId FK
         varchar title
     }
     
     CategoryMapping {
         uuid id PK
-        varchar entityType "announcement_popup"
         uuid entityId
         uuid categoryId FK
     }
     
     Category {
         uuid id PK
-        varchar entityType "announcement_popup"
+        varchar entityType "main_popup"
         varchar name
         text description
         boolean isActive
@@ -516,7 +514,7 @@ erDiagram
     
     Attachment {
         uuid id PK
-        varchar entityType "announcement_popup"
+        varchar entityType "main_popup"
         uuid entityId
         varchar fileName
         bigint fileSize
@@ -525,11 +523,11 @@ erDiagram
         int order
     }
     
-    AnnouncementPopup ||--o{ AnnouncementPopupTranslation : "has translations"
-    AnnouncementPopupTranslation }o--|| Language : "in language"
-    AnnouncementPopup ||--o{ CategoryMapping : "has"
+    MainPopup ||--o{ MainPopupTranslation : "has translations"
+    MainPopupTranslation }o--|| Language : "in language"
+    MainPopup ||--o{ CategoryMapping : "has"
     CategoryMapping }o--|| Category : "references"
-    AnnouncementPopup ||--o{ Attachment : "has attachments"
+    MainPopup ||--o{ Attachment : "has attachments"
 ```
 
 ### 주주총회 (ShareholdersMeeting)
@@ -537,7 +535,6 @@ erDiagram
 erDiagram
     ShareholdersMeeting {
         uuid id PK
-        jsonb resultOfVote "ResultOfVote"
         boolean isPublic
         varchar location
         date meetingDate
@@ -545,18 +542,38 @@ erDiagram
         int order
     }
     
+    VoteResult {
+        uuid id PK
+        uuid shareholdersMeetingId FK
+        int agendaNumber "안건 번호"
+        int totalVote
+        int yesVote
+        int noVote
+        float approvalRating "찬성률(%)"
+        varchar result "accepted|rejected"
+        int order
+    }
+    
+    VoteResultTranslation {
+        uuid id PK
+        uuid voteResultId FK
+        uuid languageId FK
+        varchar title "안건 제목"
+    }
+    
     ShareholdersMeetingTranslation {
         uuid id PK
         uuid shareholdersMeetingId FK
         uuid languageId FK
         varchar title
-        text resultText
-        text summary
+        text description "간단한 설명"
+        text content "상세 내용"
+        text resultText "의결 결과 텍스트"
+        text summary "요약"
     }
     
     CategoryMapping {
         uuid id PK
-        varchar entityType "shareholders_meeting"
         uuid entityId
         uuid categoryId FK
     }
@@ -588,6 +605,9 @@ erDiagram
         int order
     }
     
+    ShareholdersMeeting ||--o{ VoteResult : "has vote results"
+    VoteResult ||--o{ VoteResultTranslation : "has translations"
+    VoteResultTranslation }o--|| Language : "in language"
     ShareholdersMeeting ||--o{ ShareholdersMeetingTranslation : "has translations"
     ShareholdersMeetingTranslation }o--|| Language : "in language"
     ShareholdersMeeting ||--o{ CategoryMapping : "has"
@@ -625,7 +645,6 @@ erDiagram
     
     CategoryMapping {
         uuid id PK
-        varchar entityType "announcement"
         uuid entityId
         uuid categoryId FK
     }
@@ -692,7 +711,6 @@ erDiagram
     
     CategoryMapping {
         uuid id PK
-        varchar entityType "survey"
         uuid entityId
         uuid categoryId FK
     }
@@ -756,7 +774,6 @@ erDiagram
         varchar name
         varchar type "folder|file"
         uuid parentId "nullable"
-        text content "nullable - 텍스트 파일용"
         varchar fileUrl "nullable - AWS S3 URL"
         bigint fileSize "nullable - bytes"
         varchar mimeType "nullable"
@@ -770,22 +787,9 @@ erDiagram
 
 **파일 저장 전략**:
 - **folder**: 디렉토리 구조만, 파일 관련 필드는 모두 null
-- **file (텍스트)**: `content` 필드에 직접 저장 (마크다운, 텍스트)
-- **file (바이너리)**: AWS S3에 업로드 후 `fileUrl`, `fileSize`, `mimeType` 저장 (이미지, PDF, 문서 등)
+- **file**: AWS S3에 업로드 후 `fileUrl`, `fileSize`, `mimeType` 저장 (모든 파일 타입)
 
 ## JSONB 필드 구조
-
-### ResultOfVote (주주총회 의결 결과)
-```json
-{
-  "title": "string",
-  "totalVote": "number",
-  "yesVote": "number",
-  "noVote": "number",
-  "approvalRating": "number",
-  "result": "accepted | rejected"
-}
-```
 
 ### InqueryFormData (설문 질문 폼)
 ```json
@@ -848,7 +852,7 @@ erDiagram
 
 ### CategoryEntityType
 - `announcement` - 공지사항
-- `announcement_popup` - 공지사항 팝업
+- `main_popup` - 메인 팝업
 - `shareholders_meeting` - 주주총회
 - `electronic_disclosure` - 전자공시
 - `ir` - IR
@@ -887,7 +891,7 @@ erDiagram
 - `file` - 파일
 
 ### AttachmentEntityType
-- `announcement_popup` - 공지사항 팝업
+- `main_popup` - 메인 팝업
 - `shareholders_meeting` - 주주총회
 - `announcement` - 공지사항
 - `education_management` - 교육 관리
@@ -905,12 +909,12 @@ erDiagram
 ### 카테고리 테이블 구조
 **통합 Category 테이블**:
 - 모든 도메인의 카테고리를 하나의 테이블로 관리
-- `entityType` 필드로 도메인 구분 (announcement, announcement_popup, shareholders_meeting, etc.)
+- `entityType` 필드로 도메인 구분 (announcement, main_popup, shareholders_meeting, etc.)
 - 동일한 구조(`name`, `description`, `isActive`, `order`)를 공유
 - 복합 인덱스: `(entityType, order)`, `(entityType, isActive)`
 
 **지원 도메인**:
-- AnnouncementPopup
+- MainPopup
 - ShareholdersMeeting
 - ElectronicDisclosure
 - IR
@@ -929,11 +933,14 @@ erDiagram
 - **Attendee**: 교육 수강 직원 관리
   - 개별 직원의 수강 진행 상태 추적
   - 교육 관리와 1:N 관계
+- **VoteResult**: 주주총회 의결 결과 관리
+  - 개별 안건의 의결 결과 추적
+  - 주주총회와 1:N 관계
+  - 안건 번호, 찬성/반대 투표수, 결과 등 관리
 - **WikiFileSystem**: 파일/폴더 계층 구조
   - 자기 참조(Self-reference)를 통한 트리 구조
   - 폴더와 파일을 하나의 테이블로 통합 관리
-  - 텍스트 파일은 `content` 필드에 직접 저장
-  - 바이너리 파일은 AWS S3에 업로드 후 URL 참조 (`fileUrl`, `fileSize`, `mimeType`)
+  - 모든 파일은 AWS S3에 업로드 후 URL 참조 (`fileUrl`, `fileSize`, `mimeType`)
 - **SurveyQuestion**: 설문 질문 관리
   - 개별 질문의 속성 및 순서 관리
   - 설문과 1:N 관계
@@ -945,8 +952,11 @@ erDiagram
   - 여러 엔티티와 다형성 관계 (Polymorphic Association)
 - **CategoryMapping**: 카테고리 매핑 중간 테이블
   - 엔티티와 카테고리 간의 다대다 관계를 정규화
-  - `entityType`, `entityId`, `categoryId`로 관계 관리
-  - 외래 키 제약조건으로 데이터 무결성 보장
+  - `entityId`, `categoryId`로 관계 관리
+  - `categoryId`를 통해 Category를 조회하면 entityType을 알 수 있음
+- **번역 테이블**: 다국어 지원 엔티티용 번역 테이블 (MainPopup, ShareholdersMeeting, VoteResult, ElectronicDisclosure, IR, Brochure)
+  - 각 엔티티의 언어별 콘텐츠를 별도 테이블로 관리
+  - `entityId`, `languageId`로 엔티티 및 언어 참조
 
 ### 엔티티 정렬 기능
 모든 콘텐츠 엔티티는 `order` 필드를 가집니다:
@@ -960,7 +970,7 @@ erDiagram
   - 시즌별 브로슈어 순서 조정
 
 **order 필드 적용 엔티티**:
-- AnnouncementPopup
+- MainPopup
 - ShareholdersMeeting
 - ElectronicDisclosure
 - IR
@@ -977,13 +987,14 @@ erDiagram
 엔티티와 카테고리는 **CategoryMapping 중간 테이블**을 통한 정규화된 다대다 관계입니다:
 - 하나의 엔티티는 여러 개의 카테고리에 속할 수 있습니다
 - 하나의 카테고리는 여러 개의 엔티티를 포함할 수 있습니다
-- `CategoryMapping` 테이블이 `entityType`, `entityId`, `categoryId`를 저장
+- `CategoryMapping` 테이블이 `entityId`, `categoryId`를 저장
+- `entityType`은 중복이므로 제거 (Category를 통해 알 수 있음)
 - **장점**: 
   - 데이터 정규화 및 무결성 보장
   - 복잡한 쿼리 성능 향상
   - 카테고리별 엔티티 조회 용이
-  - 외래 키 제약조건 적용 가능
-- **복합 인덱스**: `(entityType, entityId)`, `(categoryId)`
+  - Category JOIN 시 entityType 확인 가능
+- **복합 인덱스**: `(entityId)`, `(categoryId)`
 - 예: 하나의 공지사항이 "인사", "복지", "교육" 카테고리에 동시에 속할 수 있습니다
 
 ### 다국어 지원 (Translation Tables)
@@ -996,18 +1007,19 @@ erDiagram
 - 하나의 엔티티는 여러 언어로 번역될 수 있음 (1:N 관계)
 
 **번역 테이블이 있는 엔티티들**:
-- **AnnouncementPopup** ↔ `AnnouncementPopupTranslation` (title)
-- **ShareholdersMeeting** ↔ `ShareholdersMeetingTranslation` (title, resultText, summary)
-- **ElectronicDisclosure** ↔ `ElectronicDisclosureTranslation` (title)
-- **IR** ↔ `IRTranslation` (title)
-- **Brochure** ↔ `BrochureTranslation` (title)
-- **News** ↔ `NewsTranslation` (title, content)
-- **LumirStory** ↔ `LumirStoryTranslation` (title, content)
-- **VideoGallery** ↔ `VideoGalleryTranslation` (title, description, videoUrl)
+- **MainPopup** ↔ `MainPopupTranslation` (title)
+- **ShareholdersMeeting** ↔ `ShareholdersMeetingTranslation` (title, description, content, resultText, summary)
+- **VoteResult** ↔ `VoteResultTranslation` (title)
+- **ElectronicDisclosure** ↔ `ElectronicDisclosureTranslation` (title, description, content)
+- **IR** ↔ `IRTranslation` (title, description, content)
+- **Brochure** ↔ `BrochureTranslation` (title, description, content)
 
 **단일 언어 엔티티들** (번역 테이블 없음):
 - **Announcement**: 내부 공지사항으로 단일 언어만 사용
 - **Survey**: 설문조사는 단일 언어로만 작성
+- **News**: 뉴스는 단일 언어로만 작성
+- **LumirStory**: 루미르 스토리는 단일 언어로만 작성
+- **VideoGallery**: 비디오 갤러리는 단일 언어로만 작성
 
 **장점**:
 - 언어별 데이터 완전 분리 (정규화)
@@ -1017,12 +1029,12 @@ erDiagram
 
 **사용 예시**:
 ```sql
--- 한국어 공지사항 팝업 조회
-SELECT ap.*, apt.title
-FROM announcement_popup ap
-JOIN announcement_popup_translation apt ON ap.id = apt.announcement_popup_id
-JOIN language l ON apt.language_id = l.id
-WHERE l.code = 'ko' AND ap.is_public = true;
+-- 한국어 메인 팝업 조회
+SELECT mp.*, mpt.title
+FROM main_popup mp
+JOIN main_popup_translation mpt ON mp.id = mpt.main_popup_id
+JOIN language l ON mpt.language_id = l.id
+WHERE l.code = 'ko' AND mp.is_public = true;
 ```
 
 ### 엔티티별 접근 권한 관리
@@ -1069,11 +1081,17 @@ WHERE l.code = 'ko' AND ap.is_public = true;
 **주요 변경**: 
 - Category 통합 테이블로 변경 (10개 → 1개, entityType으로 도메인 구분)
 - CategoryMapping 중간 테이블 추가 (EntityCategory에서 이름 변경, 정규화된 다대다 관계)
-- 다국어 지원: 언어별 번역 테이블 추가 (AnnouncementPopup, ShareholdersMeeting, ElectronicDisclosure, IR, Brochure, News, LumirStory, VideoGallery)
-- 단일 언어 유지: Announcement, Survey는 번역 테이블 없이 단일 언어만 지원
+- CategoryMapping의 entityType 제거 (Category를 통해 알 수 있으므로 중복 제거)
+- 다국어 지원: 언어별 번역 테이블 추가 (MainPopup, ShareholdersMeeting, VoteResult, ElectronicDisclosure, IR, Brochure)
+- VoteResult 다국어 지원 추가 (VoteResultTranslation)
+- ElectronicDisclosure, IR, Brochure Translation에 description, content 필드 추가
+- 단일 언어 유지: Announcement, Survey, News, LumirStory, VideoGallery는 번역 테이블 없이 단일 언어만 지원
 - 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가 (정렬 기능)
-- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment, CategoryMapping)
+- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, VoteResult, SurveyQuestion, SurveyResponse, Attachment, CategoryMapping)
+- VoteResult 독립 테이블로 분리 (주주총회당 여러 안건 지원)
 - Wiki 제거, WikiFileSystem으로 통합 (파일/폴더 탐색기 구조, AWS S3 저장 지원)
+- WikiFileSystem content 필드 제거 (모든 파일은 AWS S3 저장)
 - 접근 권한 관리를 Announcement, Survey, WikiFileSystem에 적용 (permissionEmployeeIds 필드 - JSONB 배열)
 - managerId, ownerId 필드 제거 (모든 엔티티에서 제거, createdBy/updatedBy로 대체)
 - createdBy, updatedBy를 uuid 타입으로 변경 (외부 시스템 직원 ID - SSO)
+- AnnouncementPopup을 MainPopup으로 이름 변경

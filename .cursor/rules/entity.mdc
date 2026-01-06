@@ -48,7 +48,7 @@ interface LanguageEntity extends BaseEntity {
 ```typescript
 // 첨부파일이 속한 엔티티 타입
 enum AttachmentEntityType {
-  ANNOUNCEMENT_POPUP = 'announcement_popup',
+  MAIN_POPUP = 'main_popup',
   SHAREHOLDERS_MEETING = 'shareholders_meeting',
   ANNOUNCEMENT = 'announcement',
   EDUCATION_MANAGEMENT = 'education_management',
@@ -79,7 +79,7 @@ interface AttachmentEntity extends BaseEntity {
 ```typescript
 enum CategoryEntityType {
   ANNOUNCEMENT = 'announcement',
-  ANNOUNCEMENT_POPUP = 'announcement_popup',
+  MAIN_POPUP = 'main_popup',
   SHAREHOLDERS_MEETING = 'shareholders_meeting',
   ELECTRONIC_DISCLOSURE = 'electronic_disclosure',
   IR = 'ir',
@@ -112,7 +112,6 @@ interface CategoryEntity extends BaseEntity {
 
 ```typescript
 interface CategoryMappingEntity extends BaseEntity {
-  entityType: CategoryEntityType; // 어느 엔티티의 카테고리인지
   entityId: string; // 엔티티 ID
   categoryId: string; // Category 엔티티 참조
 }
@@ -171,24 +170,24 @@ abstract class BaseEntity<T> {
 
 ## Core Domain (핵심 비즈니스)
 
-### 1. AnnouncementPopup (공지사항 팝업)
+### 1. MainPopup (메인 팝업)
 
-**파일 위치**: `src/domain/core/announcement-popup/`
+**파일 위치**: `src/domain/core/main-popup/`
 
 ```typescript
-interface AnnouncementPopupEntity extends BaseEntity {
-  status: AnnouncementStatus;
+interface MainPopupEntity extends BaseEntity {
+  status: ContentStatus;
   isPublic: boolean;
   releasedAt?: Date; // Date 타입으로 수정
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
-  // attachments는 Attachment 테이블로 관리 (entityType = 'announcement_popup')
-  // translations는 AnnouncementPopupTranslation 테이블로 관리
+  // attachments는 Attachment 테이블로 관리 (entityType = 'main_popup')
+  // translations는 MainPopupTranslation 테이블로 관리
 }
 
 // 언어별 번역
-interface AnnouncementPopupTranslationEntity extends BaseEntity {
-  announcementPopupId: string; // AnnouncementPopup 엔티티 참조
+interface MainPopupTranslationEntity extends BaseEntity {
+  mainPopupId: string; // MainPopup 엔티티 참조
   languageId: string; // Language 엔티티 참조
   title: string;
 }
@@ -196,30 +195,38 @@ interface AnnouncementPopupTranslationEntity extends BaseEntity {
 
 **구현 파일**:
 
-- `announcement-popup.entity.ts` - TypeORM Entity
-- `announcement-popup-translation.entity.ts` - TypeORM Translation Entity
-- `announcement-popup.types.ts` - DTO 타입 정의
-- `announcement-popup.service.ts` - Domain Service
-- `announcement-popup.module.ts` - NestJS Module
+- `main-popup.entity.ts` - TypeORM Entity
+- `main-popup-translation.entity.ts` - TypeORM Translation Entity
+- `main-popup.types.ts` - DTO 타입 정의
+- `main-popup.service.ts` - Domain Service
+- `main-popup.module.ts` - NestJS Module
 
 ### 2. ShareholdersMeeting (주주총회)
 
 **파일 위치**: `src/domain/core/shareholders-meeting/`
 
-````typescript
-// 의결 결과
-interface ResultOfVote {
-  title: string;
+```typescript
+// 의결 결과 (독립 테이블)
+interface VoteResultEntity extends BaseEntity {
+  shareholdersMeetingId: string; // ShareholdersMeeting 엔티티 참조
+  agendaNumber: number; // 안건 번호 (예: 1, 2, 3)
   totalVote: number;
   yesVote: number;
   noVote: number;
-  approvalRating: number;
+  approvalRating: number; // 찬성률 (%)
   result: 'accepted' | 'rejected';
+  order: number; // 안건 순서
+  // translations는 VoteResultTranslation 테이블로 관리
 }
 
-```typescript
+// 의결 결과 언어별 번역
+interface VoteResultTranslationEntity extends BaseEntity {
+  voteResultId: string; // VoteResult 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string; // 안건 제목
+}
+
 interface ShareholdersMeetingEntity extends BaseEntity {
-  resultOfVote: ResultOfVote;
   isPublic: boolean;
   location: string;
   meetingDate: Date; // Date 타입
@@ -228,6 +235,7 @@ interface ShareholdersMeetingEntity extends BaseEntity {
   // categories는 CategoryMapping 중간 테이블로 관리
   // attachments는 Attachment 테이블로 관리 (entityType = 'shareholders_meeting')
   // translations는 ShareholdersMeetingTranslation 테이블로 관리
+  // voteResults는 VoteResult 테이블로 관리 (1:N 관계)
 }
 
 // 언어별 번역
@@ -235,13 +243,17 @@ interface ShareholdersMeetingTranslationEntity extends BaseEntity {
   shareholdersMeetingId: string; // ShareholdersMeeting 엔티티 참조
   languageId: string; // Language 엔티티 참조
   title: string;
-  resultText: string;
-  summary: string;
+  description: string; // 간단한 설명
+  content: string; // 상세 내용
+  resultText: string; // 의결 결과 텍스트
+  summary: string; // 요약
 }
-````
+```
 
 **구현 파일**:
 
+- `vote-result.entity.ts` - 의결 결과 엔티티 (독립 테이블)
+- `vote-result-translation.entity.ts` - 의결 결과 번역 엔티티
 - `vote-result.types.ts` - 의결 결과 타입
 - `shareholders-meeting.entity.ts`
 - `shareholders-meeting-translation.entity.ts`
@@ -265,6 +277,8 @@ interface ElectronicDisclosureTranslationEntity extends BaseEntity {
   electronicDisclosureId: string; // ElectronicDisclosure 엔티티 참조
   languageId: string; // Language 엔티티 참조
   title: string;
+  description: string; // 간단한 설명
+  content: string; // 상세 내용
 }
 ```
 
@@ -286,6 +300,8 @@ interface IRTranslationEntity extends BaseEntity {
   irId: string; // IR 엔티티 참조
   languageId: string; // Language 엔티티 참조
   title: string;
+  description: string; // 간단한 설명
+  content: string; // 상세 내용
 }
 ```
 
@@ -307,6 +323,8 @@ interface BrochureTranslationEntity extends BaseEntity {
   brochureId: string; // Brochure 엔티티 참조
   languageId: string; // Language 엔티티 참조
   title: string;
+  description: string; // 간단한 설명
+  content: string; // 상세 내용
 }
 ```
 
@@ -316,21 +334,22 @@ interface BrochureTranslationEntity extends BaseEntity {
 
 ```typescript
 interface NewsEntity extends BaseEntity {
+  title: string;
+  content: string;
+  url: string; // 외부 링크 또는 상세 페이지 URL
   isPublic: boolean;
   status: NewsStatus;
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
-  // translations는 NewsTranslation 테이블로 관리
-}
-
-// 언어별 번역
-interface NewsTranslationEntity extends BaseEntity {
-  newsId: string; // News 엔티티 참조
-  languageId: string; // Language 엔티티 참조
-  title: string;
-  content: string;
 }
 ```
+
+**구현 파일**:
+
+- `news.entity.ts` - TypeORM Entity
+- `news.types.ts` - DTO 타입 정의
+- `news.service.ts` - Domain Service
+- `news.module.ts` - NestJS Module
 
 ### 7. Announcement (공지사항)
 
@@ -382,21 +401,22 @@ interface AnnouncementEntity extends BaseEntity {
 
 ```typescript
 interface LumirStoryEntity extends BaseEntity {
+  title: string;
+  content: string;
+  imageUrl?: string; // AWS S3 URL (썸네일/대표 이미지, 선택적)
   isPublic: boolean;
   status: LumirStoryStatus;
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
-  // translations는 LumirStoryTranslation 테이블로 관리
-}
-
-// 언어별 번역
-interface LumirStoryTranslationEntity extends BaseEntity {
-  lumirStoryId: string; // LumirStory 엔티티 참조
-  languageId: string; // Language 엔티티 참조
-  title: string;
-  content: string;
 }
 ```
+
+**구현 파일**:
+
+- `lumir-story.entity.ts` - TypeORM Entity
+- `lumir-story.types.ts` - DTO 타입 정의
+- `lumir-story.service.ts` - Domain Service
+- `lumir-story.module.ts` - NestJS Module
 
 ### 2. VideoGallery (비디오 갤러리)
 
@@ -404,22 +424,22 @@ interface LumirStoryTranslationEntity extends BaseEntity {
 
 ```typescript
 interface VideoGalleryEntity extends BaseEntity {
+  title: string;
+  description: string;
+  videoUrl: string; // AWS S3 URL 또는 외부 비디오 URL
   isPublic: boolean;
   status: VideoGalleryStatus;
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
-  // translations는 VideoGalleryTranslation 테이블로 관리
-}
-
-// 언어별 번역
-interface VideoGalleryTranslationEntity extends BaseEntity {
-  videoGalleryId: string; // VideoGallery 엔티티 참조
-  languageId: string; // Language 엔티티 참조
-  title: string;
-  description: string;
-  videoUrl: string; // 언어별로 다른 비디오 URL일 수 있음
 }
 ```
+
+**구현 파일**:
+
+- `video-gallery.entity.ts` - TypeORM Entity
+- `video-gallery.types.ts` - DTO 타입 정의
+- `video-gallery.service.ts` - Domain Service
+- `video-gallery.module.ts` - NestJS Module
 
 ### 3. Survey (설문조사)
 
@@ -550,8 +570,7 @@ interface WikiFileSystemEntity extends BaseEntity {
   name: string;
   type: WikiFileSystemType;
   parentId: string | null; // 자기 참조 (부모 폴더)
-  content?: string; // 텍스트/마크다운 파일용 (선택적)
-  fileUrl?: string; // AWS S3 URL (바이너리 파일용)
+  fileUrl?: string; // AWS S3 URL (파일용, 선택적)
   fileSize?: number; // 파일 크기 (bytes)
   mimeType?: string; // MIME 타입 (예: image/jpeg, application/pdf)
   isPublic: boolean;
@@ -563,8 +582,7 @@ interface WikiFileSystemEntity extends BaseEntity {
 **파일 저장 방식**:
 
 - **FOLDER**: 모든 파일 관련 필드는 null
-- **FILE (텍스트)**: `content` 필드 사용 (마크다운, 텍스트 등)
-- **FILE (바이너리)**: `fileUrl`, `fileSize`, `mimeType` 사용 (이미지, PDF, 문서 등)
+- **FILE**: AWS S3에 업로드 후 `fileUrl`, `fileSize`, `mimeType` 저장
 
 **구현 파일**:
 
@@ -660,8 +678,9 @@ announcement-popup/
    - `AttachmentEntity`: 첨부파일 메타데이터 관리
    - `SurveyQuestionEntity`: 설문 질문 관리
    - `SurveyResponseEntity`: 설문 응답 관리
+   - `VoteResultEntity`: 주주총회 의결 결과 관리
    - `CategoryMappingEntity`: 카테고리 매핑 중간 테이블 (다대다 관계)
-   - 번역 엔티티: `AnnouncementPopupTranslation`, `ShareholdersMeetingTranslation`, `ElectronicDisclosureTranslation`, `IRTranslation`, `BrochureTranslation`, `NewsTranslation`, `LumirStoryTranslation`, `VideoGalleryTranslation`
+   - 번역 엔티티: `MainPopupTranslation`, `ShareholdersMeetingTranslation`, `ElectronicDisclosureTranslation`, `IRTranslation`, `BrochureTranslation`, `VoteResultTranslation`
 
 5. **추가된 필드**:
    - 모든 콘텐츠 엔티티에 `order` 필드 추가 (정렬 기능)
@@ -685,11 +704,17 @@ announcement-popup/
 
 - Category 통합 테이블로 변경 (entityType으로 도메인 구분)
 - CategoryMapping 중간 테이블 추가 (정규화된 다대다 관계)
+- CategoryMapping의 entityType 제거 (Category를 통해 알 수 있으므로 중복 제거)
 - 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가
 - Language 엔티티화
-- 다국어 지원: 언어별 번역 테이블 추가 (AnnouncementPopup, ShareholdersMeeting, ElectronicDisclosure, IR, Brochure, News, LumirStory, VideoGallery)
-- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment)
+- 다국어 지원: 언어별 번역 테이블 추가 (MainPopup, ShareholdersMeeting, VoteResult, ElectronicDisclosure, IR, Brochure)
+- VoteResult 다국어 지원 추가 (VoteResultTranslation)
+- ElectronicDisclosure, IR, Brochure Translation에 description, content 필드 추가
+- 단일 언어 엔티티: Announcement, Survey, News, LumirStory, VideoGallery
+- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, VoteResult, SurveyQuestion, SurveyResponse, Attachment)
+- VoteResult 독립 테이블로 분리 (주주총회당 여러 안건 지원)
 - Wiki 제거, WikiFileSystem으로 통합 (AWS S3 저장 지원)
+- WikiFileSystem content 필드 제거 (모든 파일은 AWS S3 저장)
 - Tag 기능 제거
 - Employee 외부 시스템 연동 (SSO)
 - 설문조사 질문/응답 정규화
