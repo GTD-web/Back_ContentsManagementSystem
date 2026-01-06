@@ -106,6 +106,25 @@ interface CategoryEntity extends BaseEntity {
 - `category.service.ts` - Domain Service
 - `category.module.ts` - NestJS Module
 
+### CategoryMapping (카테고리 매핑 중간 테이블)
+
+**파일 위치**: `src/domain/common/category-mapping/`
+
+```typescript
+interface CategoryMappingEntity extends BaseEntity {
+  entityType: CategoryEntityType; // 어느 엔티티의 카테고리인지
+  entityId: string; // 엔티티 ID
+  categoryId: string; // Category 엔티티 참조
+}
+```
+
+**구현 파일**:
+
+- `category-mapping.entity.ts` - TypeORM Entity
+- `category-mapping.types.ts` - DTO 타입 정의
+- `category-mapping.service.ts` - Domain Service
+- `category-mapping.module.ts` - NestJS Module
+
 ### ContentStatus (콘텐츠 상태)
 
 **파일 위치**: `src/domain/core/common/types/status.types.ts`
@@ -140,8 +159,8 @@ abstract class BaseEntity<T> {
   createdAt: Date; // 생성 일시
   updatedAt: Date; // 수정 일시
   deletedAt?: Date | null; // 삭제 일시 (Soft Delete)
-  createdBy?: string; // 생성자 ID
-  updatedBy?: string; // 수정자 ID
+  createdBy?: string; // 생성자 ID (외부 시스템 직원 ID - SSO)
+  updatedBy?: string; // 수정자 ID (외부 시스템 직원 ID - SSO)
   version: number; // 낙관적 락 버전
 
   abstract DTO로_변환한다(): T;
@@ -159,20 +178,26 @@ abstract class BaseEntity<T> {
 ```typescript
 interface AnnouncementPopupEntity extends BaseEntity {
   status: AnnouncementStatus;
-  title: string;
   isPublic: boolean;
-  categoryIds: string[]; // Category 엔티티 다대다 참조
-  languageId: string; // Language 엔티티 참조
-  managerId: string; // 외부 시스템 직원 ID 참조
   releasedAt?: Date; // Date 타입으로 수정
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
   // attachments는 Attachment 테이블로 관리 (entityType = 'announcement_popup')
+  // translations는 AnnouncementPopupTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface AnnouncementPopupTranslationEntity extends BaseEntity {
+  announcementPopupId: string; // AnnouncementPopup 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
 }
 ```
 
 **구현 파일**:
 
 - `announcement-popup.entity.ts` - TypeORM Entity
+- `announcement-popup-translation.entity.ts` - TypeORM Translation Entity
 - `announcement-popup.types.ts` - DTO 타입 정의
 - `announcement-popup.service.ts` - Domain Service
 - `announcement-popup.module.ts` - NestJS Module
@@ -195,18 +220,23 @@ interface ResultOfVote {
 ```typescript
 interface ShareholdersMeetingEntity extends BaseEntity {
   resultOfVote: ResultOfVote;
-  title: string;
-  resultText: string;
-  summary: string;
-  languageId: string; // Language 엔티티 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   location: string;
   meetingDate: Date; // Date 타입
-  managerId: string; // 외부 시스템 직원 ID 참조
   releasedAt?: Date; // Date 타입
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
   // attachments는 Attachment 테이블로 관리 (entityType = 'shareholders_meeting')
+  // translations는 ShareholdersMeetingTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface ShareholdersMeetingTranslationEntity extends BaseEntity {
+  shareholdersMeetingId: string; // ShareholdersMeeting 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
+  resultText: string;
+  summary: string;
 }
 ````
 
@@ -214,6 +244,7 @@ interface ShareholdersMeetingEntity extends BaseEntity {
 
 - `vote-result.types.ts` - 의결 결과 타입
 - `shareholders-meeting.entity.ts`
+- `shareholders-meeting-translation.entity.ts`
 - `shareholders-meeting.types.ts`
 
 ### 3. ElectronicDisclosure (전자공시)
@@ -222,13 +253,18 @@ interface ShareholdersMeetingEntity extends BaseEntity {
 
 ```typescript
 interface ElectronicDisclosureEntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  languageId: string; // Language 엔티티 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: ElectronicDisclosureStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 ElectronicDisclosureTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface ElectronicDisclosureTranslationEntity extends BaseEntity {
+  electronicDisclosureId: string; // ElectronicDisclosure 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
 }
 ```
 
@@ -238,13 +274,18 @@ interface ElectronicDisclosureEntity extends BaseEntity {
 
 ```typescript
 interface IREntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  languageId: string; // Language 엔티티 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: IRStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 IRTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface IRTranslationEntity extends BaseEntity {
+  irId: string; // IR 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
 }
 ```
 
@@ -254,13 +295,18 @@ interface IREntity extends BaseEntity {
 
 ```typescript
 interface BrochureEntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  languageId: string; // Language 엔티티 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: BrochureStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 BrochureTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface BrochureTranslationEntity extends BaseEntity {
+  brochureId: string; // Brochure 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
 }
 ```
 
@@ -270,12 +316,19 @@ interface BrochureEntity extends BaseEntity {
 
 ```typescript
 interface NewsEntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: NewsStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 NewsTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface NewsTranslationEntity extends BaseEntity {
+  newsId: string; // News 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
+  content: string;
 }
 ```
 
@@ -300,14 +353,14 @@ interface AnnouncementEntity extends BaseEntity {
   title: string;
   content: string;
   isFixed: boolean; // 상단 고정 여부
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   releasedAt?: Date; // Date 타입
   expiredAt?: Date; // Date 타입
   mustRead: boolean; // 필독 여부
-  managerId: string; // 외부 시스템 직원 ID 참조
   status: AnnouncementStatus;
   hits: number; // 조회수
+  permissionEmployeeIds: string[]; // 권한 있는 직원 ID 목록 (SSO)
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
   // attachments는 Attachment 테이블로 관리 (entityType = 'announcement')
 }
 `````
@@ -329,12 +382,19 @@ interface AnnouncementEntity extends BaseEntity {
 
 ```typescript
 interface LumirStoryEntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: LumirStoryStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 LumirStoryTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface LumirStoryTranslationEntity extends BaseEntity {
+  lumirStoryId: string; // LumirStory 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
+  content: string;
 }
 ```
 
@@ -344,12 +404,20 @@ interface LumirStoryEntity extends BaseEntity {
 
 ```typescript
 interface VideoGalleryEntity extends BaseEntity {
-  title: string;
-  managerId: string; // 외부 시스템 직원 ID 참조
-  categoryIds: string[]; // Category 엔티티 다대다 참조
   isPublic: boolean;
   status: VideoGalleryStatus;
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
+  // translations는 VideoGalleryTranslation 테이블로 관리
+}
+
+// 언어별 번역
+interface VideoGalleryTranslationEntity extends BaseEntity {
+  videoGalleryId: string; // VideoGallery 엔티티 참조
+  languageId: string; // Language 엔티티 참조
+  title: string;
+  description: string;
+  videoUrl: string; // 언어별로 다른 비디오 URL일 수 있음
 }
 ```
 
@@ -407,13 +475,13 @@ interface SurveyResponseEntity extends BaseEntity {
 
 interface SurveyEntity extends BaseEntity {
   title: string;
-  categoryIds: string[]; // Category 엔티티 다대다 참조
-  managerId: string; // 외부 시스템 직원 ID 참조
   description: string;
   status: SurveyStatus;
   startDate?: Date; // 시작일
   endDate?: Date; // 종료일
+  permissionEmployeeIds: string[]; // 권한 있는 직원 ID 목록 (SSO)
   order: number; // 정렬 순서
+  // categories는 CategoryMapping 중간 테이블로 관리
 }
 ```
 
@@ -455,7 +523,6 @@ interface EducationManagementEntity extends BaseEntity {
   content: string;
   isPublic: boolean;
   deadline: Date; // Date 타입
-  managerId: string; // 외부 시스템 직원 ID 참조
   order: number; // 정렬 순서
   // attachments는 Attachment 테이블로 관리 (entityType = 'education_management')
 }
@@ -488,7 +555,7 @@ interface WikiFileSystemEntity extends BaseEntity {
   fileSize?: number; // 파일 크기 (bytes)
   mimeType?: string; // MIME 타입 (예: image/jpeg, application/pdf)
   isPublic: boolean;
-  ownerId: string; // 외부 시스템 직원 ID 참조
+  permissionEmployeeIds: string[]; // 권한 있는 직원 ID 목록 (SSO)
   order: number; // 정렬 순서
 }
 ```
@@ -578,7 +645,7 @@ announcement-popup/
 3. **타입 변경**:
    - 모든 날짜 필드: `string` → `Date`
    - 모든 직원 참조: `manager: Employee` → `managerId: string`
-   - 모든 카테고리 참조: 도메인별 `categoryId` → 통합 `categoryIds: string[]` (다대다 관계)
+   - 모든 카테고리 참조: JSONB 배열 → `EntityCategory` 중간 테이블 (정규화된 다대다 관계)
    - 모든 첨부파일: `attachments: string[]` → `Attachment` 테이블 (1:N 관계)
    - `AnnouncementEmployee`: JSONB 배열 → 독립 테이블 (1:N 관계)
    - `Attendee`: JSONB 배열 → 독립 테이블 (1:N 관계)
@@ -593,11 +660,14 @@ announcement-popup/
    - `AttachmentEntity`: 첨부파일 메타데이터 관리
    - `SurveyQuestionEntity`: 설문 질문 관리
    - `SurveyResponseEntity`: 설문 응답 관리
+   - `CategoryMappingEntity`: 카테고리 매핑 중간 테이블 (다대다 관계)
+   - 번역 엔티티: `AnnouncementPopupTranslation`, `ShareholdersMeetingTranslation`, `ElectronicDisclosureTranslation`, `IRTranslation`, `BrochureTranslation`, `NewsTranslation`, `LumirStoryTranslation`, `VideoGalleryTranslation`
 
 5. **추가된 필드**:
    - 모든 콘텐츠 엔티티에 `order` 필드 추가 (정렬 기능)
    - `WikiFileSystem`에 `order` 필드 추가 (파일/폴더 정렬)
-   - `BaseEntity`에 기본 포함: `id`, `createdAt`, `updatedAt`, `deletedAt`, `createdBy`, `updatedBy`, `version`
+   - `Announcement`, `Survey`, `WikiFileSystem`에 `permissionEmployeeIds` 필드 추가 (접근 권한 관리)
+   - `BaseEntity`에 기본 포함: `id`, `createdAt`, `updatedAt`, `deletedAt`, `createdBy` (외부 시스템 직원 ID - SSO), `updatedBy` (외부 시스템 직원 ID - SSO), `version`
 
 6. **구현 구조**:
    - 각 도메인별로 Entity, DTO, Service, Module 분리
@@ -610,15 +680,19 @@ announcement-popup/
 ---
 
 **문서 업데이트**: 2026년 1월 6일  
-**구현 버전**: v5.0  
+**구현 버전**: v5.1  
 **주요 변경**:
 
 - Category 통합 테이블로 변경 (entityType으로 도메인 구분)
+- CategoryMapping 중간 테이블 추가 (정규화된 다대다 관계)
 - 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가
 - Language 엔티티화
+- 다국어 지원: 언어별 번역 테이블 추가 (AnnouncementPopup, ShareholdersMeeting, ElectronicDisclosure, IR, Brochure, News, LumirStory, VideoGallery)
 - JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment)
 - Wiki 제거, WikiFileSystem으로 통합 (AWS S3 저장 지원)
 - Tag 기능 제거
 - Employee 외부 시스템 연동 (SSO)
 - 설문조사 질문/응답 정규화
 - 첨부파일 메타데이터 관리
+- Announcement, Survey, WikiFileSystem에 권한 관리 필드 (permissionEmployeeIds)
+- managerId, ownerId 필드 제거 (createdBy/updatedBy로 대체)

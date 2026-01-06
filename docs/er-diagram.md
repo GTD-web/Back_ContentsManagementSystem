@@ -13,8 +13,8 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -31,8 +31,8 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -47,8 +47,22 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    %% 카테고리 매핑 중간 테이블
+    CategoryMapping {
+        uuid id PK
+        varchar entityType "CategoryEntityType enum"
+        uuid entityId "엔티티 ID"
+        uuid categoryId FK
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -56,107 +70,163 @@ erDiagram
     AnnouncementPopup {
         uuid id PK
         varchar status "draft|approved|under_review|rejected|opened"
-        varchar title
         boolean isPublic
-        jsonb categoryIds "uuid[] - Many-to-Many"
-        uuid languageId FK
-        varchar managerId "외부 시스템 ID (SSO)"
         timestamp releasedAt "nullable"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    AnnouncementPopupTranslation {
+        uuid id PK
+        uuid announcementPopupId FK
+        uuid languageId FK
+        varchar title
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     ShareholdersMeeting {
         uuid id PK
         jsonb resultOfVote "ResultOfVote"
-        varchar title
-        text resultText
-        text summary
-        uuid languageId FK
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar location
         date meetingDate
-        varchar managerId "외부 시스템 ID (SSO)"
         timestamp releasedAt "nullable"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    ShareholdersMeetingTranslation {
+        uuid id PK
+        uuid shareholdersMeetingId FK
+        uuid languageId FK
+        varchar title
+        text resultText
+        text summary
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     ElectronicDisclosure {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        uuid languageId FK
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    ElectronicDisclosureTranslation {
+        uuid id PK
+        uuid electronicDisclosureId FK
+        uuid languageId FK
+        varchar title
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     IR {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        uuid languageId FK
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    IRTranslation {
+        uuid id PK
+        uuid irId FK
+        uuid languageId FK
+        varchar title
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     Brochure {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        uuid languageId FK
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    BrochureTranslation {
+        uuid id PK
+        uuid brochureId FK
+        uuid languageId FK
+        varchar title
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     News {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    NewsTranslation {
+        uuid id PK
+        uuid newsId FK
+        uuid languageId FK
+        varchar title
+        text content
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -165,26 +235,25 @@ erDiagram
         varchar title
         text content
         boolean isFixed
-        jsonb categoryIds "uuid[] - Many-to-Many"
         timestamp releasedAt "nullable"
         timestamp expiredAt "nullable"
         boolean mustRead
-        varchar managerId "외부 시스템 ID (SSO)"
         varchar status "draft|approved|under_review|rejected|opened"
         int hits
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     AnnouncementEmployee {
         uuid id PK
         uuid announcementId FK
-        varchar employeeId "외부 시스템 ID (SSO)"
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
         boolean isRead
         boolean isSubmitted
         timestamp submittedAt "nullable"
@@ -193,59 +262,81 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     %% Sub Domain
     LumirStory {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    LumirStoryTranslation {
+        uuid id PK
+        uuid lumirStoryId FK
+        uuid languageId FK
+        varchar title
+        text content
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     VideoGallery {
         uuid id PK
-        varchar title
-        varchar managerId "외부 시스템 ID (SSO)"
-        jsonb categoryIds "uuid[] - Many-to-Many"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    VideoGalleryTranslation {
+        uuid id PK
+        uuid videoGalleryId FK
+        uuid languageId FK
+        varchar title
+        text description
+        varchar videoUrl "AWS S3 URL"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     Survey {
         uuid id PK
         varchar title
-        jsonb categoryIds "uuid[] - Many-to-Many"
-        varchar managerId "외부 시스템 ID (SSO)"
         text description
         varchar status "draft|approved|under_review|rejected|opened"
         date startDate "nullable"
         date endDate "nullable"
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -260,22 +351,22 @@ erDiagram
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     SurveyResponse {
         uuid id PK
         uuid questionId FK
-        varchar employeeId "외부 시스템 ID (SSO)"
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
         jsonb response "InqueryResponseData"
         timestamp submittedAt
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -285,28 +376,27 @@ erDiagram
         text content
         boolean isPublic
         date deadline
-        varchar managerId "외부 시스템 ID (SSO)"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
     Attendee {
         uuid id PK
         uuid educationManagementId FK
-        varchar employeeId "외부 시스템 ID (SSO)"
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
         varchar status "pending|in_progress|completed|overdue"
         timestamp completedAt "nullable"
         date deadline
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
@@ -320,45 +410,57 @@ erDiagram
         bigint fileSize "nullable - 파일 크기(bytes)"
         varchar mimeType "nullable - MIME 타입"
         boolean isPublic
-        varchar ownerId "외부 시스템 ID (SSO)"
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
-        varchar createdBy "nullable"
-        varchar updatedBy "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
         int version
     }
 
-    %% Relationships (Many-to-Many)
-    AnnouncementPopup }o--o{ Category : "categoryIds"
-    AnnouncementPopup }o--|| Language : "languageId"
+    %% Relationships (Many-to-Many via CategoryMapping)
+    AnnouncementPopup ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    AnnouncementPopup ||--o{ AnnouncementPopupTranslation : "has translations"
+    AnnouncementPopupTranslation }o--|| Language : "in language"
     AnnouncementPopup ||--o{ Attachment : "has attachments"
     
-    ShareholdersMeeting }o--o{ Category : "categoryIds"
-    ShareholdersMeeting }o--|| Language : "languageId"
+    ShareholdersMeeting ||--o{ CategoryMapping : "has"
+    ShareholdersMeeting ||--o{ ShareholdersMeetingTranslation : "has translations"
+    ShareholdersMeetingTranslation }o--|| Language : "in language"
     ShareholdersMeeting ||--o{ Attachment : "has attachments"
     
-    ElectronicDisclosure }o--o{ Category : "categoryIds"
-    ElectronicDisclosure }o--|| Language : "languageId"
+    ElectronicDisclosure ||--o{ CategoryMapping : "has"
+    ElectronicDisclosure ||--o{ ElectronicDisclosureTranslation : "has translations"
+    ElectronicDisclosureTranslation }o--|| Language : "in language"
     
-    IR }o--o{ Category : "categoryIds"
-    IR }o--|| Language : "languageId"
+    IR ||--o{ CategoryMapping : "has"
+    IR ||--o{ IRTranslation : "has translations"
+    IRTranslation }o--|| Language : "in language"
     
-    Brochure }o--o{ Category : "categoryIds"
-    Brochure }o--|| Language : "languageId"
+    Brochure ||--o{ CategoryMapping : "has"
+    Brochure ||--o{ BrochureTranslation : "has translations"
+    BrochureTranslation }o--|| Language : "in language"
     
-    News }o--o{ Category : "categoryIds"
+    News ||--o{ CategoryMapping : "has"
+    News ||--o{ NewsTranslation : "has translations"
+    NewsTranslation }o--|| Language : "in language"
     
-    Announcement }o--o{ Category : "categoryIds"
+    Announcement ||--o{ CategoryMapping : "has"
     Announcement ||--o{ AnnouncementEmployee : "has many"
     Announcement ||--o{ Attachment : "has attachments"
     
-    LumirStory }o--o{ Category : "categoryIds"
+    LumirStory ||--o{ CategoryMapping : "has"
+    LumirStory ||--o{ LumirStoryTranslation : "has translations"
+    LumirStoryTranslation }o--|| Language : "in language"
     
-    VideoGallery }o--o{ Category : "categoryIds"
+    VideoGallery ||--o{ CategoryMapping : "has"
+    VideoGallery ||--o{ VideoGalleryTranslation : "has translations"
+    VideoGalleryTranslation }o--|| Language : "in language"
     
-    Survey }o--o{ Category : "categoryIds"
+    Survey ||--o{ CategoryMapping : "has"
     Survey ||--o{ SurveyQuestion : "has many"
     
     SurveyQuestion ||--o{ SurveyResponse : "has many"
@@ -377,13 +479,23 @@ erDiagram
     AnnouncementPopup {
         uuid id PK
         varchar status "draft|approved|under_review|rejected|opened"
-        varchar title
         boolean isPublic
-        jsonb categoryIds "uuid[]"
-        uuid languageId FK
-        varchar managerId
-        timestamp releasedAt
+        timestamp releasedAt "nullable"
         int order
+    }
+    
+    AnnouncementPopupTranslation {
+        uuid id PK
+        uuid announcementPopupId FK
+        uuid languageId FK
+        varchar title
+    }
+    
+    CategoryMapping {
+        uuid id PK
+        varchar entityType "announcement_popup"
+        uuid entityId
+        uuid categoryId FK
     }
     
     Category {
@@ -399,6 +511,7 @@ erDiagram
         uuid id PK
         varchar code "ko|en|ja|zh"
         varchar name
+        boolean isActive
     }
     
     Attachment {
@@ -406,10 +519,16 @@ erDiagram
         varchar entityType "announcement_popup"
         uuid entityId
         varchar fileName
+        bigint fileSize
+        varchar mimeType
+        varchar url
+        int order
     }
     
-    AnnouncementPopup }o--o{ Category : "many-to-many"
-    AnnouncementPopup }o--|| Language : "written in"
+    AnnouncementPopup ||--o{ AnnouncementPopupTranslation : "has translations"
+    AnnouncementPopupTranslation }o--|| Language : "in language"
+    AnnouncementPopup ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
     AnnouncementPopup ||--o{ Attachment : "has attachments"
 ```
 
@@ -418,18 +537,28 @@ erDiagram
 erDiagram
     ShareholdersMeeting {
         uuid id PK
-        jsonb resultOfVote
-        varchar title
-        text resultText
-        text summary
-        uuid languageId FK
-        jsonb categoryIds "uuid[]"
+        jsonb resultOfVote "ResultOfVote"
         boolean isPublic
         varchar location
         date meetingDate
-        varchar managerId
-        timestamp releasedAt
+        timestamp releasedAt "nullable"
         int order
+    }
+    
+    ShareholdersMeetingTranslation {
+        uuid id PK
+        uuid shareholdersMeetingId FK
+        uuid languageId FK
+        varchar title
+        text resultText
+        text summary
+    }
+    
+    CategoryMapping {
+        uuid id PK
+        varchar entityType "shareholders_meeting"
+        uuid entityId
+        uuid categoryId FK
     }
     
     Category {
@@ -445,6 +574,7 @@ erDiagram
         uuid id PK
         varchar code "ko|en|ja|zh"
         varchar name
+        boolean isActive
     }
     
     Attachment {
@@ -452,10 +582,16 @@ erDiagram
         varchar entityType "shareholders_meeting"
         uuid entityId
         varchar fileName
+        bigint fileSize
+        varchar mimeType
+        varchar url
+        int order
     }
     
-    ShareholdersMeeting }o--o{ Category : "many-to-many"
-    ShareholdersMeeting }o--|| Language : "written in"
+    ShareholdersMeeting ||--o{ ShareholdersMeetingTranslation : "has translations"
+    ShareholdersMeetingTranslation }o--|| Language : "in language"
+    ShareholdersMeeting ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
     ShareholdersMeeting ||--o{ Attachment : "has attachments"
 ```
 
@@ -467,25 +603,31 @@ erDiagram
         varchar title
         text content
         boolean isFixed
-        jsonb categoryIds "uuid[]"
-        timestamp releasedAt
-        timestamp expiredAt
+        timestamp releasedAt "nullable"
+        timestamp expiredAt "nullable"
         boolean mustRead
-        varchar managerId
         varchar status "draft|approved|under_review|rejected|opened"
         int hits
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
     }
     
     AnnouncementEmployee {
         uuid id PK
         uuid announcementId FK
-        varchar employeeId
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
         boolean isRead
         boolean isSubmitted
-        timestamp submittedAt
-        timestamp readAt
-        text responseMessage
+        timestamp submittedAt "nullable"
+        timestamp readAt "nullable"
+        text responseMessage "nullable"
+    }
+    
+    CategoryMapping {
+        uuid id PK
+        varchar entityType "announcement"
+        uuid entityId
+        uuid categoryId FK
     }
     
     Category {
@@ -502,9 +644,14 @@ erDiagram
         varchar entityType "announcement"
         uuid entityId
         varchar fileName
+        bigint fileSize
+        varchar mimeType
+        varchar url
+        int order
     }
     
-    Announcement }o--o{ Category : "many-to-many"
+    Announcement ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
     Announcement ||--o{ AnnouncementEmployee : "has many"
     Announcement ||--o{ Attachment : "has attachments"
 ```
@@ -517,12 +664,11 @@ erDiagram
     Survey {
         uuid id PK
         varchar title
-        jsonb categoryIds "uuid[]"
-        varchar managerId
         text description
         varchar status "draft|approved|under_review|rejected|opened"
-        date startDate
-        date endDate
+        date startDate "nullable"
+        date endDate "nullable"
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
     }
     
@@ -531,7 +677,7 @@ erDiagram
         uuid surveyId FK
         varchar title
         varchar type "short_answer|paragraph|multiple_choice|dropdown|checkboxes|file_upload|datetime|linear_scale|grid_scale"
-        jsonb form
+        jsonb form "InqueryFormData"
         boolean isRequired
         int order
     }
@@ -539,9 +685,16 @@ erDiagram
     SurveyResponse {
         uuid id PK
         uuid questionId FK
-        varchar employeeId
-        jsonb response
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
+        jsonb response "InqueryResponseData"
         timestamp submittedAt
+    }
+    
+    CategoryMapping {
+        uuid id PK
+        varchar entityType "survey"
+        uuid entityId
+        uuid categoryId FK
     }
     
     Category {
@@ -553,7 +706,8 @@ erDiagram
         int order
     }
     
-    Survey }o--o{ Category : "many-to-many"
+    Survey ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
     Survey ||--o{ SurveyQuestion : "has many"
     SurveyQuestion ||--o{ SurveyResponse : "has many"
 ```
@@ -567,16 +721,15 @@ erDiagram
         text content
         boolean isPublic
         date deadline
-        varchar managerId
         int order
     }
     
     Attendee {
         uuid id PK
         uuid educationManagementId FK
-        varchar employeeId
+        varchar employeeId "외부 시스템 직원 ID (SSO)"
         varchar status "pending|in_progress|completed|overdue"
-        timestamp completedAt
+        timestamp completedAt "nullable"
         date deadline
     }
     
@@ -585,6 +738,10 @@ erDiagram
         varchar entityType "education_management"
         uuid entityId
         varchar fileName
+        bigint fileSize
+        varchar mimeType
+        varchar url
+        int order
     }
     
     EducationManagement ||--o{ Attendee : "has many"
@@ -604,7 +761,7 @@ erDiagram
         bigint fileSize "nullable - bytes"
         varchar mimeType "nullable"
         boolean isPublic
-        varchar ownerId
+        jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
     }
     
@@ -670,6 +827,17 @@ erDiagram
 }
 ```
 
+### permissionEmployeeIds (권한 직원 목록)
+```json
+// Announcement, Survey, WikiFileSystem에 적용
+[
+  "employee-uuid-1",
+  "employee-uuid-2",
+  "employee-uuid-3"
+]
+```
+**참고**: 이 필드는 `Announcement`, `Survey`, `WikiFileSystem` 엔티티에 존재하며, 외부 시스템(SSO)의 직원 ID 목록을 저장합니다.
+
 ## Enum 타입
 
 ### LanguageCode
@@ -726,12 +894,11 @@ erDiagram
 
 ## 외부 시스템 참조
 
-다음 필드들은 외부 직원 관리 시스템의 ID를 참조합니다:
-- `managerId` - 콘텐츠 관리자 ID
-- `ownerId` - 위키 소유자 ID
+다음 필드들은 외부 직원 관리 시스템(SSO)의 ID를 참조합니다:
 - `employeeId` - 공지사항/설문/교육 대상 직원 ID
-- `createdBy` - 생성자 ID (BaseEntity)
-- `updatedBy` - 수정자 ID (BaseEntity)
+- `permissionEmployeeIds` - 엔티티 접근 권한이 있는 직원 ID 목록 (JSONB 배열, Announcement/Survey/WikiFileSystem에 적용)
+- `createdBy` - 생성자 ID (BaseEntity, uuid 타입)
+- `updatedBy` - 수정자 ID (BaseEntity, uuid 타입)
 
 ## 데이터베이스 특징
 
@@ -776,6 +943,10 @@ erDiagram
 - **Attachment**: 첨부파일 메타데이터 관리
   - 파일명, 크기, MIME 타입 등의 메타데이터
   - 여러 엔티티와 다형성 관계 (Polymorphic Association)
+- **CategoryMapping**: 카테고리 매핑 중간 테이블
+  - 엔티티와 카테고리 간의 다대다 관계를 정규화
+  - `entityType`, `entityId`, `categoryId`로 관계 관리
+  - 외래 키 제약조건으로 데이터 무결성 보장
 
 ### 엔티티 정렬 기능
 모든 콘텐츠 엔티티는 `order` 필드를 가집니다:
@@ -803,11 +974,79 @@ erDiagram
 - WikiFileSystem
 
 ### Many-to-Many 관계
-엔티티와 카테고리는 **다대다(Many-to-Many)** 관계입니다:
+엔티티와 카테고리는 **CategoryMapping 중간 테이블**을 통한 정규화된 다대다 관계입니다:
 - 하나의 엔티티는 여러 개의 카테고리에 속할 수 있습니다
 - 하나의 카테고리는 여러 개의 엔티티를 포함할 수 있습니다
-- `categoryIds` 필드는 UUID 배열(JSONB)로 저장됩니다
+- `CategoryMapping` 테이블이 `entityType`, `entityId`, `categoryId`를 저장
+- **장점**: 
+  - 데이터 정규화 및 무결성 보장
+  - 복잡한 쿼리 성능 향상
+  - 카테고리별 엔티티 조회 용이
+  - 외래 키 제약조건 적용 가능
+- **복합 인덱스**: `(entityType, entityId)`, `(categoryId)`
 - 예: 하나의 공지사항이 "인사", "복지", "교육" 카테고리에 동시에 속할 수 있습니다
+
+### 다국어 지원 (Translation Tables)
+**다국어를 지원하는 엔티티들은 별도의 번역 테이블을 사용합니다**:
+
+**번역 테이블 구조**:
+- 각 엔티티의 기본 테이블은 언어 독립적인 데이터(ID, 상태, 공개 여부 등)만 포함
+- 언어별 번역 테이블(`[Entity]Translation`)이 번역 가능한 필드(title, content, description 등)를 저장
+- 번역 테이블은 `entityId`, `languageId`로 엔티티 및 언어 참조
+- 하나의 엔티티는 여러 언어로 번역될 수 있음 (1:N 관계)
+
+**번역 테이블이 있는 엔티티들**:
+- **AnnouncementPopup** ↔ `AnnouncementPopupTranslation` (title)
+- **ShareholdersMeeting** ↔ `ShareholdersMeetingTranslation` (title, resultText, summary)
+- **ElectronicDisclosure** ↔ `ElectronicDisclosureTranslation` (title)
+- **IR** ↔ `IRTranslation` (title)
+- **Brochure** ↔ `BrochureTranslation` (title)
+- **News** ↔ `NewsTranslation` (title, content)
+- **LumirStory** ↔ `LumirStoryTranslation` (title, content)
+- **VideoGallery** ↔ `VideoGalleryTranslation` (title, description, videoUrl)
+
+**단일 언어 엔티티들** (번역 테이블 없음):
+- **Announcement**: 내부 공지사항으로 단일 언어만 사용
+- **Survey**: 설문조사는 단일 언어로만 작성
+
+**장점**:
+- 언어별 데이터 완전 분리 (정규화)
+- 번역 누락 시 쉽게 감지 가능
+- 언어별 필드 개별 관리 가능 (예: 영어 제목만 수정)
+- 외래 키 제약조건으로 데이터 무결성 보장
+
+**사용 예시**:
+```sql
+-- 한국어 공지사항 팝업 조회
+SELECT ap.*, apt.title
+FROM announcement_popup ap
+JOIN announcement_popup_translation apt ON ap.id = apt.announcement_popup_id
+JOIN language l ON apt.language_id = l.id
+WHERE l.code = 'ko' AND ap.is_public = true;
+```
+
+### 엔티티별 접근 권한 관리
+**permissionEmployeeIds 필드**를 통한 간단한 접근 제어 (Announcement, Survey, WikiFileSystem에 적용):
+- **저장 방식**: 직원 ID의 JSONB 배열 (예: `["emp1", "emp2", "emp3"]`)
+- **적용 대상**: Announcement, Survey, WikiFileSystem
+  - Announcement: 특정 팀/부서만 볼 수 있는 내부 공지
+  - Survey: 특정 그룹만 응답 가능한 설문조사
+  - WikiFileSystem: 특정 직원/그룹만 접근 가능한 파일/폴더
+- **권한 체크**: 
+  ```typescript
+  if (entity.permissionEmployeeIds.includes(currentEmployeeId)) {
+    // 접근 허용
+  }
+  ```
+- **사용 시나리오**:
+  - 특정 부서만 볼 수 있는 공지사항 (예: 인사팀 전용 공지)
+  - 특정 직급 이상만 응답 가능한 설문조사 (예: 관리자 대상 설문)
+  - 특정 팀만 접근 가능한 위키 문서 (예: 개발팀 전용 기술 문서)
+- **향후 확장**: 필요 시 권한 레벨(read/write/delete/manage)을 포함하는 구조로 쉽게 확장 가능
+  ```typescript
+  // 현재: ["emp1", "emp2"]
+  // 향후: [{"employeeId": "emp1", "level": "read"}, {"employeeId": "emp2", "level": "write"}]
+  ```
 
 ### Soft Delete
 모든 엔티티는 `deletedAt` 필드를 가지며, 삭제 시 물리적으로 삭제되지 않고 `deletedAt` 타임스탬프가 기록됩니다.
@@ -825,10 +1064,16 @@ erDiagram
 ---
 
 **문서 생성일**: 2026년 1월 6일  
-**버전**: v5.0  
+**버전**: v5.1  
 **기반 문서**: `.cursor/rules/entity.mdc`  
 **주요 변경**: 
 - Category 통합 테이블로 변경 (10개 → 1개, entityType으로 도메인 구분)
+- CategoryMapping 중간 테이블 추가 (EntityCategory에서 이름 변경, 정규화된 다대다 관계)
+- 다국어 지원: 언어별 번역 테이블 추가 (AnnouncementPopup, ShareholdersMeeting, ElectronicDisclosure, IR, Brochure, News, LumirStory, VideoGallery)
+- 단일 언어 유지: Announcement, Survey는 번역 테이블 없이 단일 언어만 지원
 - 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가 (정렬 기능)
-- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment)
+- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, SurveyQuestion, SurveyResponse, Attachment, CategoryMapping)
 - Wiki 제거, WikiFileSystem으로 통합 (파일/폴더 탐색기 구조, AWS S3 저장 지원)
+- 접근 권한 관리를 Announcement, Survey, WikiFileSystem에 적용 (permissionEmployeeIds 필드 - JSONB 배열)
+- managerId, ownerId 필드 제거 (모든 엔티티에서 제거, createdBy/updatedBy로 대체)
+- createdBy, updatedBy를 uuid 타입으로 변경 (외부 시스템 직원 ID - SSO)
