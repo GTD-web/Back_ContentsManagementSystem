@@ -72,7 +72,6 @@ erDiagram
         varchar status "draft|approved|under_review|rejected|opened"
         boolean isPublic
         timestamp releasedAt "nullable"
-        varchar imageUrl "nullable - AWS S3 URL (팝업 이미지)"
         int order
         timestamp createdAt
         timestamp updatedAt
@@ -88,6 +87,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title
         text description "설명"
+        varchar imageUrl "nullable - AWS S3 URL (팝업 이미지, 언어별)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -190,7 +190,6 @@ erDiagram
         uuid id PK "description"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
-        varchar fileUrl "nullable - AWS S3 URL (IR 자료 파일)"
         int order
         timestamp createdAt
         timestamp updatedAt
@@ -206,7 +205,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title
         text description "간단한 설명"
-        text content "상세 내용"
+        varchar fileUrl "nullable - AWS S3 URL (IR 자료 파일, 언어별)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -219,7 +218,6 @@ erDiagram
         uuid id PK "description"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
-        varchar fileUrl "nullable - AWS S3 URL (브로슈어 파일)"
         int order
         timestamp createdAt
         timestamp updatedAt
@@ -235,6 +233,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title
         text description "간단한 설명"
+        varchar fileUrl "nullable - AWS S3 URL (브로슈어 파일, 언어별)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -246,7 +245,7 @@ erDiagram
     News {
         uuid id PK "description"
         varchar title
-        text content
+        text description "설명"
         varchar url "외부 링크 또는 상세 페이지 URL"
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
@@ -509,7 +508,6 @@ erDiagram
         varchar status "draft|approved|under_review|rejected|opened"
         boolean isPublic
         timestamp releasedAt "nullable"
-        varchar imageUrl "nullable - AWS S3 URL (팝업 이미지)"
         int order
     }
     
@@ -519,6 +517,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title
         text description "설명"
+        varchar imageUrl "nullable - AWS S3 URL (팝업 이미지, 언어별)"
     }
     
     CategoryMapping {
@@ -1155,12 +1154,12 @@ CREATE INDEX idx_pageview_session_viewed ON page_view(session_id, viewed_at DESC
 - 하나의 엔티티는 여러 언어로 번역될 수 있음 (1:N 관계)
 
 **번역 테이블이 있는 엔티티들**:
-- **MainPopup** ↔ `MainPopupTranslation` (title, description)
+- **MainPopup** ↔ `MainPopupTranslation` (title, description, imageUrl)
 - **ShareholdersMeeting** ↔ `ShareholdersMeetingTranslation` (title, description, content, resultText, summary)
 - **VoteResult** ↔ `VoteResultTranslation` (title)
 - **ElectronicDisclosure** ↔ `ElectronicDisclosureTranslation` (title, description)
-- **IR** ↔ `IRTranslation` (title, description, content)
-- **Brochure** ↔ `BrochureTranslation` (title, description)
+- **IR** ↔ `IRTranslation` (title, description, fileUrl)
+- **Brochure** ↔ `BrochureTranslation` (title, description, fileUrl)
 
 **단일 언어 엔티티들** (번역 테이블 없음):
 - **Announcement**: 내부 공지사항으로 단일 언어만 사용

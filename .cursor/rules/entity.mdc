@@ -188,7 +188,6 @@ interface MainPopupEntity extends BaseEntity {
   status: ContentStatus;
   isPublic: boolean;
   releasedAt?: Date; // Date 타입으로 수정
-  imageUrl?: string; // AWS S3 URL (팝업 이미지)
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
   // attachments는 Attachment 테이블로 관리 (entityType = 'main_popup')
@@ -201,6 +200,7 @@ interface MainPopupTranslationEntity extends BaseEntity {
   languageId: string; // Language 엔티티 참조
   title: string;
   description: string; // 설명
+  imageUrl?: string; // AWS S3 URL (팝업 이미지, 언어별)
 }
 ```
 
@@ -300,7 +300,6 @@ interface ElectronicDisclosureTranslationEntity extends BaseEntity {
 interface IREntity extends BaseEntity {
   isPublic: boolean;
   status: IRStatus;
-  fileUrl?: string; // AWS S3 URL (IR 자료 파일)
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
   // translations는 IRTranslation 테이블로 관리
@@ -312,7 +311,7 @@ interface IRTranslationEntity extends BaseEntity {
   languageId: string; // Language 엔티티 참조
   title: string;
   description: string; // 간단한 설명
-  content: string; // 상세 내용
+  fileUrl?: string; // AWS S3 URL (IR 자료 파일, 언어별)
 }
 ```
 
@@ -324,7 +323,6 @@ interface IRTranslationEntity extends BaseEntity {
 interface BrochureEntity extends BaseEntity {
   isPublic: boolean;
   status: BrochureStatus;
-  fileUrl?: string; // AWS S3 URL (브로슈어 파일)
   order: number; // 정렬 순서
   // categories는 CategoryMapping 중간 테이블로 관리
   // translations는 BrochureTranslation 테이블로 관리
@@ -336,6 +334,7 @@ interface BrochureTranslationEntity extends BaseEntity {
   languageId: string; // Language 엔티티 참조
   title: string;
   description: string; // 간단한 설명
+  fileUrl?: string; // AWS S3 URL (브로슈어 파일, 언어별)
 }
 ```
 
@@ -346,7 +345,7 @@ interface BrochureTranslationEntity extends BaseEntity {
 ```typescript
 interface NewsEntity extends BaseEntity {
   title: string;
-  content: string;
+  description: string;
   url: string; // 외부 링크 또는 상세 페이지 URL
   isPublic: boolean;
   status: NewsStatus;
