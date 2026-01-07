@@ -55,9 +55,9 @@ erDiagram
 
     CategoryMapping {
         uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -520,70 +520,194 @@ erDiagram
     WikiFileSystem }o--o| WikiFileSystem : "parentId (self-reference)"
 ```
 
-## Core Domain 상세
+---
 
-### 메인 팝업 (MainPopup)
+## 도메인 구성
+
+### Common Domain (공통 도메인)
+시스템 전반에서 공유되는 공통 엔티티
+
+1. **Language** (언어) - 다국어 지원
+2. **Attachment** (첨부파일) - 파일 첨부 메타데이터
+3. **Category** (카테고리) - 통합 카테고리 관리
+4. **CategoryMapping** (카테고리 매핑) - 엔티티-카테고리 관계
+
+### Core Domain (핵심 비즈니스)
+회사의 핵심 비즈니스 기능
+
+1. **ShareholdersMeeting** (주주총회) - 주주총회 정보 및 의결 결과
+2. **ElectronicDisclosure** (전자공시) - 전자공시 문서
+3. **IR** (투자자 관계) - IR 자료 및 투자자 정보
+4. **Brochure** (브로슈어) - 회사 소개 및 제품 브로슈어
+5. **News** (뉴스) - 언론 보도 및 뉴스
+6. **Announcement** (공지사항) - 내부 공지사항 및 직원 응답
+
+### Sub Domain (부가 기능)
+핵심 비즈니스를 지원하는 부가 기능
+
+1. **MainPopup** (메인 팝업) - 메인 페이지 팝업
+2. **LumirStory** (루미르 스토리) - 회사 스토리 및 콘텐츠
+3. **VideoGallery** (비디오 갤러리) - 비디오 콘텐츠
+4. **Survey** (설문조사) - 직원 설문조사 및 응답
+5. **EducationManagement** (교육 관리) - 직원 교육 및 수강 관리
+6. **WikiFileSystem** (위키 파일 시스템) - 문서 및 파일 관리
+7. **PageView** (페이지 조회 통계) - 페이지 방문 통계
+
+---
+
+## Common Domain 상세
+
+### 1. 언어 (Language)
 ```mermaid
 erDiagram
-    MainPopup {
-        uuid id PK "description"
-        varchar status "draft|approved|under_review|rejected|opened"
-        boolean isPublic
-        timestamp releasedAt "nullable"
-        int order
-    }
-    
-    MainPopupTranslation {
-        uuid id PK "description"
-        uuid mainPopupId UK "FK - 유니크 제약조건: (mainPopupId, languageId)"
-        uuid languageId UK "FK"
-        varchar title
-        text description "설명"
-        text imageUrl "nullable - AWS S3 URL (팝업 이미지, 언어별)"
-    }
-    
-    CategoryMapping {
-        uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
-    }
-    
-    Category {
-        uuid id PK "description"
-        varchar entityType "main_popup"
-        varchar name
-        text description "설명"
-        boolean isActive
-        int order
-    }
-    
     Language {
         uuid id PK "description"
         varchar code "ko|en|ja|zh"
-        varchar name
-        boolean isActive
+        varchar name "예: 한국어, English"
+        boolean isActive "활성화 여부"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
     }
-    
+```
+
+**설명**:
+- 시스템에서 지원하는 언어 관리
+- 다국어 번역 테이블에서 참조
+- 관리자가 활성/비활성 제어 가능
+
+**지원 언어**:
+- `ko` - 한국어
+- `en` - English (영어)
+- `ja` - 日本語 (일본어)
+- `zh` - 中文 (중국어)
+
+### 2. 첨부파일 (Attachment)
+```mermaid
+erDiagram
     Attachment {
         uuid id PK "description"
-        varchar entityType "main_popup"
-        uuid entityId
-        varchar fileName
-        bigint fileSize
-        varchar mimeType
-        text url
+        varchar entityType "main_popup|shareholders_meeting|announcement|education_management|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
+        uuid entityId "참조할 엔티티 ID"
+        varchar fileName "원본 파일명"
+        bigint fileSize "파일 크기(bytes)"
+        varchar mimeType "MIME 타입 (예: image/jpeg, application/pdf)"
+        text url "AWS S3 URL"
+        int order "첨부파일 순서"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+```
+
+**설명**:
+- 여러 엔티티에서 공유하는 첨부파일 메타데이터
+- 다형성 관계 (Polymorphic Association) 구조
+- 실제 파일은 AWS S3에 저장, URL만 DB에 저장
+- `order` 필드로 첨부파일 순서 제어
+
+**지원 엔티티**:
+- MainPopup, ShareholdersMeeting, Announcement
+- EducationManagement, ElectronicDisclosure, IR
+- Brochure, LumirStory, VideoGallery, News, Survey
+
+### 3. 카테고리 (Category)
+```mermaid
+erDiagram
+    Category {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey|education_management"
+        varchar name "카테고리 이름"
+        text description "카테고리 설명"
+        boolean isActive "활성화 여부"
+        int order "정렬 순서"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+```
+
+**설명**:
+- 모든 도메인의 카테고리를 하나의 테이블로 통합 관리
+- `entityType` 필드로 도메인 구분
+- 동일한 구조(name, description, isActive, order)를 공유
+- 관리자가 카테고리 생성/수정/활성화 제어
+
+**예시**:
+- Announcement: "인사", "복지", "IT", "전사공지"
+- News: "언론보도", "수상", "제품출시"
+- Survey: "직원만족도", "업무환경", "복지"
+
+### 4. 카테고리 매핑 (CategoryMapping)
+```mermaid
+erDiagram
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey|education_management - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "Category 참조 - UK composite: (entityType, entityId, categoryId)"
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+    
+    Category {
+        uuid id PK
+        varchar entityType
+        varchar name
+        text description
+        boolean isActive
         int order
     }
     
-    MainPopup ||--o{ MainPopupTranslation : "has translations"
-    MainPopupTranslation }o--|| Language : "in language"
-    MainPopup ||--o{ CategoryMapping : "has"
     CategoryMapping }o--|| Category : "references"
-    MainPopup ||--o{ Attachment : "has attachments"
 ```
 
-### 주주총회 (ShareholdersMeeting)
+**설명**:
+- 엔티티와 카테고리 간의 다대다(Many-to-Many) 관계를 정규화
+- 하나의 엔티티는 여러 카테고리에 속할 수 있음
+- 하나의 카테고리는 여러 엔티티를 포함할 수 있음
+- `entityType`은 성능 최적화용 비정규화 필드 (JOIN 없이 필터링)
+
+**유니크 제약조건**:
+- `(entityType, entityId, categoryId)` 복합 유니크 키
+- 같은 엔티티가 같은 카테고리를 중복으로 가질 수 없음
+- DB 레벨에서 중복 방지
+
+**복합 인덱스**:
+- `(entityType, entityId)` - 특정 엔티티의 카테고리 조회
+- `(categoryId)` - 특정 카테고리의 엔티티 조회
+
+**예시 쿼리**:
+```sql
+-- 특정 공지사항의 모든 카테고리 조회
+SELECT c.* FROM category c
+JOIN category_mapping cm ON c.id = cm.category_id
+WHERE cm.entity_type = 'announcement' AND cm.entity_id = 'announcement-uuid-123';
+
+-- 특정 카테고리의 모든 공지사항 조회
+SELECT a.* FROM announcement a
+JOIN category_mapping cm ON a.id = cm.entity_id
+WHERE cm.entity_type = 'announcement' AND cm.category_id = 'category-uuid-456';
+```
+
+---
+
+## Core Domain 상세
+
+### 1. 주주총회 (ShareholdersMeeting)
 ```mermaid
 erDiagram
     ShareholdersMeeting {
@@ -628,9 +752,9 @@ erDiagram
     
     CategoryMapping {
         uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
     }
     
     Category {
@@ -670,7 +794,207 @@ erDiagram
     ShareholdersMeeting ||--o{ Attachment : "has attachments"
 ```
 
-### 공지사항 (Announcement)
+### 2. 전자공시 (ElectronicDisclosure)
+```mermaid
+erDiagram
+    ElectronicDisclosure {
+        uuid id PK "description"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    ElectronicDisclosureTranslation {
+        uuid id PK "description"
+        uuid electronicDisclosureId UK "FK - 유니크 제약조건: (electronicDisclosureId, languageId)"
+        uuid languageId UK "FK"
+        varchar title
+        text description "간단한 설명"
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "electronic_disclosure"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Language {
+        uuid id PK "description"
+        varchar code "ko|en|ja|zh"
+        varchar name
+        boolean isActive
+    }
+    
+    ElectronicDisclosure ||--o{ ElectronicDisclosureTranslation : "has translations"
+    ElectronicDisclosureTranslation }o--|| Language : "in language"
+    ElectronicDisclosure ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+```
+
+### 3. IR (투자자 관계)
+```mermaid
+erDiagram
+    IR {
+        uuid id PK "description"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    IRTranslation {
+        uuid id PK "description"
+        uuid irId UK "FK - 유니크 제약조건: (irId, languageId)"
+        uuid languageId UK "FK"
+        varchar title
+        text description "간단한 설명"
+        text fileUrl "nullable - AWS S3 URL (IR 자료 파일, 언어별)"
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "ir"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Language {
+        uuid id PK "description"
+        varchar code "ko|en|ja|zh"
+        varchar name
+        boolean isActive
+    }
+    
+    Attachment {
+        uuid id PK "description"
+        varchar entityType "ir"
+        uuid entityId
+        varchar fileName
+        bigint fileSize
+        varchar mimeType
+        text url
+        int order
+    }
+    
+    IR ||--o{ IRTranslation : "has translations"
+    IRTranslation }o--|| Language : "in language"
+    IR ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    IR ||--o{ Attachment : "has attachments"
+```
+
+### 4. 브로슈어 (Brochure)
+```mermaid
+erDiagram
+    Brochure {
+        uuid id PK "description"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    BrochureTranslation {
+        uuid id PK "description"
+        uuid brochureId UK "FK - 유니크 제약조건: (brochureId, languageId)"
+        uuid languageId UK "FK"
+        varchar title
+        text description "간단한 설명"
+        text fileUrl "nullable - AWS S3 URL (브로슈어 파일, 언어별)"
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "brochure"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Language {
+        uuid id PK "description"
+        varchar code "ko|en|ja|zh"
+        varchar name
+        boolean isActive
+    }
+    
+    Brochure ||--o{ BrochureTranslation : "has translations"
+    BrochureTranslation }o--|| Language : "in language"
+    Brochure ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+```
+
+### 5. 뉴스 (News)
+```mermaid
+erDiagram
+    News {
+        uuid id PK "description"
+        varchar title
+        text description "설명"
+        text url "외부 링크 또는 상세 페이지 URL"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "news"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Attachment {
+        uuid id PK "description"
+        varchar entityType "news"
+        uuid entityId
+        varchar fileName
+        bigint fileSize
+        varchar mimeType
+        text url
+        int order
+    }
+    
+    News ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    News ||--o{ Attachment : "has attachments"
+```
+
+### 6. 공지사항 (Announcement)
 ```mermaid
 erDiagram
     Announcement {
@@ -701,9 +1025,9 @@ erDiagram
     
     CategoryMapping {
         uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
     }
     
     Category {
@@ -734,7 +1058,157 @@ erDiagram
 
 ## Sub Domain 상세
 
-### 설문조사 (Survey)
+### 1. 메인 팝업 (MainPopup)
+```mermaid
+erDiagram
+    MainPopup {
+        uuid id PK "description"
+        varchar status "draft|approved|under_review|rejected|opened"
+        boolean isPublic
+        timestamp releasedAt "nullable"
+        int order
+    }
+    
+    MainPopupTranslation {
+        uuid id PK "description"
+        uuid mainPopupId UK "FK - 유니크 제약조건: (mainPopupId, languageId)"
+        uuid languageId UK "FK"
+        varchar title
+        text description "설명"
+        text imageUrl "nullable - AWS S3 URL (팝업 이미지, 언어별)"
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "main_popup"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Language {
+        uuid id PK "description"
+        varchar code "ko|en|ja|zh"
+        varchar name
+        boolean isActive
+    }
+    
+    Attachment {
+        uuid id PK "description"
+        varchar entityType "main_popup"
+        uuid entityId
+        varchar fileName
+        bigint fileSize
+        varchar mimeType
+        text url
+        int order
+    }
+    
+    MainPopup ||--o{ MainPopupTranslation : "has translations"
+    MainPopupTranslation }o--|| Language : "in language"
+    MainPopup ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    MainPopup ||--o{ Attachment : "has attachments"
+```
+
+### 2. 루미르 스토리 (LumirStory)
+```mermaid
+erDiagram
+    LumirStory {
+        uuid id PK "description"
+        varchar title
+        text content
+        text imageUrl "nullable - AWS S3 URL (썸네일/대표 이미지)"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "lumir_story"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Attachment {
+        uuid id PK "description"
+        varchar entityType "lumir_story"
+        uuid entityId
+        varchar fileName
+        bigint fileSize
+        varchar mimeType
+        text url
+        int order
+    }
+    
+    LumirStory ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    LumirStory ||--o{ Attachment : "has attachments"
+```
+
+### 3. 비디오 갤러리 (VideoGallery)
+```mermaid
+erDiagram
+    VideoGallery {
+        uuid id PK "description"
+        varchar title
+        text description "설명"
+        boolean isPublic
+        varchar status "draft|approved|under_review|rejected|opened"
+        int order
+    }
+    
+    CategoryMapping {
+        uuid id PK "description"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
+    }
+    
+    Category {
+        uuid id PK "description"
+        varchar entityType "video_gallery"
+        varchar name
+        text description "설명"
+        boolean isActive
+        int order
+    }
+    
+    Attachment {
+        uuid id PK "description"
+        varchar entityType "video_gallery"
+        uuid entityId
+        varchar fileName
+        bigint fileSize
+        varchar mimeType
+        text url
+        int order
+    }
+    
+    VideoGallery ||--o{ CategoryMapping : "has"
+    CategoryMapping }o--|| Category : "references"
+    VideoGallery ||--o{ Attachment : "has attachments"
+```
+
+### 4. 설문조사 (Survey)
 ```mermaid
 erDiagram
     Survey {
@@ -769,9 +1243,9 @@ erDiagram
     
     CategoryMapping {
         uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
     }
     
     Category {
@@ -789,7 +1263,7 @@ erDiagram
     SurveyQuestion ||--o{ SurveyResponse : "has many"
 ```
 
-### 교육 관리 (EducationManagement)
+### 5. 교육 관리 (EducationManagement)
 ```mermaid
 erDiagram
     EducationManagement {
@@ -812,9 +1286,9 @@ erDiagram
     
     CategoryMapping {
         uuid id PK "description"
-        varchar entityType UK "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey|education_management"
-        uuid entityId UK "엔티티 ID"
-        uuid categoryId FK "유니크 제약조건: (entityType, entityId, categoryId)"
+        varchar entityType "announcement|main_popup|shareholders_meeting|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey|education_management - UK composite: (entityType, entityId, categoryId)"
+        uuid entityId "엔티티 ID - UK composite: (entityType, entityId, categoryId)"
+        uuid categoryId FK "UK composite: (entityType, entityId, categoryId)"
     }
     
     Category {
@@ -843,7 +1317,7 @@ erDiagram
     EducationManagement ||--o{ Attachment : "has attachments"
 ```
 
-### 위키 파일 시스템 (WikiFileSystem)
+### 6. 위키 파일 시스템 (WikiFileSystem)
 ```mermaid
 erDiagram
     WikiFileSystem {
@@ -866,7 +1340,7 @@ erDiagram
 - **folder**: 디렉토리 구조만, 파일 관련 필드는 모두 null
 - **file**: AWS S3에 업로드 후 `fileUrl`, `fileSize`, `mimeType` 저장 (모든 파일 타입)
 
-### 페이지 조회 통계 (PageView)
+### 7. 페이지 조회 통계 (PageView)
 ```mermaid
 erDiagram
     PageView {
@@ -1268,24 +1742,3 @@ WHERE l.code = 'ko' AND mp.is_public = true;
 **문서 생성일**: 2026년 1월 6일  
 **버전**: v5.1  
 **기반 문서**: `.cursor/rules/entity.mdc`  
-**주요 변경**: 
-- Category 통합 테이블로 변경 (10개 → 1개, entityType으로 도메인 구분)
-- CategoryMapping 중간 테이블 추가 (EntityCategory에서 이름 변경, 정규화된 다대다 관계)
-- CategoryMapping의 entityType 추가 (성능 최적화용 비정규화 필드, JOIN 없이 필터링 가능)
-- 다국어 지원: 언어별 번역 테이블 추가 (MainPopup, ShareholdersMeeting, VoteResult, ElectronicDisclosure, IR, Brochure)
-- VoteResult 다국어 지원 추가 (VoteResultTranslation)
-- ElectronicDisclosure Translation에 description 필드 추가
-- 단일 언어 유지: Announcement, Survey, News, LumirStory, VideoGallery는 번역 테이블 없이 단일 언어만 지원
-- 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가 (정렬 기능)
-- JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, VoteResult, SurveyQuestion, SurveyResponse, Attachment, CategoryMapping)
-- VoteResult 독립 테이블로 분리 (주주총회당 여러 안건 지원)
-- Wiki 제거, WikiFileSystem으로 통합 (파일/폴더 탐색기 구조, AWS S3 저장 지원)
-- WikiFileSystem content 필드 제거 (모든 파일은 AWS S3 저장)
-- 접근 권한 관리를 Announcement, Survey, WikiFileSystem에 적용 (permissionEmployeeIds 필드 - JSONB 배열)
-- managerId, ownerId 필드 제거 (모든 엔티티에서 제거, createdBy/updatedBy로 대체)
-- createdBy, updatedBy를 uuid 타입으로 변경 (외부 시스템 직원 ID - SSO)
-- AnnouncementPopup을 MainPopup으로 이름 변경
-- AWS S3 URL 필드 추가: MainPopup(imageUrl), IR(fileUrl), Brochure(fileUrl)
-- Announcement에 isPublic 필드 추가
-- EducationManagement에 managerId 필드 추가 (담당자 ID)
-- PageView 엔티티 추가 (페이지 조회 통계 수집)
