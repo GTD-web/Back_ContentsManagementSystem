@@ -265,6 +265,7 @@ erDiagram
         varchar title
         text content
         boolean isFixed
+        boolean isPublic
         timestamp releasedAt "nullable"
         timestamp expiredAt "nullable"
         boolean mustRead
@@ -383,6 +384,7 @@ erDiagram
         varchar title
         text content
         boolean isPublic
+        varchar managerId "담당자 ID (외부 시스템 직원 ID - SSO)"
         date deadline
         int order
         timestamp createdAt
@@ -418,6 +420,30 @@ erDiagram
         boolean isPublic
         jsonb permissionEmployeeIds "외부 시스템 직원 IDs (SSO)"
         int order
+        timestamp createdAt
+        timestamp updatedAt
+        timestamp deletedAt "nullable"
+        uuid createdBy "nullable - 외부 시스템 직원 ID (SSO)"
+        uuid updatedBy "nullable - 외부 시스템 직원 ID (SSO)"
+        int version
+    }
+
+    PageView {
+        uuid id PK "description"
+        varchar employeeId "nullable - 외부 시스템 직원 ID (SSO)"
+        varchar sessionId "세션 ID"
+        varchar pageUrl "방문한 페이지 URL"
+        varchar pageTitle "nullable - 페이지 제목"
+        varchar referrerUrl "nullable - 이전 페이지 URL"
+        varchar entityType "nullable - main_popup|shareholders_meeting|announcement|electronic_disclosure|ir|brochure|lumir_story|video_gallery|news|survey|education_management|wiki_file_system"
+        uuid entityId "nullable - 엔티티 ID"
+        timestamp viewedAt "방문 시각"
+        int duration "nullable - 체류 시간(초)"
+        varchar ipAddress "nullable - IP 주소"
+        text userAgent "nullable - 브라우저/디바이스 정보"
+        varchar deviceType "nullable - desktop|mobile|tablet"
+        varchar country "nullable - 국가"
+        varchar city "nullable - 도시"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -631,6 +657,7 @@ erDiagram
         varchar title
         text content
         boolean isFixed
+        boolean isPublic
         timestamp releasedAt "nullable"
         timestamp expiredAt "nullable"
         boolean mustRead
@@ -749,6 +776,7 @@ erDiagram
         varchar title
         text content
         boolean isPublic
+        varchar managerId "담당자 ID (외부 시스템 직원 ID - SSO)"
         date deadline
         int order
     }
@@ -798,6 +826,70 @@ erDiagram
 **파일 저장 전략**:
 - **folder**: 디렉토리 구조만, 파일 관련 필드는 모두 null
 - **file**: AWS S3에 업로드 후 `fileUrl`, `fileSize`, `mimeType` 저장 (모든 파일 타입)
+
+### 페이지 조회 통계 (PageView)
+```mermaid
+erDiagram
+    PageView {
+        uuid id PK "description"
+        varchar employeeId "nullable - 외부 시스템 직원 ID (SSO)"
+        varchar sessionId "세션 ID"
+        varchar pageUrl "방문한 페이지 URL"
+        varchar pageTitle "nullable - 페이지 제목"
+        varchar referrerUrl "nullable - 이전 페이지 URL"
+        varchar entityType "nullable - main_popup|shareholders_meeting|announcement|..."
+        uuid entityId "nullable - 엔티티 ID"
+        timestamp viewedAt "방문 시각"
+        int duration "nullable - 체류 시간(초)"
+        varchar ipAddress "nullable - IP 주소"
+        text userAgent "nullable - 브라우저 정보"
+        varchar deviceType "nullable - desktop|mobile|tablet"
+        varchar country "nullable - 국가"
+        varchar city "nullable - 도시"
+    }
+```
+
+**통계 쿼리 예시**:
+```sql
+-- 총 방문자 수 (30일)
+SELECT COUNT(DISTINCT COALESCE(employee_id, session_id)) as unique_visitors
+FROM page_view
+WHERE viewed_at >= NOW() - INTERVAL '30 days';
+
+-- 총 방문 기록 수
+SELECT COUNT(*) as total_views
+FROM page_view
+WHERE viewed_at >= NOW() - INTERVAL '30 days';
+
+-- 최근 방문 기록 (20건)
+SELECT *
+FROM page_view
+ORDER BY viewed_at DESC
+LIMIT 20;
+
+-- 페이지별 방문 수
+SELECT entity_type, COUNT(*) as view_count
+FROM page_view
+WHERE viewed_at >= NOW() - INTERVAL '30 days'
+  AND entity_type IS NOT NULL
+GROUP BY entity_type
+ORDER BY view_count DESC;
+
+-- 평균 체류 시간
+SELECT entity_type, AVG(duration) as avg_duration
+FROM page_view
+WHERE duration IS NOT NULL
+GROUP BY entity_type;
+```
+
+**인덱스 권장사항**:
+```sql
+CREATE INDEX idx_pageview_viewed_at ON page_view(viewed_at);
+CREATE INDEX idx_pageview_employee_id ON page_view(employee_id);
+CREATE INDEX idx_pageview_session_id ON page_view(session_id);
+CREATE INDEX idx_pageview_entity ON page_view(entity_type, entity_id);
+CREATE INDEX idx_pageview_page_url ON page_view(page_url);
+```
 
 ## JSONB 필드 구조
 
@@ -899,6 +991,25 @@ erDiagram
 ### WikiFileSystemType
 - `folder` - 폴더
 - `file` - 파일
+
+### DeviceType
+- `desktop` - 데스크톱
+- `mobile` - 모바일
+- `tablet` - 태블릿
+
+### PageViewEntityType
+- `main_popup` - 메인 팝업
+- `shareholders_meeting` - 주주총회
+- `announcement` - 공지사항
+- `electronic_disclosure` - 전자공시
+- `ir` - IR
+- `brochure` - 브로슈어
+- `lumir_story` - 루미르 스토리
+- `video_gallery` - 비디오 갤러리
+- `news` - 뉴스
+- `survey` - 설문조사
+- `education_management` - 교육 관리
+- `wiki_file_system` - 위키 파일 시스템
 
 ### AttachmentEntityType
 - `main_popup` - 메인 팝업
@@ -1110,7 +1221,7 @@ WHERE l.code = 'ko' AND mp.is_public = true;
 - CategoryMapping의 entityType 추가 (성능 최적화용 비정규화 필드, JOIN 없이 필터링 가능)
 - 다국어 지원: 언어별 번역 테이블 추가 (MainPopup, ShareholdersMeeting, VoteResult, ElectronicDisclosure, IR, Brochure)
 - VoteResult 다국어 지원 추가 (VoteResultTranslation)
-- ElectronicDisclosure, IR, Brochure Translation에 description 필드 추가
+- ElectronicDisclosure Translation에 description 필드 추가
 - 단일 언어 유지: Announcement, Survey, News, LumirStory, VideoGallery는 번역 테이블 없이 단일 언어만 지원
 - 모든 콘텐츠 엔티티 및 WikiFileSystem에 order 필드 추가 (정렬 기능)
 - JSONB → 독립 테이블 분리 (AnnouncementEmployee, Attendee, VoteResult, SurveyQuestion, SurveyResponse, Attachment, CategoryMapping)
@@ -1121,3 +1232,7 @@ WHERE l.code = 'ko' AND mp.is_public = true;
 - managerId, ownerId 필드 제거 (모든 엔티티에서 제거, createdBy/updatedBy로 대체)
 - createdBy, updatedBy를 uuid 타입으로 변경 (외부 시스템 직원 ID - SSO)
 - AnnouncementPopup을 MainPopup으로 이름 변경
+- AWS S3 URL 필드 추가: MainPopup(imageUrl), IR(fileUrl), Brochure(fileUrl)
+- Announcement에 isPublic 필드 추가
+- EducationManagement에 managerId 필드 추가 (담당자 ID)
+- PageView 엔티티 추가 (페이지 조회 통계 수집)

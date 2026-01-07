@@ -385,6 +385,7 @@ interface AnnouncementEntity extends BaseEntity {
   title: string;
   content: string;
   isFixed: boolean; // 상단 고정 여부
+  isPublic: boolean; // 공개 여부
   releasedAt?: Date; // Date 타입
   expiredAt?: Date; // Date 타입
   mustRead: boolean; // 필독 여부
@@ -557,6 +558,7 @@ interface EducationManagementEntity extends BaseEntity {
   title: string;
   content: string;
   isPublic: boolean;
+  managerId: string; // 담당자 ID (외부 시스템 직원 ID - SSO)
   deadline: Date; // Date 타입
   order: number; // 정렬 순서
   // attachments는 Attachment 테이블로 관리 (entityType = 'education_management')
@@ -605,6 +607,70 @@ interface WikiFileSystemEntity extends BaseEntity {
 - `wiki-file-system.types.ts` - 파일 시스템 타입
 - `wiki-file-system.service.ts` - Domain Service
 - `wiki-file-system.module.ts` - NestJS Module
+
+### 6. PageView (페이지 조회 통계)
+
+**파일 위치**: `src/domain/sub/page-view/`
+
+```typescript
+// 디바이스 타입
+enum DeviceType {
+  DESKTOP = 'desktop',
+  MOBILE = 'mobile',
+  TABLET = 'tablet',
+}
+
+// 페이지뷰 엔티티 타입 (통계 대상 엔티티)
+enum PageViewEntityType {
+  MAIN_POPUP = 'main_popup',
+  SHAREHOLDERS_MEETING = 'shareholders_meeting',
+  ANNOUNCEMENT = 'announcement',
+  ELECTRONIC_DISCLOSURE = 'electronic_disclosure',
+  IR = 'ir',
+  BROCHURE = 'brochure',
+  LUMIR_STORY = 'lumir_story',
+  VIDEO_GALLERY = 'video_gallery',
+  NEWS = 'news',
+  SURVEY = 'survey',
+  EDUCATION_MANAGEMENT = 'education_management',
+  WIKI_FILE_SYSTEM = 'wiki_file_system',
+}
+
+interface PageViewEntity extends BaseEntity {
+  // 사용자 정보
+  employeeId?: string; // 외부 시스템 직원 ID (SSO) - 로그인 사용자
+  sessionId: string; // 세션 ID (익명 사용자 추적)
+
+  // 페이지 정보
+  pageUrl: string; // 방문한 페이지 URL (예: /announcement/123)
+  pageTitle?: string; // 페이지 제목
+  referrerUrl?: string; // 이전 페이지 URL
+
+  // 엔티티 참조 (선택적)
+  entityType?: PageViewEntityType; // 페이지뷰 엔티티 타입
+  entityId?: string; // 해당 엔티티의 ID
+
+  // 방문 정보
+  viewedAt: Date; // 방문 시각
+  duration?: number; // 체류 시간 (초)
+
+  // 기술 정보
+  ipAddress?: string; // IP 주소
+  userAgent?: string; // 브라우저/디바이스 정보
+  deviceType?: DeviceType; // 디바이스 타입
+
+  // 지리 정보 (선택적)
+  country?: string; // 국가
+  city?: string; // 도시
+}
+```
+
+**구현 파일**:
+
+- `page-view.entity.ts` - 페이지뷰 엔티티
+- `page-view.types.ts` - 페이지뷰 타입
+- `page-view.service.ts` - Domain Service
+- `page-view.module.ts` - NestJS Module
 
 ---
 
