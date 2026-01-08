@@ -75,7 +75,7 @@ erDiagram
         boolean isPublic
         varchar status "draft|approved|under_review|rejected|opened"
         varchar location
-        date meetingDate
+        timestamp meetingDate "주주총회 일시"
         timestamp releasedAt "nullable"
         text imageUrl "nullable - AWS S3 URL (대표 이미지)"
         jsonb attachments "nullable - 첨부파일 목록 (AWS S3 URLs)"
@@ -91,13 +91,12 @@ erDiagram
     VoteResult {
         uuid id PK "description"
         uuid shareholdersMeetingId FK
-        int agendaNumber "안건 번호"
+        int agendaNumber "안건 번호 (정렬 순서로도 사용)"
         int totalVote
         int yesVote
         int noVote
         float approvalRating "찬성률(%)"
         varchar result "accepted|rejected"
-        int order
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -346,8 +345,8 @@ erDiagram
         uuid announcementId UK "FK - 공지사항 ID (유니크 제약조건: 공지사항당 설문 1개)"
         varchar title
         text description
-        date startDate "nullable - 설문 시작일"
-        date endDate "nullable - 설문 마감일"
+        timestamp startDate "nullable - 설문 시작일시"
+        timestamp endDate "nullable - 설문 마감일시"
         int order
         timestamp createdAt
         timestamp updatedAt
@@ -498,7 +497,7 @@ erDiagram
         boolean isPublic
         varchar status "scheduled|in_progress|completed|cancelled|postponed"
         uuid managerId "담당자 ID (외부 시스템 직원 ID - SSO)"
-        date deadline
+        timestamp deadline "교육 마감일시"
         jsonb attachments "nullable - 첨부파일 목록 (AWS S3 URLs)"
         int order
         timestamp createdAt
@@ -549,6 +548,21 @@ erDiagram
         uuid ancestor PK "FK - 조상 노드 ID"
         uuid descendant PK "FK - 자손 노드 ID"
         int depth "거리 (0=자기자신, 1=직접자식)"
+        timestamp createdAt
+    }
+
+    InvalidPermissionLog {
+        uuid id PK "description"
+        varchar entityType "wiki_file_system|announcement 등"
+        uuid entityId "대상 엔티티 ID"
+        varchar permissionType "department|rank|position|employee"
+        jsonb invalidCodes "무효화된 코드/ID 목록"
+        jsonb originalPermissions "원본 권한 설정 (스냅샷)"
+        varchar action "detected|removed|notified|resolved"
+        text note "nullable - 추가 메모"
+        timestamp detectedAt "감지 시각"
+        timestamp resolvedAt "nullable - 해결 시각"
+        uuid resolvedBy "nullable - 해결한 관리자 ID"
         timestamp createdAt
     }
 
@@ -611,6 +625,8 @@ erDiagram
     WikiFileSystem }o--o| WikiFileSystem : "parentId (self-reference)"
     WikiFileSystem ||--o{ WikiFileSystemClosure : "ancestor"
     WikiFileSystem ||--o{ WikiFileSystemClosure : "descendant"
+    
+    %% InvalidPermissionLog는 여러 엔티티를 참조하므로 관계 표시 생략 (entityType + entityId로 동적 참조)
 ```
 
 ---
@@ -650,6 +666,7 @@ erDiagram
 | **Survey** | 공지사항 연동 설문조사 (타입별 응답 테이블 분리) | ❌ |
 | **EducationManagement** | 직원 교육 및 수강 관리 | ❌ |
 | **WikiFileSystem** | 문서 및 파일 관리 (계층 구조) | ❌ |
+| **InvalidPermissionLog** | 외부 시스템 권한 무효화 이력 추적 | ❌ |
 
 ---
 
@@ -748,6 +765,16 @@ enum WikiFileSystemType {
 }
 ```
 
+### InvalidPermissionAction (권한 무효화 처리 상태)
+```typescript
+enum InvalidPermissionAction {
+  DETECTED = 'detected',   // 감지됨
+  REMOVED = 'removed',     // 무효한 코드 제거됨
+  NOTIFIED = 'notified',   // 관리자에게 통보됨
+  RESOLVED = 'resolved'    // 해결됨
+}
+```
+
 ---
 
 ## 외부 시스템 참조
@@ -792,8 +819,13 @@ enum WikiFileSystemType {
 - **자기 참조**: parentId를 통한 트리 구조
 - **파일 저장**: AWS S3에 업로드 후 URL 참조
 
-### 6. 공통 기능
-- **Soft Delete**: `deletedAt` 필드로 논리 삭제
+### 6. 외부 시스템 권한 무효화 추적
+- **InvalidPermissionLog**: 외부 시스템(SSO)의 부서/직급/직책 코드 변경 시 이력 추적
+- **용도**: 감사 로그, 권한 변경 이력, 문제 해결 추적
+- **지원 엔티티**: WikiFileSystem, Announcement 등 외부 권한 코드를 사용하는 모든 엔티티
+
+### 7. 공통 기능
+- **Soft Delete**: `deletedAt` 필드로 논리 삭제 (단, SurveyResponseCheckbox는 hard delete 사용)
 - **Optimistic Locking**: `version` 필드로 동시성 제어
 - **Audit Fields**: `createdAt`, `updatedAt`, `createdBy`, `updatedBy`
 - **Order Field**: 모든 콘텐츠 엔티티에서 정렬 순서 관리
@@ -819,6 +851,19 @@ enum WikiFileSystemType {
 ---
 
 ## 변경 이력
+
+### v5.14 (2026-01-08)
+- ✅ **데이터 타입 일관성 개선**
+  - `VoteResult.order` 필드 제거 (agendaNumber로 정렬)
+  - date → timestamp 변경: `ShareholdersMeeting.meetingDate`, `Survey.startDate/endDate`, `EducationManagement.deadline`
+  - 모든 날짜 관련 필드가 시간 정보 포함 (정확한 일시 관리)
+- ✅ **외부 시스템 권한 무효화 추적**
+  - `InvalidPermissionLog` 엔티티 추가
+  - 외부 시스템(SSO) 부서/직급/직책 코드 변경 시 이력 추적
+  - 감사 로그 및 문제 해결을 위한 히스토리 관리
+- ✅ **설문 응답 삭제 정책 명확화**
+  - `SurveyResponseCheckbox`: hard delete 사용 (체크박스 선택/해제 반복 지원)
+  - 사용자가 선택 취소 시 레코드 완전 삭제 (UK 제약조건 문제 없음)
 
 ### v5.13 (2026-01-08)
 - ✅ **상태 관리 필드 추가**
@@ -870,4 +915,4 @@ enum WikiFileSystemType {
 
 **문서 생성일**: 2026년 1월 6일  
 **최종 업데이트**: 2026년 1월 8일  
-**버전**: v5.13
+**버전**: v5.14
