@@ -551,18 +551,18 @@ erDiagram
         timestamp createdAt
     }
 
-    InvalidPermissionLog {
+    WikiPermissionLog {
         uuid id PK "description"
-        varchar entityType "wiki_file_system|announcement 등"
-        uuid entityId "대상 엔티티 ID"
-        varchar permissionType "department|rank|position|employee"
-        jsonb invalidCodes "무효화된 코드/ID 목록"
-        jsonb originalPermissions "원본 권한 설정 (스냅샷)"
+        uuid wikiFileSystemId FK "wiki_file_system ID"
+        jsonb invalidDepartmentCodes "nullable - 무효화된 부서 코드 목록"
+        jsonb invalidRankCodes "nullable - 무효화된 직급 코드 목록"
+        jsonb invalidPositionCodes "nullable - 무효화된 직책 코드 목록"
+        jsonb snapshotPermissions "권한 설정 스냅샷"
         varchar action "detected|removed|notified|resolved"
         text note "nullable - 추가 메모"
         timestamp detectedAt "감지 시각"
         timestamp resolvedAt "nullable - 해결 시각"
-        uuid resolvedBy "nullable - 해결한 관리자 ID"
+        uuid resolvedBy "nullable - 해결한 관리자 ID (외부 시스템 직원 ID - SSO)"
         timestamp createdAt
     }
 
@@ -625,8 +625,7 @@ erDiagram
     WikiFileSystem }o--o| WikiFileSystem : "parentId (self-reference)"
     WikiFileSystem ||--o{ WikiFileSystemClosure : "ancestor"
     WikiFileSystem ||--o{ WikiFileSystemClosure : "descendant"
-    
-    %% InvalidPermissionLog는 여러 엔티티를 참조하므로 관계 표시 생략 (entityType + entityId로 동적 참조)
+    WikiFileSystem ||--o{ WikiPermissionLog : "has permission logs"
 ```
 
 ---
@@ -666,7 +665,7 @@ erDiagram
 | **Survey** | 공지사항 연동 설문조사 (타입별 응답 테이블 분리) | ❌ |
 | **EducationManagement** | 직원 교육 및 수강 관리 | ❌ |
 | **WikiFileSystem** | 문서 및 파일 관리 (계층 구조) | ❌ |
-| **InvalidPermissionLog** | 외부 시스템 권한 무효화 이력 추적 | ❌ |
+| **WikiPermissionLog** | WikiFileSystem 권한 무효화 이력 추적 | ❌ |
 
 ---
 
@@ -765,13 +764,13 @@ enum WikiFileSystemType {
 }
 ```
 
-### InvalidPermissionAction (권한 무효화 처리 상태)
+### WikiPermissionAction (Wiki 권한 무효화 처리 상태)
 ```typescript
-enum InvalidPermissionAction {
-  DETECTED = 'detected',   // 감지됨
-  REMOVED = 'removed',     // 무효한 코드 제거됨
+enum WikiPermissionAction {
+  DETECTED = 'detected',   // 감지됨 (무효한 코드 발견)
+  REMOVED = 'removed',     // 무효한 코드 자동 제거됨
   NOTIFIED = 'notified',   // 관리자에게 통보됨
-  RESOLVED = 'resolved'    // 해결됨
+  RESOLVED = 'resolved'    // 관리자가 수동으로 해결함
 }
 ```
 
@@ -819,10 +818,10 @@ enum InvalidPermissionAction {
 - **자기 참조**: parentId를 통한 트리 구조
 - **파일 저장**: AWS S3에 업로드 후 URL 참조
 
-### 6. 외부 시스템 권한 무효화 추적
-- **InvalidPermissionLog**: 외부 시스템(SSO)의 부서/직급/직책 코드 변경 시 이력 추적
-- **용도**: 감사 로그, 권한 변경 이력, 문제 해결 추적
-- **지원 엔티티**: WikiFileSystem, Announcement 등 외부 권한 코드를 사용하는 모든 엔티티
+### 6. WikiFileSystem 권한 무효화 추적
+- **WikiPermissionLog**: 외부 시스템(SSO)의 부서/직급/직책 코드 제거/변경 시 이력 추적
+- **용도**: WikiFileSystem 권한 변경 감사 로그, 문제 해결 추적
+- **특징**: 무효화된 코드별 추적, 권한 설정 스냅샷 보관, 해결 여부 관리
 
 ### 7. 공통 기능
 - **Soft Delete**: `deletedAt` 필드로 논리 삭제 (단, SurveyResponseCheckbox는 hard delete 사용)
@@ -857,10 +856,10 @@ enum InvalidPermissionAction {
   - `VoteResult.order` 필드 제거 (agendaNumber로 정렬)
   - date → timestamp 변경: `ShareholdersMeeting.meetingDate`, `Survey.startDate/endDate`, `EducationManagement.deadline`
   - 모든 날짜 관련 필드가 시간 정보 포함 (정확한 일시 관리)
-- ✅ **외부 시스템 권한 무효화 추적**
-  - `InvalidPermissionLog` 엔티티 추가
-  - 외부 시스템(SSO) 부서/직급/직책 코드 변경 시 이력 추적
-  - 감사 로그 및 문제 해결을 위한 히스토리 관리
+- ✅ **WikiFileSystem 권한 무효화 추적**
+  - `WikiPermissionLog` 엔티티 추가
+  - 외부 시스템(SSO) 부서/직급/직책 코드 제거 시 이력 추적
+  - WikiFileSystem 전용 감사 로그 및 문제 해결 히스토리
 - ✅ **설문 응답 삭제 정책 명확화**
   - `SurveyResponseCheckbox`: hard delete 사용 (체크박스 선택/해제 반복 지원)
   - 사용자가 선택 취소 시 레코드 완전 삭제 (UK 제약조건 문제 없음)
