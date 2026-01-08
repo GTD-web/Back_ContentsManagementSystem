@@ -2685,7 +2685,378 @@ ALTER TABLE category ADD CONSTRAINT chk_category_order
 
 ---
 
+## 인덱스 권장사항
+
+데이터베이스 성능 최적화를 위한 인덱스 목록입니다.
+
+### 공통 인덱스 (모든 테이블)
+
+```sql
+-- Soft Delete 필터링 (deleted_at IS NULL 조건 최적화)
+CREATE INDEX idx_{table}_deleted_at ON {table}(deleted_at);
+
+-- 생성일 기준 정렬 (최신순 조회 최적화)
+CREATE INDEX idx_{table}_created_at ON {table}(created_at DESC) WHERE deleted_at IS NULL;
+
+-- 생성자별 조회
+CREATE INDEX idx_{table}_created_by ON {table}(created_by) WHERE deleted_at IS NULL;
+```
+
+### CategoryMapping (카테고리 매핑)
+
+```sql
+-- 특정 엔티티의 카테고리 조회
+CREATE INDEX idx_category_mapping_entity 
+ON category_mapping(entity_type, entity_id) 
+WHERE deleted_at IS NULL;
+
+-- 특정 카테고리의 엔티티 조회
+CREATE INDEX idx_category_mapping_category 
+ON category_mapping(category_id) 
+WHERE deleted_at IS NULL;
+
+-- 복합 유니크 제약조건 (중복 방지)
+CREATE UNIQUE INDEX idx_category_mapping_unique 
+ON category_mapping(entity_type, entity_id, category_id) 
+WHERE deleted_at IS NULL;
+```
+
+### Category (카테고리)
+
+```sql
+-- 엔티티 타입별 활성 카테고리 조회
+CREATE INDEX idx_category_entity_type_active 
+ON category(entity_type, is_active, "order") 
+WHERE deleted_at IS NULL;
+
+-- 정렬 순서
+CREATE INDEX idx_category_order 
+ON category("order") 
+WHERE deleted_at IS NULL;
+```
+
+### EducationManagement (교육 관리)
+
+```sql
+-- 담당자별 교육 목록 조회 (교육 담당자 목록 조회용)
+CREATE INDEX idx_education_management_manager 
+ON education_management(manager_id) 
+WHERE deleted_at IS NULL;
+
+-- 마감일 기준 정렬
+CREATE INDEX idx_education_management_deadline 
+ON education_management(deadline) 
+WHERE deleted_at IS NULL;
+
+-- 공개 교육 조회
+CREATE INDEX idx_education_management_public 
+ON education_management(is_public) 
+WHERE deleted_at IS NULL AND is_public = true;
+```
+
+### Attendee (수강 직원)
+
+```sql
+-- 교육별 수강생 조회
+CREATE INDEX idx_attendee_education 
+ON attendee(education_management_id, status) 
+WHERE deleted_at IS NULL;
+
+-- 직원별 수강 목록 조회
+CREATE INDEX idx_attendee_employee 
+ON attendee(employee_id, status) 
+WHERE deleted_at IS NULL;
+
+-- 완료일 기준 정렬
+CREATE INDEX idx_attendee_completed 
+ON attendee(completed_at DESC) 
+WHERE deleted_at IS NULL AND status = 'completed';
+```
+
+### Announcement (공지사항)
+
+```sql
+-- 공개 여부 + 상태별 조회
+CREATE INDEX idx_announcement_public_status 
+ON announcement(is_public, status, "order") 
+WHERE deleted_at IS NULL;
+
+-- 고정 공지사항 조회
+CREATE INDEX idx_announcement_fixed 
+ON announcement(is_fixed, "order") 
+WHERE deleted_at IS NULL AND is_fixed = true;
+
+-- 만료일 기준 조회 (현재 유효한 공지)
+CREATE INDEX idx_announcement_active 
+ON announcement(released_at, expired_at) 
+WHERE deleted_at IS NULL AND is_public = true;
+```
+
+### AnnouncementRead (공지사항 읽음)
+
+```sql
+-- 공지사항별 읽음 통계
+CREATE INDEX idx_announcement_read_announcement 
+ON announcement_read(announcement_id) 
+WHERE deleted_at IS NULL;
+
+-- 직원별 읽음 목록
+CREATE INDEX idx_announcement_read_employee 
+ON announcement_read(employee_id, read_at DESC) 
+WHERE deleted_at IS NULL;
+
+-- 유니크 제약조건
+CREATE UNIQUE INDEX idx_announcement_read_unique 
+ON announcement_read(announcement_id, employee_id) 
+WHERE deleted_at IS NULL;
+```
+
+### AnnouncementResponse (공지사항 응답)
+
+```sql
+-- 공지사항별 응답 통계
+CREATE INDEX idx_announcement_response_announcement 
+ON announcement_response(announcement_id) 
+WHERE deleted_at IS NULL;
+
+-- 직원별 응답 목록
+CREATE INDEX idx_announcement_response_employee 
+ON announcement_response(employee_id, submitted_at DESC) 
+WHERE deleted_at IS NULL;
+
+-- 유니크 제약조건
+CREATE UNIQUE INDEX idx_announcement_response_unique 
+ON announcement_response(announcement_id, employee_id) 
+WHERE deleted_at IS NULL;
+```
+
+### Survey (설문조사)
+
+```sql
+-- 상태별 설문 조회
+CREATE INDEX idx_survey_status 
+ON survey(status, "order") 
+WHERE deleted_at IS NULL;
+
+-- 기간별 설문 조회
+CREATE INDEX idx_survey_date_range 
+ON survey(start_date, end_date) 
+WHERE deleted_at IS NULL;
+```
+
+### SurveyQuestion (설문 질문)
+
+```sql
+-- 설문별 질문 조회 (순서대로)
+CREATE INDEX idx_survey_question_survey 
+ON survey_question(survey_id, "order") 
+WHERE deleted_at IS NULL;
+```
+
+### Survey 응답 테이블 (타입별)
+
+```sql
+-- SurveyResponseText (단답형/장문형)
+CREATE INDEX idx_survey_response_text_question 
+ON survey_response_text(question_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_text_unique 
+ON survey_response_text(question_id, employee_id) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseChoice (객관식/드롭다운)
+CREATE INDEX idx_survey_response_choice_question 
+ON survey_response_choice(question_id, selected_option) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_choice_unique 
+ON survey_response_choice(question_id, employee_id) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseCheckbox (체크박스)
+CREATE INDEX idx_survey_response_checkbox_question 
+ON survey_response_checkbox(question_id, selected_option) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_checkbox_unique 
+ON survey_response_checkbox(question_id, employee_id, selected_option) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseScale (척도)
+CREATE INDEX idx_survey_response_scale_question 
+ON survey_response_scale(question_id, scale_value) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_scale_unique 
+ON survey_response_scale(question_id, employee_id) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseGrid (그리드)
+CREATE INDEX idx_survey_response_grid_question 
+ON survey_response_grid(question_id, row_name) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_grid_unique 
+ON survey_response_grid(question_id, employee_id, row_name) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseFile (파일)
+CREATE INDEX idx_survey_response_file_question 
+ON survey_response_file(question_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_file_unique 
+ON survey_response_file(question_id, employee_id, file_url) 
+WHERE deleted_at IS NULL;
+
+-- SurveyResponseDatetime (날짜/시간)
+CREATE INDEX idx_survey_response_datetime_question 
+ON survey_response_datetime(question_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_survey_response_datetime_unique 
+ON survey_response_datetime(question_id, employee_id) 
+WHERE deleted_at IS NULL;
+```
+
+### SurveyCompletion (설문 완료)
+
+```sql
+-- 설문별 완료 통계
+CREATE INDEX idx_survey_completion_survey 
+ON survey_completion(survey_id, is_completed) 
+WHERE deleted_at IS NULL;
+
+-- 직원별 완료 목록
+CREATE INDEX idx_survey_completion_employee 
+ON survey_completion(employee_id, completed_at DESC) 
+WHERE deleted_at IS NULL;
+
+-- 유니크 제약조건
+CREATE UNIQUE INDEX idx_survey_completion_unique 
+ON survey_completion(survey_id, employee_id) 
+WHERE deleted_at IS NULL;
+```
+
+### ShareholdersMeeting (주주총회)
+
+```sql
+-- 공개 여부 + 날짜 기준 조회
+CREATE INDEX idx_shareholders_meeting_public_date 
+ON shareholders_meeting(is_public, meeting_date DESC) 
+WHERE deleted_at IS NULL;
+
+-- 정렬 순서
+CREATE INDEX idx_shareholders_meeting_order 
+ON shareholders_meeting("order") 
+WHERE deleted_at IS NULL;
+```
+
+### VoteResult (의결 결과)
+
+```sql
+-- 주주총회별 의결 결과 조회 (순서대로)
+CREATE INDEX idx_vote_result_meeting 
+ON vote_result(shareholders_meeting_id, "order") 
+WHERE deleted_at IS NULL;
+```
+
+### WikiFileSystem (위키 파일 시스템)
+
+```sql
+-- 부모 폴더별 자식 조회
+CREATE INDEX idx_wiki_file_system_parent 
+ON wiki_file_system(parent_id, "order") 
+WHERE deleted_at IS NULL;
+
+-- 루트 폴더 조회
+CREATE INDEX idx_wiki_file_system_root 
+ON wiki_file_system(parent_id, "order") 
+WHERE deleted_at IS NULL AND parent_id IS NULL;
+
+-- 파일 타입별 조회
+CREATE INDEX idx_wiki_file_system_type 
+ON wiki_file_system(type) 
+WHERE deleted_at IS NULL;
+```
+
+### 번역 테이블 (Translation)
+
+```sql
+-- ShareholdersMeetingTranslation
+CREATE INDEX idx_shareholders_meeting_translation_meeting 
+ON shareholders_meeting_translation(shareholders_meeting_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_shareholders_meeting_translation_unique 
+ON shareholders_meeting_translation(shareholders_meeting_id, language_id) 
+WHERE deleted_at IS NULL;
+
+-- VoteResultTranslation
+CREATE INDEX idx_vote_result_translation_vote 
+ON vote_result_translation(vote_result_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_vote_result_translation_unique 
+ON vote_result_translation(vote_result_id, language_id) 
+WHERE deleted_at IS NULL;
+
+-- ElectronicDisclosureTranslation
+CREATE INDEX idx_electronic_disclosure_translation_disclosure 
+ON electronic_disclosure_translation(electronic_disclosure_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_electronic_disclosure_translation_unique 
+ON electronic_disclosure_translation(electronic_disclosure_id, language_id) 
+WHERE deleted_at IS NULL;
+
+-- IRTranslation
+CREATE INDEX idx_ir_translation_ir 
+ON ir_translation(ir_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_ir_translation_unique 
+ON ir_translation(ir_id, language_id) 
+WHERE deleted_at IS NULL;
+
+-- BrochureTranslation
+CREATE INDEX idx_brochure_translation_brochure 
+ON brochure_translation(brochure_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_brochure_translation_unique 
+ON brochure_translation(brochure_id, language_id) 
+WHERE deleted_at IS NULL;
+
+-- MainPopupTranslation
+CREATE INDEX idx_main_popup_translation_popup 
+ON main_popup_translation(main_popup_id) 
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX idx_main_popup_translation_unique 
+ON main_popup_translation(main_popup_id, language_id) 
+WHERE deleted_at IS NULL;
+```
+
+### 인덱스 사용 시 주의사항
+
+1. **부분 인덱스 (Partial Index)**: `WHERE deleted_at IS NULL` 조건으로 인덱스 크기 감소 및 성능 향상
+2. **복합 인덱스 순서**: 가장 선택적인 컬럼을 앞에 배치 (예: `entity_type, entity_id`)
+3. **유니크 인덱스**: 중복 방지 + 조회 성능 향상 동시 달성
+4. **인덱스 모니터링**: 주기적으로 사용되지 않는 인덱스 확인 및 제거
+5. **통계 업데이트**: `ANALYZE` 명령으로 통계 정보 최신화
+
+---
+
 ## 주요 변경 이력
+
+### v5.7 (2026-01-08)
+- ✅ **인덱스 권장사항 추가**
+  - 모든 주요 테이블에 대한 성능 최적화 인덱스 정의
+  - EducationManagement에 managerId 인덱스 추가 (교육 담당자 목록 조회 최적화)
+  - 부분 인덱스 (Partial Index) 활용으로 인덱스 크기 최소화
+  - 유니크 인덱스로 데이터 무결성 + 성능 동시 달성
 
 ### v5.6 (2026-01-07)
 - ✅ **공지사항 테이블 구조 개선 (Sparse Data Pattern 적용)**
