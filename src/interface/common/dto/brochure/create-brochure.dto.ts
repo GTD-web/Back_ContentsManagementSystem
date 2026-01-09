@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
@@ -27,9 +34,9 @@ export class BrochureAttachmentDto {
 }
 
 /**
- * 브로슈어 생성 DTO
+ * 브로슈어 번역 생성 DTO
  */
-export class CreateBrochureDto {
+export class CreateBrochureTranslationDto {
   @ApiProperty({
     description: '언어 ID',
     example: 'uuid-ko',
@@ -52,6 +59,32 @@ export class CreateBrochureDto {
   @IsOptional()
   @IsString()
   description?: string;
+}
+
+/**
+ * 브로슈어 생성 DTO
+ */
+export class CreateBrochureDto {
+  @ApiProperty({
+    description: '번역 목록 (여러 언어 동시 설정 가능)',
+    type: [CreateBrochureTranslationDto],
+    example: [
+      {
+        languageId: 'uuid-ko',
+        title: '회사 소개 브로슈어',
+        description: '루미르 회사 소개 자료입니다.',
+      },
+      {
+        languageId: 'uuid-en',
+        title: 'Company Introduction Brochure',
+        description: 'Lumir company introduction material.',
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateBrochureTranslationDto)
+  translations: CreateBrochureTranslationDto[];
 
   @ApiProperty({ description: '생성자 ID', required: false })
   @IsOptional()

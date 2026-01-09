@@ -15,7 +15,10 @@ import {
   GetBrochureListHandler,
   GetBrochureDetailHandler,
   InitializeDefaultBrochuresHandler,
+  UpdateBrochureTranslationsHandler,
+  SyncBrochureTranslationsHandler,
 } from './handlers';
+import { BrochureSyncScheduler } from './brochure-sync.scheduler';
 
 /**
  * 브로슈어 컨텍스트 모듈
@@ -38,6 +41,9 @@ import {
     GetBrochureListHandler,
     GetBrochureDetailHandler,
     InitializeDefaultBrochuresHandler,
+    UpdateBrochureTranslationsHandler,
+    SyncBrochureTranslationsHandler,
+    BrochureSyncScheduler,
   ],
   exports: [BrochureContextService],
 })

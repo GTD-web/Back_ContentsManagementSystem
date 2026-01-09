@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -26,6 +27,7 @@ import { CurrentUser } from '@interface/common/decorators/current-user.decorator
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { BrochureBusinessService } from '@business/brochure-business/brochure-business.service';
 import { CreateBrochureDto } from '@interface/common/dto/brochure/create-brochure.dto';
+import { UpdateBrochureTranslationsDto } from '@interface/common/dto/brochure/update-brochure-translations.dto';
 import {
   UpdateBrochureDto,
   UpdateBrochurePublicDto,
@@ -146,23 +148,25 @@ export class BrochureController {
       '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
   })
   @ApiBody({
+    description:
+      '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
+      '**예시 (한 개 언어)**:\n' +
+      '```json\n' +
+      '[{"languageId":"uuid-ko","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]\n' +
+      '```\n\n' +
+      '**예시 (여러 언어)**:\n' +
+      '```json\n' +
+      '[{"languageId":"uuid-ko","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."},{"languageId":"uuid-en","title":"Company Introduction Brochure","description":"Lumir company introduction material."}]\n' +
+      '```',
     schema: {
       type: 'object',
       properties: {
-        languageId: {
+        translations: {
           type: 'string',
-          description: '언어 ID',
-          example: 'uuid-ko',
-        },
-        title: {
-          type: 'string',
-          description: '제목',
-          example: '회사 소개 브로슈어',
-        },
-        description: {
-          type: 'string',
-          description: '설명 (선택)',
-          example: '루미르 회사 소개 자료입니다.',
+          description:
+            '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
+          example:
+            '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]',
         },
         files: {
           type: 'array',
@@ -170,7 +174,7 @@ export class BrochureController {
           description: '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능)',
         },
       },
-      required: ['languageId', 'title'],
+      required: ['translations'],
     },
   })
   @ApiResponse({
@@ -187,16 +191,62 @@ export class BrochureController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<BrochureResponseDto> {
-    const createDto: CreateBrochureDto = {
-      languageId: body.languageId,
-      title: body.title,
-      description: body.description,
-      createdBy: user.id,
-    };
+    // translations가 JSON 문자열로 전달될 수 있으므로 파싱
+    let translations = body.translations;
+
+    if (!translations) {
+      throw new BadRequestException('translations 필드는 필수입니다.');
+    }
+
+    if (typeof translations === 'string') {
+      try {
+        translations = JSON.parse(translations);
+      } catch (error) {
+        throw new BadRequestException(
+          'translations 파싱 실패: 올바른 JSON 형식이 아닙니다.',
+        );
+      }
+    }
+
+    if (!Array.isArray(translations) || translations.length === 0) {
+      throw new BadRequestException(
+        'translations는 비어있지 않은 배열이어야 합니다.',
+      );
+    }
 
     return await this.brochureBusinessService.브로슈어를_생성한다(
-      createDto,
+      translations,
+      user.id,
       files,
+    );
+  }
+
+  /**
+   * 브로슈어 번역들을 수정한다
+   */
+  @Put(':id/translations')
+  @ApiOperation({
+    summary: '브로슈어 번역 수정',
+    description:
+      '브로슈어의 여러 언어 번역을 수정합니다. 수정된 번역은 자동 동기화에서 제외됩니다 (isSynced: false).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '브로슈어 번역 수정 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '브로슈어를 찾을 수 없음',
+  })
+  async 브로슈어_번역들을_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: UpdateBrochureTranslationsDto,
+  ): Promise<any> {
+    return await this.brochureBusinessService.브로슈어_번역들을_수정한다(
+      id,
+      body.translations,
+      user.id,
     );
   }
 

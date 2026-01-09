@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from '@libs/database/database.module';
 import { AuthInterfaceModule } from './interface/admin/auth/auth.module';
@@ -24,6 +25,9 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // 스케줄러 모듈 (전역)
+    ScheduleModule.forRoot(),
 
     // 데이터베이스 모듈
     DatabaseModule,

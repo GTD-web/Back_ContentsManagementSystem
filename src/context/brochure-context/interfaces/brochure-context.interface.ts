@@ -6,10 +6,14 @@ import { LanguageCode } from '@domain/common/language/language-code.types';
 /**
  * 브로슈어 생성 DTO
  */
-export interface CreateBrochureDto {
+export interface CreateBrochureTranslationDto {
   languageId: string;
   title: string;
   description?: string;
+}
+
+export interface CreateBrochureDto {
+  translations: CreateBrochureTranslationDto[];
   attachments?: Array<{
     fileName: string;
     fileUrl: string;

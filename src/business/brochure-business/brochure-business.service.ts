@@ -3,9 +3,9 @@ import { BrochureContextService } from '@context/brochure-context/brochure-conte
 import { CategoryService } from '@domain/common/category/category.service';
 import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
+import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
 import { Category } from '@domain/common/category/category.entity';
 import { S3Service } from '@libs/storage/s3.service';
-import { ContentStatus } from '@domain/core/content-status.types';
 import { BrochureDetailResult } from '@context/brochure-context/interfaces/brochure-context.interface';
 import { BrochureListItemDto } from '@interface/common/dto/brochure/brochure-response.dto';
 
@@ -87,17 +87,15 @@ export class BrochureBusinessService {
    * 브로슈어를 생성한다 (파일 업로드 포함)
    */
   async 브로슈어를_생성한다(
-    data: {
+    translations: Array<{
       languageId: string;
       title: string;
       description?: string;
-      createdBy?: string;
-    },
+    }>,
+    createdBy?: string,
     files?: Express.Multer.File[],
   ): Promise<BrochureDetailResult> {
-    this.logger.log(
-      `브로슈어 생성 시작 - 언어 ID: ${data.languageId}, 제목: ${data.title}`,
-    );
+    this.logger.log(`브로슈어 생성 시작 - 번역 수: ${translations.length}`);
 
     // 파일 업로드 처리
     let attachments:
@@ -126,11 +124,10 @@ export class BrochureBusinessService {
 
     // 생성 데이터 구성
     const createData = {
-      languageId: data.languageId,
-      title: data.title,
-      description: data.description,
-      attachments,
-      createdBy: data.createdBy,
+      translations,
+      attachments:
+        attachments && attachments.length > 0 ? attachments : undefined,
+      createdBy,
     };
 
     const result =
@@ -451,6 +448,37 @@ export class BrochureBusinessService {
     );
 
     this.logger.log(`브로슈어 파일 삭제 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
+   * 브로슈어 번역들을 수정한다
+   */
+  async 브로슈어_번역들을_수정한다(
+    brochureId: string,
+    translations: Array<{
+      languageId: string;
+      title: string;
+      description?: string;
+    }>,
+    updatedBy?: string,
+  ): Promise<BrochureTranslation[]> {
+    this.logger.log(
+      `브로슈어 번역 수정 시작 - 브로슈어 ID: ${brochureId}, 번역 수: ${translations.length}`,
+    );
+
+    const result = await this.brochureContextService.브로슈어_번역들을_수정한다(
+      brochureId,
+      {
+        translations,
+        updatedBy,
+      },
+    );
+
+    this.logger.log(
+      `브로슈어 번역 수정 완료 - 브로슈어 ID: ${brochureId}, 수정된 번역 수: ${result.length}`,
+    );
 
     return result;
   }

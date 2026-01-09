@@ -7,6 +7,10 @@ import { UpdateBrochurePublicCommand } from './handlers/commands/update-brochure
 import { UpdateBrochureOrderCommand } from './handlers/commands/update-brochure-order.handler';
 import { UpdateBrochureFileCommand } from './handlers/commands/update-brochure-file.handler';
 import { InitializeDefaultBrochuresCommand } from './handlers/commands/initialize-default-brochures.handler';
+import {
+  UpdateBrochureTranslationsCommand,
+  UpdateBrochureTranslationsDto,
+} from './handlers/commands/update-brochure-translations.handler';
 import { GetBrochureListQuery } from './handlers/queries/get-brochure-list.handler';
 import { GetBrochureDetailQuery } from './handlers/queries/get-brochure-detail.handler';
 import {
@@ -20,6 +24,7 @@ import {
   BrochureDetailResult,
 } from './interfaces/brochure-context.interface';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
+import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
 
 /**
  * 브로슈어 컨텍스트 서비스
@@ -148,5 +153,16 @@ export class BrochureContextService {
     }
 
     return deletedCount;
+  }
+
+  /**
+   * 브로슈어 번역들을 수정한다
+   */
+  async 브로슈어_번역들을_수정한다(
+    brochureId: string,
+    data: UpdateBrochureTranslationsDto,
+  ): Promise<BrochureTranslation[]> {
+    const command = new UpdateBrochureTranslationsCommand(brochureId, data);
+    return await this.commandBus.execute(command);
   }
 }
