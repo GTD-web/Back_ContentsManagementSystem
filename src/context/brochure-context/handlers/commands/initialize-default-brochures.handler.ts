@@ -8,19 +8,17 @@ import { Language } from '@domain/common/language/language.entity';
 import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
- * 기본 브로슈어 초기화 커맨드
+ * 기본 브로슈어 생성 커맨드
  */
 export class InitializeDefaultBrochuresCommand {
   constructor(public readonly createdBy?: string) {}
 }
 
 /**
- * 기본 브로슈어 초기화 핸들러
+ * 기본 브로슈어 생성 핸들러
  */
 @CommandHandler(InitializeDefaultBrochuresCommand)
-export class InitializeDefaultBrochuresHandler
-  implements ICommandHandler<InitializeDefaultBrochuresCommand>
-{
+export class InitializeDefaultBrochuresHandler implements ICommandHandler<InitializeDefaultBrochuresCommand> {
   private readonly logger = new Logger(InitializeDefaultBrochuresHandler.name);
 
   constructor(
@@ -35,7 +33,7 @@ export class InitializeDefaultBrochuresHandler
   async execute(
     command: InitializeDefaultBrochuresCommand,
   ): Promise<Brochure[]> {
-    this.logger.log('기본 브로슈어 초기화 시작');
+    this.logger.log('기본 브로슈어 생성 시작');
 
     // 언어 조회
     const languages = await this.languageRepository.find({
@@ -142,8 +140,10 @@ export class InitializeDefaultBrochuresHandler
         isPublic: brochureData.isPublic,
         status: brochureData.status,
         order: brochureData.order,
-        attachments: brochureData.attachments.length > 0 ? brochureData.attachments : null,
+        attachments:
+          brochureData.attachments.length > 0 ? brochureData.attachments : null,
         createdBy: command.createdBy,
+        updatedBy: command.createdBy, // 생성 시점이므로 createdBy와 동일하게 설정
       });
 
       const savedBrochure = await this.brochureRepository.save(brochure);
@@ -180,7 +180,7 @@ export class InitializeDefaultBrochuresHandler
     }
 
     this.logger.log(
-      `기본 브로슈어 초기화 완료 - 총 ${createdBrochures.length}개 추가됨`,
+      `기본 브로슈어 생성 완료 - 총 ${createdBrochures.length}개 추가됨`,
     );
 
     return createdBrochures;

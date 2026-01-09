@@ -7,19 +7,14 @@ import { LanguageCode } from '@domain/common/language/language-code.types';
  * 브로슈어 생성 DTO
  */
 export interface CreateBrochureDto {
-  isPublic: boolean;
-  status: ContentStatus;
-  order: number;
+  languageId: string;
+  title: string;
+  description?: string;
   attachments?: Array<{
     fileName: string;
     fileUrl: string;
     fileSize: number;
     mimeType: string;
-  }>;
-  translations: Array<{
-    languageId: string;
-    title: string;
-    description?: string;
   }>;
   createdBy?: string;
 }

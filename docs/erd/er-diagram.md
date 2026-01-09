@@ -851,6 +851,12 @@ enum WikiPermissionAction {
 
 ## 변경 이력
 
+### v5.15 (2026-01-09)
+- ✅ **파일 업로드 방식 변경**
+  - Form-data 업로드: 클라이언트가 `multipart/form-data`로 파일 전송
+  - 백엔드 처리: NestJS Multer로 파일 수신 → AWS S3 업로드 → 메타데이터 자동 저장
+  - attachments JSONB는 백엔드에서 자동 생성 (파일명, 크기, MIME 타입, S3 URL)
+
 ### v5.14 (2026-01-08)
 - ✅ **데이터 타입 일관성 개선**
   - `VoteResult.order` 필드 제거 (agendaNumber로 정렬)

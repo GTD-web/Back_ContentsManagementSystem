@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BrochureContextModule } from '@context/brochure-context/brochure-context.module';
 import { CategoryModule } from '@domain/common/category/category.module';
+import { StorageModule } from '@libs/storage/storage.module';
 import { BrochureBusinessService } from './brochure-business.service';
 
 /**
@@ -10,7 +11,7 @@ import { BrochureBusinessService } from './brochure-business.service';
  * Domain 레이어에 직접 의존하지 않음
  */
 @Module({
-  imports: [BrochureContextModule, CategoryModule],
+  imports: [BrochureContextModule, CategoryModule, StorageModule],
   providers: [BrochureBusinessService],
   exports: [BrochureBusinessService],
 })

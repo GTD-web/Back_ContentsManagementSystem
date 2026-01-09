@@ -86,11 +86,49 @@ export class BrochureResponseDto {
 }
 
 /**
+ * 브로슈어 목록 아이템 DTO (한국어 번역 flatten)
+ */
+export class BrochureListItemDto {
+  @ApiProperty({ description: '브로슈어 ID' })
+  id: string;
+
+  @ApiProperty({ description: '공개 여부', example: true })
+  isPublic: boolean;
+
+  @ApiProperty({
+    description: '상태',
+    enum: ContentStatus,
+    example: ContentStatus.OPENED,
+  })
+  status: ContentStatus;
+
+  @ApiProperty({ description: '정렬 순서', example: 1 })
+  order: number;
+
+  @ApiProperty({ description: '제목 (한국어)', example: '회사 소개 브로슈어' })
+  title: string;
+
+  @ApiProperty({
+    description: '설명 (한국어)',
+    required: false,
+    nullable: true,
+    example: '회사 소개 자료',
+  })
+  description: string | null;
+
+  @ApiProperty({ description: '생성 일시' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '수정 일시' })
+  updatedAt: Date;
+}
+
+/**
  * 브로슈어 목록 응답 DTO
  */
 export class BrochureListResponseDto {
-  @ApiProperty({ description: '브로슈어 목록', type: [BrochureResponseDto] })
-  items: BrochureResponseDto[];
+  @ApiProperty({ description: '브로슈어 목록', type: [BrochureListItemDto] })
+  items: BrochureListItemDto[];
 
   @ApiProperty({ description: '총 개수', example: 10 })
   total: number;

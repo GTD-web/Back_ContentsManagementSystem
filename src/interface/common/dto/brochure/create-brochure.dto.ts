@@ -1,37 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsBoolean,
-  IsNumber,
-  IsArray,
-  IsOptional,
-  IsString,
-  ValidateNested,
-  ArrayMinSize,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
- * 브로슈어 번역 DTO
- */
-export class BrochureTranslationDto {
-  @ApiProperty({ description: '언어 ID' })
-  @IsString()
-  languageId: string;
-
-  @ApiProperty({ description: '제목', example: '회사 소개 브로슈어' })
-  @IsString()
-  title: string;
-
-  @ApiProperty({ description: '설명', required: false })
-  @IsOptional()
-  @IsString()
-  description?: string;
-}
-
-/**
- * 브로슈어 첨부파일 DTO
+ * 브로슈어 첨부파일 DTO (응답용)
  */
 export class BrochureAttachmentDto {
   @ApiProperty({ description: '파일명', example: 'brochure_ko.pdf' })
@@ -59,56 +31,27 @@ export class BrochureAttachmentDto {
  */
 export class CreateBrochureDto {
   @ApiProperty({
-    description: '공개 여부',
-    example: true,
-    default: true,
+    description: '언어 ID',
+    example: 'uuid-ko',
+  })
+  @IsString()
+  languageId: string;
+
+  @ApiProperty({
+    description: '제목',
+    example: '회사 소개 브로슈어',
+  })
+  @IsString()
+  title: string;
+
+  @ApiProperty({
+    description: '설명',
+    example: '루미르 회사 소개 자료입니다.',
     required: false,
   })
   @IsOptional()
-  @IsBoolean()
-  isPublic?: boolean;
-
-  @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.DRAFT,
-    default: ContentStatus.DRAFT,
-    required: false,
-  })
-  @IsOptional()
-  @IsEnum(ContentStatus)
-  status?: ContentStatus;
-
-  @ApiProperty({
-    description: '정렬 순서',
-    example: 1,
-    default: 0,
-    required: false,
-  })
-  @IsOptional()
-  @IsNumber()
-  order?: number;
-
-  @ApiProperty({
-    description: '첨부파일 목록',
-    type: [BrochureAttachmentDto],
-    required: false,
-  })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => BrochureAttachmentDto)
-  attachments?: BrochureAttachmentDto[];
-
-  @ApiProperty({
-    description: '번역 목록',
-    type: [BrochureTranslationDto],
-  })
-  @IsArray()
-  @ArrayMinSize(1, { message: '최소 하나의 번역이 필요합니다.' })
-  @ValidateNested({ each: true })
-  @Type(() => BrochureTranslationDto)
-  translations: BrochureTranslationDto[];
+  @IsString()
+  description?: string;
 
   @ApiProperty({ description: '생성자 ID', required: false })
   @IsOptional()

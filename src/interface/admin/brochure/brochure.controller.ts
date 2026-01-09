@@ -8,6 +8,8 @@ import {
   Param,
   Query,
   Patch,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,8 +17,13 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { Public } from '@interface/common/decorators/public.decorator';
+import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { BrochureBusinessService } from '@business/brochure-business/brochure-business.service';
 import { CreateBrochureDto } from '@interface/common/dto/brochure/create-brochure.dto';
 import {
@@ -37,7 +44,6 @@ import {
 
 @ApiTags('A-2. 관리자 - 브로슈어')
 @ApiBearerAuth('Bearer')
-@Public() // 테스트를 위해 임시로 Public 설정
 @Controller('admin/brochures')
 export class BrochureController {
   constructor(
@@ -105,49 +111,140 @@ export class BrochureController {
   }
 
   /**
-   * 브로슈어를 생성한다
+   * 브로슈어를 생성한다 (파일 업로드 포함)
    */
   @Post()
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      fileFilter: (req, file, callback) => {
+        // 허용된 MIME 타입: PDF, JPG, PNG, WEBP
+        const allowedMimeTypes = [
+          'application/pdf',
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp',
+        ];
+
+        if (allowedMimeTypes.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(
+            new Error(
+              `지원하지 않는 파일 형식입니다. 허용된 형식: PDF, JPG, PNG, WEBP (현재: ${file.mimetype})`,
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '브로슈어 생성',
-    description: '새로운 브로슈어를 생성합니다.',
+    description:
+      '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        languageId: {
+          type: 'string',
+          description: '언어 ID',
+          example: 'uuid-ko',
+        },
+        title: {
+          type: 'string',
+          description: '제목',
+          example: '회사 소개 브로슈어',
+        },
+        description: {
+          type: 'string',
+          description: '설명 (선택)',
+          example: '루미르 회사 소개 자료입니다.',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능)',
+        },
+      },
+      required: ['languageId', 'title'],
+    },
   })
   @ApiResponse({
     status: 201,
-    description: '브로슈어 생성 성공',
+    description: '브로슈어 생성 성공 (비공개, DRAFT 상태로 생성됨)',
     type: BrochureResponseDto,
   })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (언어 ID 없음, 제목 없음, 파일 형식 오류)',
+  })
   async 브로슈어를_생성한다(
-    @Body() createDto: CreateBrochureDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어를_생성한다(createDto);
+    const createDto: CreateBrochureDto = {
+      languageId: body.languageId,
+      title: body.title,
+      description: body.description,
+      createdBy: user.id,
+    };
+
+    return await this.brochureBusinessService.브로슈어를_생성한다(
+      createDto,
+      files,
+    );
   }
 
   /**
-   * 기본 브로슈어들을 추가한다
+   * 기본 브로슈어들을 생성한다
    */
-  @Post('initialize-default')
+  @Post('create-default')
   @ApiOperation({
-    summary: '기본 브로슈어 초기화',
+    summary: '기본 브로슈어 생성',
     description:
-      '기본 브로슈어 목 데이터를 추가합니다. (회사 소개, 제품 카탈로그, 기술 백서)',
+      '기본 브로슈어 목 데이터를 생성합니다. (회사 소개, 제품 카탈로그, 기술 백서)',
   })
   @ApiResponse({
     status: 201,
-    description: '기본 브로슈어 추가 성공',
+    description: '기본 브로슈어 생성 성공',
     type: [BrochureResponseDto],
   })
-  async 기본_브로슈어들을_추가한다(): Promise<BrochureListResponseDto> {
-    const items =
-      await this.brochureBusinessService.기본_브로슈어들을_추가한다();
+  async 기본_브로슈어들을_생성한다(): Promise<BrochureResponseDto[]> {
+    return await this.brochureBusinessService.기본_브로슈어들을_생성한다(
+      'system',
+    );
+  }
 
-    return {
-      items,
-      total: items.length,
-      page: 1,
-      limit: items.length,
-      totalPages: 1,
-    };
+  /**
+   * 기본 브로슈어들을 초기화한다 (일괄 제거)
+   */
+  @Delete('initialize-default')
+  @ApiOperation({
+    summary: '기본 브로슈어 초기화',
+    description:
+      '기본 브로슈어 목 데이터를 일괄 제거합니다. (system 사용자가 생성한 브로슈어 삭제)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '기본 브로슈어 초기화 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        deletedCount: { type: 'number', example: 3 },
+      },
+    },
+  })
+  async 기본_브로슈어들을_초기화한다(): Promise<{
+    success: boolean;
+    deletedCount: number;
+  }> {
+    return await this.brochureBusinessService.기본_브로슈어들을_초기화한다();
   }
 
   /**
@@ -254,12 +351,27 @@ export class BrochureController {
   }
 
   /**
-   * 브로슈어 파일을 수정한다
+   * 브로슈어 파일을 수정한다 (파일 업로드 포함)
    */
   @Patch(':id/files')
+  @UseInterceptors(FilesInterceptor('files', 10))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '브로슈어 파일 수정',
-    description: '브로슈어의 첨부파일을 수정합니다.',
+    description:
+      '브로슈어의 첨부파일을 수정합니다. 파일은 multipart/form-data로 전송합니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: '추가할 첨부파일 목록 (최대 10개)',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
@@ -272,11 +384,57 @@ export class BrochureController {
   })
   async 브로슈어_파일을_수정한다(
     @Param('id') id: string,
-    @Body() updateDto: UpdateBrochureFileDto,
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<BrochureResponseDto> {
     return await this.brochureBusinessService.브로슈어_파일을_수정한다(
       id,
-      updateDto,
+      {},
+      files,
+    );
+  }
+
+  /**
+   * 브로슈어 파일을 삭제한다
+   */
+  @Delete(':id/files')
+  @ApiOperation({
+    summary: '브로슈어 파일 삭제',
+    description: '브로슈어의 첨부파일을 삭제합니다. S3에서도 함께 삭제됩니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        fileUrls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '삭제할 파일 URL 목록',
+          example: [
+            'https://bucket.s3.amazonaws.com/brochures/file1.pdf',
+            'https://bucket.s3.amazonaws.com/brochures/file2.jpg',
+          ],
+        },
+      },
+      required: ['fileUrls'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '브로슈어 파일 삭제 성공',
+    type: BrochureResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '브로슈어를 찾을 수 없음',
+  })
+  async 브로슈어_파일을_삭제한다(
+    @Param('id') id: string,
+    @Body() body: { fileUrls: string[] },
+  ): Promise<BrochureResponseDto> {
+    return await this.brochureBusinessService.브로슈어_파일을_삭제한다(
+      id,
+      body.fileUrls,
     );
   }
 
@@ -322,13 +480,11 @@ export class BrochureController {
   async 브로슈어_카테고리를_수정한다(
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryDto,
-  ): Promise<{ success: boolean }> {
-    const result =
-      await this.brochureBusinessService.브로슈어_카테고리를_수정한다(
-        id,
-        updateDto,
-      );
-    return { success: result };
+  ): Promise<BrochureCategoryResponseDto> {
+    return await this.brochureBusinessService.브로슈어_카테고리를_수정한다(
+      id,
+      updateDto,
+    );
   }
 
   /**
@@ -371,11 +527,12 @@ export class BrochureController {
   async 브로슈어_카테고리_오더를_변경한다(
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryOrderDto,
-  ): Promise<BrochureCategoryResponseDto> {
-    return await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
+  ): Promise<{ success: boolean }> {
+    await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
       id,
       updateDto,
     );
+    return { success: true };
   }
 
   /**

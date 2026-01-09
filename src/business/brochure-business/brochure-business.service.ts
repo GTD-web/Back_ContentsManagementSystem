@@ -4,8 +4,10 @@ import { CategoryService } from '@domain/common/category/category.service';
 import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { Category } from '@domain/common/category/category.entity';
+import { S3Service } from '@libs/storage/s3.service';
 import { ContentStatus } from '@domain/core/content-status.types';
 import { BrochureDetailResult } from '@context/brochure-context/interfaces/brochure-context.interface';
+import { BrochureListItemDto } from '@interface/common/dto/brochure/brochure-response.dto';
 
 /**
  * 브로슈어 비즈니스 서비스
@@ -21,6 +23,7 @@ export class BrochureBusinessService {
   constructor(
     private readonly brochureContextService: BrochureContextService,
     private readonly categoryService: CategoryService,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -32,7 +35,7 @@ export class BrochureBusinessService {
     page: number = 1,
     limit: number = 10,
   ): Promise<{
-    items: Brochure[];
+    items: BrochureListItemDto[];
     total: number;
     page: number;
     limit: number;
@@ -49,51 +52,84 @@ export class BrochureBusinessService {
       limit,
     );
 
-    const totalPages = Math.ceil(result.total / result.limit);
+    const totalPages = Math.ceil(result.total / limit);
 
-    this.logger.log(`브로슈어 목록 조회 완료 - 총 ${result.total}개`);
+    // Brochure 엔티티를 BrochureListItemDto로 변환 (attachments 제거, translations flatten)
+    const items: BrochureListItemDto[] = result.items.map((brochure) => {
+      const koreanTranslation = brochure.translations[0]; // 이미 한국어만 필터링되어 있음
+
+      return {
+        id: brochure.id,
+        isPublic: brochure.isPublic,
+        status: brochure.status,
+        order: brochure.order,
+        title: koreanTranslation?.title || '',
+        description: koreanTranslation?.description || null,
+        createdAt: brochure.createdAt,
+        updatedAt: brochure.updatedAt,
+      };
+    });
+
+    this.logger.log(
+      `브로슈어 목록 조회 완료 - 총 ${result.total}개 (${page}/${totalPages} 페이지)`,
+    );
 
     return {
-      ...result,
+      items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
       totalPages,
     };
   }
 
   /**
-   * 브로슈어를 생성한다
+   * 브로슈어를 생성한다 (파일 업로드 포함)
    */
-  async 브로슈어를_생성한다(data: {
-    isPublic?: boolean;
-    status?: ContentStatus;
-    translations: Array<{
+  async 브로슈어를_생성한다(
+    data: {
       languageId: string;
       title: string;
-      description?: string | null;
-    }>;
-    attachments?: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileSize: number;
-      mimeType: string;
-    }> | null;
-    order?: number;
-    createdBy?: string;
-  }): Promise<BrochureDetailResult> {
+      description?: string;
+      createdBy?: string;
+    },
+    files?: Express.Multer.File[],
+  ): Promise<BrochureDetailResult> {
     this.logger.log(
-      `브로슈어 생성 시작 - 제목: ${data.translations[0]?.title}`,
+      `브로슈어 생성 시작 - 언어 ID: ${data.languageId}, 제목: ${data.title}`,
     );
 
-    // 기본값 설정
+    // 파일 업로드 처리
+    let attachments:
+      | Array<{
+          fileName: string;
+          fileUrl: string;
+          fileSize: number;
+          mimeType: string;
+        }>
+      | undefined = undefined;
+
+    if (files && files.length > 0) {
+      this.logger.log(`${files.length}개의 파일 업로드 시작`);
+      const uploadedFiles = await this.s3Service.uploadFiles(
+        files,
+        'brochures',
+      );
+      attachments = uploadedFiles.map((file) => ({
+        fileName: file.fileName,
+        fileUrl: file.url,
+        fileSize: file.fileSize,
+        mimeType: file.mimeType,
+      }));
+      this.logger.log(`파일 업로드 완료: ${attachments.length}개`);
+    }
+
+    // 생성 데이터 구성
     const createData = {
-      isPublic: data.isPublic ?? true,
-      status: data.status ?? ContentStatus.DRAFT,
-      order: data.order ?? 0,
-      translations: data.translations.map((t) => ({
-        languageId: t.languageId,
-        title: t.title,
-        description: t.description ?? undefined, // null을 undefined로 변환
-      })),
-      attachments: data.attachments || undefined,
+      languageId: data.languageId,
+      title: data.title,
+      description: data.description,
+      attachments,
       createdBy: data.createdBy,
     };
 
@@ -174,6 +210,130 @@ export class BrochureBusinessService {
   }
 
   /**
+   * 기본 브로슈어들을 생성한다
+   */
+  async 기본_브로슈어들을_생성한다(createdBy?: string): Promise<Brochure[]> {
+    this.logger.log(
+      `기본 브로슈어 생성 시작 - 생성자: ${createdBy || 'Unknown'}`,
+    );
+
+    const result =
+      await this.brochureContextService.기본_브로슈어들을_생성한다(createdBy);
+
+    this.logger.log(`기본 브로슈어 생성 완료 - 총 ${result.length}개`);
+
+    return result;
+  }
+
+  /**
+   * 기본 브로슈어들을 초기화한다 (일괄 제거)
+   */
+  async 기본_브로슈어들을_초기화한다(): Promise<{
+    success: boolean;
+    deletedCount: number;
+  }> {
+    this.logger.log(
+      `기본 브로슈어 초기화 시작 (system 사용자 생성 브로슈어 삭제)`,
+    );
+
+    const deletedCount =
+      await this.brochureContextService.기본_브로슈어들을_초기화한다();
+
+    this.logger.log(`기본 브로슈어 초기화 완료 - 총 ${deletedCount}개 삭제됨`);
+
+    return {
+      success: true,
+      deletedCount,
+    };
+  }
+
+  /**
+   * 브로슈어 카테고리를 생성한다
+   */
+  async 브로슈어_카테고리를_생성한다(data: {
+    name: string;
+    description?: string;
+    isActive?: boolean;
+    order?: number;
+    createdBy?: string;
+  }): Promise<Category> {
+    this.logger.log(`브로슈어 카테고리 생성 시작 - 이름: ${data.name}`);
+
+    const newCategory = await this.categoryService.카테고리를_생성한다({
+      entityType: CategoryEntityType.BROCHURE,
+      name: data.name,
+      description: data.description,
+      isActive: data.isActive ?? true,
+      order: data.order ?? 0,
+      createdBy: data.createdBy,
+    });
+
+    this.logger.log(`브로슈어 카테고리 생성 완료 - ID: ${newCategory.id}`);
+
+    return newCategory;
+  }
+
+  /**
+   * 브로슈어 카테고리를 수정한다
+   */
+  async 브로슈어_카테고리를_수정한다(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      isActive?: boolean;
+      order?: number;
+      updatedBy?: string;
+    },
+  ): Promise<Category> {
+    this.logger.log(`브로슈어 카테고리 수정 시작 - ID: ${id}`);
+
+    const updatedCategory = await this.categoryService.카테고리를_업데이트한다(
+      id,
+      data,
+    );
+
+    this.logger.log(`브로슈어 카테고리 수정 완료 - ID: ${id}`);
+
+    return updatedCategory;
+  }
+
+  /**
+   * 브로슈어 카테고리 오더를 변경한다
+   */
+  async 브로슈어_카테고리_오더를_변경한다(
+    id: string,
+    data: {
+      order: number;
+      updatedBy?: string;
+    },
+  ): Promise<Category> {
+    this.logger.log(`브로슈어 카테고리 오더 변경 시작 - ID: ${id}`);
+
+    const result = await this.categoryService.카테고리를_업데이트한다(id, {
+      order: data.order,
+      updatedBy: data.updatedBy,
+    });
+
+    this.logger.log(`브로슈어 카테고리 오더 변경 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
+   * 브로슈어 카테고리를 삭제한다
+   */
+  async 브로슈어_카테고리를_삭제한다(id: string): Promise<boolean> {
+    this.logger.log(`브로슈어 카테고리 삭제 시작 - ID: ${id}`);
+
+    const result = await this.categoryService.카테고리를_삭제한다(id);
+
+    this.logger.log(`브로슈어 카테고리 삭제 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
    * 브로슈어 오더를 수정한다
    */
   async 브로슈어_오더를_수정한다(
@@ -196,92 +356,12 @@ export class BrochureBusinessService {
   }
 
   /**
-   * 브로슈어 카테고리를 수정한다
-   */
-  async 브로슈어_카테고리를_수정한다(
-    id: string,
-    data: {
-      categoryIds: string[];
-      updatedBy?: string;
-    },
-  ): Promise<boolean> {
-    this.logger.log(`브로슈어 카테고리 수정 시작 - ID: ${id}`);
-
-    // TODO: 카테고리 관련 로직 구현 필요
-    // Category Context Service와 통합 필요
-
-    this.logger.log(`브로슈어 카테고리 수정 완료 - ID: ${id}`);
-
-    return true;
-  }
-
-  /**
-   * 브로슈어 카테고리를 생성한다
-   */
-  async 브로슈어_카테고리를_생성한다(data: {
-    name: string;
-    description?: string;
-    order?: number;
-    createdBy?: string;
-  }): Promise<Category> {
-    this.logger.log(`브로슈어 카테고리 생성 시작 - 이름: ${data.name}`);
-
-    const category = await this.categoryService.카테고리를_생성한다({
-      entityType: CategoryEntityType.BROCHURE,
-      name: data.name,
-      description: data.description,
-      isActive: true,
-      order: data.order ?? 0,
-      createdBy: data.createdBy,
-    });
-
-    this.logger.log(`브로슈어 카테고리 생성 완료 - ID: ${category.id}`);
-
-    return category;
-  }
-
-  /**
-   * 브로슈어 카테고리 오더를 변경한다
-   */
-  async 브로슈어_카테고리_오더를_변경한다(
-    id: string,
-    data: {
-      order: number;
-      updatedBy?: string;
-    },
-  ): Promise<Category> {
-    this.logger.log(`브로슈어 카테고리 오더 변경 시작 - ID: ${id}`);
-
-    const category = await this.categoryService.카테고리를_업데이트한다(id, {
-      order: data.order,
-      updatedBy: data.updatedBy,
-    });
-
-    this.logger.log(`브로슈어 카테고리 오더 변경 완료 - ID: ${id}`);
-
-    return category;
-  }
-
-  /**
-   * 브로슈어 카테고리를 삭제한다
-   */
-  async 브로슈어_카테고리를_삭제한다(id: string): Promise<boolean> {
-    this.logger.log(`브로슈어 카테고리 삭제 시작 - ID: ${id}`);
-
-    const result = await this.categoryService.카테고리를_삭제한다(id);
-
-    this.logger.log(`브로슈어 카테고리 삭제 완료 - ID: ${id}`);
-
-    return result;
-  }
-
-  /**
-   * 브로슈어 파일을 수정한다
+   * 브로슈어 파일을 수정한다 (파일 업로드 포함)
    */
   async 브로슈어_파일을_수정한다(
     id: string,
     data: {
-      attachments: Array<{
+      attachments?: Array<{
         fileName: string;
         fileUrl: string;
         fileSize: number;
@@ -289,12 +369,36 @@ export class BrochureBusinessService {
       }>;
       updatedBy?: string;
     },
+    files?: Express.Multer.File[],
   ): Promise<Brochure> {
     this.logger.log(`브로슈어 파일 수정 시작 - ID: ${id}`);
 
+    // 파일 업로드 처리
+    let attachments = data.attachments;
+    if (files && files.length > 0) {
+      this.logger.log(`${files.length}개의 파일 업로드 시작`);
+      const uploadedFiles = await this.s3Service.uploadFiles(
+        files,
+        'brochures',
+      );
+      const newAttachments = uploadedFiles.map((file) => ({
+        fileName: file.fileName,
+        fileUrl: file.url,
+        fileSize: file.fileSize,
+        mimeType: file.mimeType,
+      }));
+
+      // 기존 첨부파일과 새 첨부파일 병합
+      attachments = [...(attachments || []), ...newAttachments];
+      this.logger.log(`파일 업로드 완료: ${newAttachments.length}개`);
+    }
+
     const result = await this.brochureContextService.브로슈어_파일을_수정한다(
       id,
-      data,
+      {
+        attachments: attachments || [],
+        updatedBy: data.updatedBy,
+      },
     );
 
     this.logger.log(`브로슈어 파일 수정 완료 - ID: ${id}`);
@@ -303,15 +407,50 @@ export class BrochureBusinessService {
   }
 
   /**
-   * 기본 브로슈어들을 추가한다
+   * 브로슈어 파일을 삭제한다
    */
-  async 기본_브로슈어들을_추가한다(createdBy?: string): Promise<Brochure[]> {
-    this.logger.log('기본 브로슈어 추가 시작');
+  async 브로슈어_파일을_삭제한다(
+    id: string,
+    fileUrls: string[],
+    updatedBy?: string,
+  ): Promise<Brochure> {
+    this.logger.log(
+      `브로슈어 파일 삭제 시작 - ID: ${id}, 파일 수: ${fileUrls.length}`,
+    );
 
-    const result =
-      await this.brochureContextService.기본_브로슈어들을_추가한다(createdBy);
+    // 브로슈어 조회
+    const brochure =
+      await this.brochureContextService.브로슈어_상세_조회한다(id);
 
-    this.logger.log(`기본 브로슈어 추가 완료 - 총 ${result.length}개 추가됨`);
+    if (!brochure.attachments || brochure.attachments.length === 0) {
+      this.logger.warn(`삭제할 파일이 없습니다 - ID: ${id}`);
+      return brochure;
+    }
+
+    // S3에서 파일 삭제
+    this.logger.log(`S3에서 ${fileUrls.length}개의 파일 삭제 시작`);
+    await this.s3Service.deleteFiles(fileUrls);
+    this.logger.log(`S3 파일 삭제 완료`);
+
+    // 삭제할 파일 제외한 첨부파일 목록 생성
+    const remainingAttachments = brochure.attachments.filter(
+      (attachment) => !fileUrls.includes(attachment.fileUrl),
+    );
+
+    this.logger.log(
+      `남은 첨부파일: ${remainingAttachments.length}개 (${brochure.attachments.length - remainingAttachments.length}개 삭제됨)`,
+    );
+
+    // 브로슈어 파일 정보 업데이트
+    const result = await this.brochureContextService.브로슈어_파일을_수정한다(
+      id,
+      {
+        attachments: remainingAttachments,
+        updatedBy,
+      },
+    );
+
+    this.logger.log(`브로슈어 파일 삭제 완료 - ID: ${id}`);
 
     return result;
   }

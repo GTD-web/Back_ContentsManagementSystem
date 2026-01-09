@@ -10,10 +10,30 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ContentStatus } from '@domain/core/content-status.types';
-import {
-  BrochureTranslationDto,
-  BrochureAttachmentDto,
-} from './create-brochure.dto';
+import { BrochureAttachmentDto } from './create-brochure.dto';
+
+/**
+ * 브로슈어 번역 수정 DTO
+ */
+export class UpdateBrochureTranslationDto {
+  @ApiProperty({ description: '번역 ID', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiProperty({ description: '언어 ID' })
+  @IsString()
+  languageId: string;
+
+  @ApiProperty({ description: '제목', example: '회사 소개 브로슈어' })
+  @IsString()
+  title: string;
+
+  @ApiProperty({ description: '설명', required: false })
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
 
 /**
  * 브로슈어 수정 DTO
@@ -51,14 +71,14 @@ export class UpdateBrochureDto {
 
   @ApiProperty({
     description: '번역 목록',
-    type: [BrochureTranslationDto],
+    type: [UpdateBrochureTranslationDto],
     required: false,
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BrochureTranslationDto)
-  translations?: BrochureTranslationDto[];
+  @Type(() => UpdateBrochureTranslationDto)
+  translations?: UpdateBrochureTranslationDto[];
 
   @ApiProperty({ description: '수정자 ID', required: false })
   @IsOptional()

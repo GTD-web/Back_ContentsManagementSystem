@@ -39,10 +39,22 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
     const queryBuilder = this.brochureRepository
       .createQueryBuilder('brochure')
       .leftJoinAndSelect('brochure.translations', 'translations')
-      .leftJoinAndSelect('translations.language', 'language');
+      .leftJoinAndSelect('translations.language', 'language')
+      // 한국어 번역이 있는 브로슈어만 조회 (EXISTS 서브쿼리 사용)
+      .where((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('1')
+          .from('brochure_translations', 'bt')
+          .innerJoin('languages', 'lang', 'bt.languageId = lang.id')
+          .where('bt.brochureId = brochure.id')
+          .andWhere("lang.code = 'ko'")
+          .getQuery();
+        return `EXISTS ${subQuery}`;
+      });
 
     if (isPublic !== undefined) {
-      queryBuilder.where('brochure.isPublic = :isPublic', { isPublic });
+      queryBuilder.andWhere('brochure.isPublic = :isPublic', { isPublic });
     }
 
     if (orderBy === 'order') {
@@ -56,6 +68,13 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
     queryBuilder.skip(skip).take(limit);
 
     const [items, total] = await queryBuilder.getManyAndCount();
+
+    // 목록 조회에서는 한국어 번역만 반환
+    items.forEach((brochure) => {
+      brochure.translations = brochure.translations.filter(
+        (translation) => translation.language.code === 'ko',
+      );
+    });
 
     return { items, total, page, limit };
   }

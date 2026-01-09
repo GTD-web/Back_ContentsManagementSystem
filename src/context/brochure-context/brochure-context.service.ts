@@ -117,10 +117,36 @@ export class BrochureContextService {
   }
 
   /**
-   * 기본 브로슈어들을 추가한다
+   * 기본 브로슈어들을 생성한다
    */
-  async 기본_브로슈어들을_추가한다(createdBy?: string): Promise<Brochure[]> {
+  async 기본_브로슈어들을_생성한다(createdBy?: string): Promise<Brochure[]> {
     const command = new InitializeDefaultBrochuresCommand(createdBy);
     return await this.commandBus.execute(command);
+  }
+
+  /**
+   * 기본 브로슈어들을 초기화한다 (일괄 제거)
+   */
+  async 기본_브로슈어들을_초기화한다(): Promise<number> {
+    // system 사용자가 생성한 브로슈어들을 모두 삭제
+    const listQuery = new GetBrochureListQuery(undefined, 'order', 1, 1000);
+    const { items } = await this.queryBus.execute(listQuery);
+
+    // system 사용자가 생성한 브로슈어만 필터링
+    const systemBrochures = items.filter(
+      (brochure) => brochure.createdBy === 'system',
+    );
+
+    // 일괄 삭제
+    let deletedCount = 0;
+    for (const brochure of systemBrochures) {
+      const command = new DeleteBrochureCommand(brochure.id);
+      const success = await this.commandBus.execute(command);
+      if (success) {
+        deletedCount++;
+      }
+    }
+
+    return deletedCount;
   }
 }

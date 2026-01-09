@@ -82,11 +82,16 @@
 - MainPopup, LumirStory, VideoGallery, EducationManagement
 
 **특징**:
-- AWS S3에 파일 업로드 후 메타데이터만 저장
+- **파일 업로드 방식**: 클라이언트가 Form-data로 파일 전송 → 백엔드가 S3에 업로드 → 메타데이터 저장
 - `order` 필드로 첨부파일 순서 관리
 - 파일 크기는 bytes 단위
 - **파일명으로 언어 구분**: 다국어 파일은 파일명에 언어 코드 포함 (예: `brochure_ko.pdf`, `brochure_en.pdf`, `popup_image_ja.jpg`)
 - **파일명 규칙**: `{파일명}_{언어코드}.{확장자}` 형식 권장
+- **파일 처리 흐름**:
+  1. 클라이언트: `multipart/form-data`로 파일 전송
+  2. 백엔드: `@nestjs/platform-express` Multer로 파일 수신
+  3. 백엔드: AWS S3 SDK로 파일 업로드
+  4. 백엔드: S3 URL과 메타데이터를 JSONB 필드에 저장
 
 ---
 
@@ -774,6 +779,12 @@ ALTER TABLE attendee ADD CONSTRAINT chk_attendee_completed
   - `Announcement.requiresResponse` 필드 제거
   - CHECK 제약조건 업데이트: Survey의 permission 제약 제거, announcementId 유니크 제약 추가
   - 인덱스 추가: `idx_survey_announcement`, `idx_survey_end_date`
+
+### v5.15 (2026-01-09)
+- ✅ **파일 업로드 방식 변경**
+  - 클라이언트: Form-data로 파일 전송 (multipart/form-data)
+  - 백엔드: Multer로 파일 수신 → S3 업로드 → 메타데이터 저장
+  - attachments JSONB 필드는 백엔드가 자동 생성
 
 ### v5.9 (2026-01-08)
 - ✅ **첨부파일 관리 단순화**

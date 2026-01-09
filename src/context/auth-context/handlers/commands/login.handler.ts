@@ -2,12 +2,12 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
 import {
   LoginCommand,
   LoginResult,
 } from '../../interfaces/auth-context.interface';
-import { UserCacheService } from '../../user-cache.service';
 
 /**
  * SSO 로그인 핸들러
@@ -23,7 +23,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-    private readonly userCacheService: UserCacheService,
+    private readonly jwtService: JwtService,
   ) {
     const baseUrl = this.configService.get<string>('SSO_BASE_URL') || '';
     // trailing slash 제거
@@ -67,20 +67,26 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
       // CMS-DEV 시스템의 역할 추출
       const cmsRoles = data.systemRoles['CMS-DEV'] || [];
 
-      // 사용자 정보를 캐시에 저장
-      this.userCacheService.setUser(data.id, {
-        id: data.id,
+      // 자체 JWT 생성 (email, name 포함)
+      const payload = {
+        sub: data.id, // 사용자 ID
         email: data.email,
         name: data.name,
         employeeNumber: data.employeeNumber,
+        roles: cmsRoles,
         status: data.status,
+      };
+
+      const accessToken = this.jwtService.sign(payload);
+      const refreshToken = this.jwtService.sign(payload, {
+        expiresIn: '7d', // 리프레시 토큰은 7일
       });
 
       this.logger.log(`로그인 성공: ${email} (역할: ${cmsRoles.join(', ')})`);
 
       return {
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
+        accessToken,
+        refreshToken,
         user: {
           id: data.id,
           externalId: data.id, // SSO의 id를 externalId로 사용
