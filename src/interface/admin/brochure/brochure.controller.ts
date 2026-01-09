@@ -32,12 +32,12 @@ import { UpdateBrochureTranslationsDto } from '@interface/common/dto/brochure/up
 import {
   UpdateBrochureDto,
   UpdateBrochurePublicDto,
-  UpdateBrochureOrderDto,
   UpdateBrochureFileDto,
   CreateBrochureCategoryDto,
   UpdateBrochureCategoryDto,
   UpdateBrochureCategoryOrderDto,
 } from '@interface/common/dto/brochure/update-brochure.dto';
+import { UpdateBrochureBatchOrderDto } from '@interface/common/dto/brochure/update-brochure-batch-order.dto';
 import {
   BrochureResponseDto,
   BrochureListResponseDto,
@@ -351,29 +351,40 @@ export class BrochureController {
   }
 
   /**
-   * 브로슈어 오더를 수정한다
+   * 브로슈어 오더를 일괄 수정한다
    */
-  @Patch(':id/order')
+  @Put('batch-order')
   @ApiOperation({
-    summary: '브로슈어 오더 수정',
-    description: '브로슈어의 정렬 순서를 수정합니다.',
+    summary: '브로슈어 오더 일괄 수정',
+    description:
+      '여러 브로슈어의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 브로슈어 목록을 전달하면 됩니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '브로슈어 오더 수정 성공',
-    type: BrochureResponseDto,
+    description: '브로슈어 오더 일괄 수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        updatedCount: { type: 'number', example: 5 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (수정할 브로슈어가 없음)',
   })
   @ApiResponse({
     status: 404,
-    description: '브로슈어를 찾을 수 없음',
+    description: '일부 브로슈어를 찾을 수 없음',
   })
-  async 브로슈어_오더를_수정한다(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateBrochureOrderDto,
-  ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_오더를_수정한다(
-      id,
-      updateDto,
+  async 브로슈어_오더를_일괄_수정한다(
+    @Body() updateDto: UpdateBrochureBatchOrderDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    return await this.brochureBusinessService.브로슈어_오더를_일괄_수정한다(
+      updateDto.brochures,
+      user.id,
     );
   }
 

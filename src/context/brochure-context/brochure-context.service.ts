@@ -4,7 +4,10 @@ import { CreateBrochureCommand } from './handlers/commands/create-brochure.handl
 import { UpdateBrochureCommand } from './handlers/commands/update-brochure.handler';
 import { DeleteBrochureCommand } from './handlers/commands/delete-brochure.handler';
 import { UpdateBrochurePublicCommand } from './handlers/commands/update-brochure-public.handler';
-import { UpdateBrochureOrderCommand } from './handlers/commands/update-brochure-order.handler';
+import {
+  UpdateBrochureBatchOrderCommand,
+  UpdateBrochureBatchOrderDto,
+} from './handlers/commands/update-brochure-batch-order.handler';
 import { UpdateBrochureFileCommand } from './handlers/commands/update-brochure-file.handler';
 import { InitializeDefaultBrochuresCommand } from './handlers/commands/initialize-default-brochures.handler';
 import {
@@ -79,13 +82,12 @@ export class BrochureContextService {
   }
 
   /**
-   * 브로슈어 오더를 수정한다
+   * 브로슈어 오더를 일괄 수정한다
    */
-  async 브로슈어_오더를_수정한다(
-    id: string,
-    data: UpdateBrochureOrderDto,
-  ): Promise<Brochure> {
-    const command = new UpdateBrochureOrderCommand(id, data);
+  async 브로슈어_오더를_일괄_수정한다(
+    data: UpdateBrochureBatchOrderDto,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    const command = new UpdateBrochureBatchOrderCommand(data);
     return await this.commandBus.execute(command);
   }
 

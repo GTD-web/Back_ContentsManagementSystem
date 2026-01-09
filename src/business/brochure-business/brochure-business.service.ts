@@ -331,23 +331,25 @@ export class BrochureBusinessService {
   }
 
   /**
-   * 브로슈어 오더를 수정한다
+   * 브로슈어 오더를 일괄 수정한다
    */
-  async 브로슈어_오더를_수정한다(
-    id: string,
-    data: {
-      order: number;
-      updatedBy?: string;
-    },
-  ): Promise<Brochure> {
-    this.logger.log(`브로슈어 오더 수정 시작 - ID: ${id}`);
-
-    const result = await this.brochureContextService.브로슈어_오더를_수정한다(
-      id,
-      data,
+  async 브로슈어_오더를_일괄_수정한다(
+    brochures: Array<{ id: string; order: number }>,
+    updatedBy?: string,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    this.logger.log(
+      `브로슈어 일괄 오더 수정 시작 - 수정할 브로슈어 수: ${brochures.length}`,
     );
 
-    this.logger.log(`브로슈어 오더 수정 완료 - ID: ${id}`);
+    const result =
+      await this.brochureContextService.브로슈어_오더를_일괄_수정한다({
+        brochures,
+        updatedBy,
+      });
+
+    this.logger.log(
+      `브로슈어 일괄 오더 수정 완료 - 수정된 브로슈어 수: ${result.updatedCount}`,
+    );
 
     return result;
   }
