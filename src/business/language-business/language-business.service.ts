@@ -35,6 +35,19 @@ export class LanguageBusinessService {
   }
 
   /**
+   * 언어 상세를 조회한다
+   */
+  async 언어_상세를_조회한다(id: string): Promise<Language> {
+    this.logger.log(`언어 상세 조회 시작 - ID: ${id}`);
+
+    const result = await this.languageContextService.언어_상세를_조회한다(id);
+
+    this.logger.log(`언어 상세 조회 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
    * 언어를 생성한다
    */
   async 언어를_생성한다(data: {

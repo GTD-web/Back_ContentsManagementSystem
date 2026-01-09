@@ -1,0 +1,22 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@libs/(.*)$": "<rootDir>/../libs/$1",
+    "^@src/(.*)$": "<rootDir>/../src/$1",
+    "^@domain/(.*)$": "<rootDir>/../src/domain/$1",
+    "^@context/(.*)$": "<rootDir>/../src/context/$1",
+    "^@business/(.*)$": "<rootDir>/../src/business/$1",
+    "^@interface/(.*)$": "<rootDir>/../src/interface/$1"
+  },
+  "setupFilesAfterEnv": ["./setup.ts"],
+  "testTimeout": 30000,
+  "maxWorkers": 1,
+  "forceExit": true,
+  "detectOpenHandles": true
+}

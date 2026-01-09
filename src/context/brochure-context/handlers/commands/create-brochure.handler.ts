@@ -3,8 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
-import { CreateBrochureDto, CreateBrochureResult } from '../../interfaces/brochure-context.interface';
-import { Logger } from '@nestjs/common';
+import { Language } from '@domain/common/language/language.entity';
+import {
+  CreateBrochureDto,
+  CreateBrochureResult,
+} from '../../interfaces/brochure-context.interface';
+import { Logger, BadRequestException } from '@nestjs/common';
 
 /**
  * 브로슈어 생성 커맨드
@@ -25,12 +29,37 @@ export class CreateBrochureHandler implements ICommandHandler<CreateBrochureComm
     private readonly brochureRepository: Repository<Brochure>,
     @InjectRepository(BrochureTranslation)
     private readonly brochureTranslationRepository: Repository<BrochureTranslation>,
+    @InjectRepository(Language)
+    private readonly languageRepository: Repository<Language>,
   ) {}
 
   async execute(command: CreateBrochureCommand): Promise<CreateBrochureResult> {
     const { data } = command;
 
     this.logger.log(`브로슈어 생성 시작`);
+
+    // 번역의 languageId 검증
+    if (data.translations && data.translations.length > 0) {
+      const languageIds = data.translations.map((trans) => trans.languageId);
+      const uniqueLanguageIds = [...new Set(languageIds)];
+
+      const existingLanguages = await this.languageRepository.find({
+        where: uniqueLanguageIds.map((id) => ({ id })),
+      });
+
+      const existingLanguageIds = new Set(
+        existingLanguages.map((lang) => lang.id),
+      );
+      const missingLanguageIds = uniqueLanguageIds.filter(
+        (id) => !existingLanguageIds.has(id),
+      );
+
+      if (missingLanguageIds.length > 0) {
+        throw new BadRequestException(
+          `존재하지 않는 언어 ID입니다: ${missingLanguageIds.join(', ')}`,
+        );
+      }
+    }
 
     // 브로슈어 생성
     const brochure = this.brochureRepository.create({

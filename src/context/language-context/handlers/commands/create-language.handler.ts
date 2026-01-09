@@ -2,7 +2,10 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Language } from '@domain/common/language/language.entity';
-import { CreateLanguageDto, CreateLanguageResult } from '../../interfaces/language-context.interface';
+import {
+  CreateLanguageDto,
+  CreateLanguageResult,
+} from '../../interfaces/language-context.interface';
 import { Logger, ConflictException } from '@nestjs/common';
 
 /**
@@ -35,11 +38,16 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
     });
 
     if (existing) {
-      throw new ConflictException(`이미 존재하는 언어 코드입니다: ${data.code}`);
+      throw new ConflictException(
+        `이미 존재하는 언어 코드입니다: ${data.code}`,
+      );
     }
 
     // 언어 생성
-    const language = this.languageRepository.create(data);
+    const language = this.languageRepository.create({
+      ...data,
+      isActive: data.isActive ?? true, // 기본값 true 설정
+    });
     const saved = await this.languageRepository.save(language);
 
     this.logger.log(`언어 생성 완료 - ID: ${saved.id}`);

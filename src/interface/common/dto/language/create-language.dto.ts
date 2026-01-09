@@ -6,7 +6,11 @@ import { LanguageCode } from '@domain/common/language/language-code.types';
  * 언어 생성 DTO
  */
 export class CreateLanguageDto {
-  @ApiProperty({ description: '언어 코드', example: 'ko', enum: ['ko', 'en', 'ja', 'zh'] })
+  @ApiProperty({
+    description: '언어 코드',
+    example: 'ko',
+    enum: ['ko', 'en', 'ja', 'zh'],
+  })
   @IsEnum(['ko', 'en', 'ja', 'zh'])
   code: LanguageCode;
 
@@ -14,9 +18,15 @@ export class CreateLanguageDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ description: '활성화 여부', example: true, default: true })
+  @ApiProperty({
+    description: '활성화 여부',
+    example: true,
+    default: true,
+    required: false,
+  })
+  @IsOptional()
   @IsBoolean()
-  isActive: boolean;
+  isActive?: boolean;
 
   @ApiProperty({ description: '생성자 ID', required: false })
   @IsOptional()

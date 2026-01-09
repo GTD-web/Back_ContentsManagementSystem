@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { 
-  IsEnum, 
-  IsBoolean, 
-  IsNumber, 
-  IsArray, 
-  IsOptional, 
+import {
+  IsEnum,
+  IsBoolean,
+  IsNumber,
+  IsArray,
+  IsOptional,
   IsString,
   ValidateNested,
   ArrayMinSize,
@@ -38,7 +38,10 @@ export class BrochureAttachmentDto {
   @IsString()
   fileName: string;
 
-  @ApiProperty({ description: '파일 URL', example: 'https://s3.amazonaws.com/...' })
+  @ApiProperty({
+    description: '파일 URL',
+    example: 'https://s3.amazonaws.com/...',
+  })
   @IsString()
   fileUrl: string;
 
@@ -55,25 +58,39 @@ export class BrochureAttachmentDto {
  * 브로슈어 생성 DTO
  */
 export class CreateBrochureDto {
-  @ApiProperty({ description: '공개 여부', example: true, default: true })
+  @ApiProperty({
+    description: '공개 여부',
+    example: true,
+    default: true,
+    required: false,
+  })
+  @IsOptional()
   @IsBoolean()
-  isPublic: boolean;
+  isPublic?: boolean;
 
-  @ApiProperty({ 
-    description: '상태', 
+  @ApiProperty({
+    description: '상태',
     enum: ContentStatus,
     example: ContentStatus.DRAFT,
     default: ContentStatus.DRAFT,
+    required: false,
   })
+  @IsOptional()
   @IsEnum(ContentStatus)
-  status: ContentStatus;
+  status?: ContentStatus;
 
-  @ApiProperty({ description: '정렬 순서', example: 1, default: 0 })
+  @ApiProperty({
+    description: '정렬 순서',
+    example: 1,
+    default: 0,
+    required: false,
+  })
+  @IsOptional()
   @IsNumber()
-  order: number;
+  order?: number;
 
-  @ApiProperty({ 
-    description: '첨부파일 목록', 
+  @ApiProperty({
+    description: '첨부파일 목록',
     type: [BrochureAttachmentDto],
     required: false,
   })
@@ -83,8 +100,8 @@ export class CreateBrochureDto {
   @Type(() => BrochureAttachmentDto)
   attachments?: BrochureAttachmentDto[];
 
-  @ApiProperty({ 
-    description: '번역 목록', 
+  @ApiProperty({
+    description: '번역 목록',
     type: [BrochureTranslationDto],
   })
   @IsArray()

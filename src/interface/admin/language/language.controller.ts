@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -18,7 +19,10 @@ import {
 import { LanguageBusinessService } from '@business/language-business/language-business.service';
 import { CreateLanguageDto } from '@interface/common/dto/language/create-language.dto';
 import { UpdateLanguageDto } from '@interface/common/dto/language/update-language.dto';
-import { LanguageResponseDto, LanguageListResponseDto } from '@interface/common/dto/language/language-response.dto';
+import {
+  LanguageResponseDto,
+  LanguageListResponseDto,
+} from '@interface/common/dto/language/language-response.dto';
 
 @ApiTags('A-1. 관리자 - 언어')
 @ApiBearerAuth('Bearer')
@@ -80,7 +84,10 @@ export class LanguageController {
   async 언어를_생성한다(
     @Body() createDto: CreateLanguageDto,
   ): Promise<LanguageResponseDto> {
-    return await this.languageBusinessService.언어를_생성한다(createDto);
+    return await this.languageBusinessService.언어를_생성한다({
+      ...createDto,
+      isActive: createDto.isActive ?? true, // 기본값 true 설정
+    });
   }
 
   /**
@@ -108,6 +115,53 @@ export class LanguageController {
   }
 
   /**
+   * 언어 상세를 조회한다
+   */
+  @Get(':id')
+  @ApiOperation({
+    summary: '언어 상세 조회',
+    description: 'ID로 언어 상세 정보를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '언어 상세 조회 성공',
+    type: LanguageResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '언어를 찾을 수 없음',
+  })
+  async 언어_상세를_조회한다(
+    @Param('id') id: string,
+  ): Promise<LanguageResponseDto> {
+    return await this.languageBusinessService.언어_상세를_조회한다(id);
+  }
+
+  /**
+   * 언어를 부분 수정한다 (PATCH)
+   */
+  @Patch(':id')
+  @ApiOperation({
+    summary: '언어 부분 수정',
+    description: '언어 정보를 부분 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '언어 수정 성공',
+    type: LanguageResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '언어를 찾을 수 없음',
+  })
+  async 언어를_부분수정한다(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateLanguageDto,
+  ): Promise<LanguageResponseDto> {
+    return await this.languageBusinessService.언어를_수정한다(id, updateDto);
+  }
+
+  /**
    * 언어를 삭제한다
    */
   @Delete(':id')
@@ -123,7 +177,9 @@ export class LanguageController {
     status: 404,
     description: '언어를 찾을 수 없음',
   })
-  async 언어를_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
+  async 언어를_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     const result = await this.languageBusinessService.언어를_삭제한다(id);
     return { success: result };
   }

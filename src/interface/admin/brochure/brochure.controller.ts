@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { BrochureBusinessService } from '@business/brochure-business/brochure-business.service';
 import { CreateBrochureDto } from '@interface/common/dto/brochure/create-brochure.dto';
-import { 
+import {
   UpdateBrochureDto,
   UpdateBrochurePublicDto,
   UpdateBrochureOrderDto,
@@ -27,8 +27,8 @@ import {
   UpdateBrochureCategoryDto,
   UpdateBrochureCategoryOrderDto,
 } from '@interface/common/dto/brochure/update-brochure.dto';
-import { 
-  BrochureResponseDto, 
+import {
+  BrochureResponseDto,
   BrochureListResponseDto,
   BrochureCategoryListResponseDto,
   BrochureCategoryResponseDto,
@@ -71,8 +71,9 @@ export class BrochureController {
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
   ): Promise<BrochureListResponseDto> {
-    const isPublicFilter = isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
-    
+    const isPublicFilter =
+      isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
+
     const items = await this.brochureBusinessService.브로슈어_목록을_조회한다(
       isPublicFilter,
       orderBy || 'order',
@@ -82,6 +83,25 @@ export class BrochureController {
       items,
       total: items.length,
     };
+  }
+
+  /**
+   * 브로슈어를 생성한다
+   */
+  @Post()
+  @ApiOperation({
+    summary: '브로슈어 생성',
+    description: '새로운 브로슈어를 생성합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '브로슈어 생성 성공',
+    type: BrochureResponseDto,
+  })
+  async 브로슈어를_생성한다(
+    @Body() createDto: CreateBrochureDto,
+  ): Promise<BrochureResponseDto> {
+    return await this.brochureBusinessService.브로슈어를_생성한다(createDto);
   }
 
   /**
@@ -98,7 +118,8 @@ export class BrochureController {
     type: BrochureCategoryListResponseDto,
   })
   async 브로슈어_카테고리_목록을_조회한다(): Promise<BrochureCategoryListResponseDto> {
-    const items = await this.brochureBusinessService.브로슈어_카테고리_목록을_조회한다();
+    const items =
+      await this.brochureBusinessService.브로슈어_카테고리_목록을_조회한다();
 
     return {
       items,
@@ -108,6 +129,9 @@ export class BrochureController {
 
   /**
    * 브로슈어 상세 조회한다
+   *
+   * 주의: 이 라우트는 categories 라우트보다 뒤에 와야 합니다.
+   * 그렇지 않으면 /categories가 :id로 매칭됩니다.
    */
   @Get(':id')
   @ApiOperation({
@@ -150,7 +174,10 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochurePublicDto,
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_공개를_수정한다(id, updateDto);
+    return await this.brochureBusinessService.브로슈어_공개를_수정한다(
+      id,
+      updateDto,
+    );
   }
 
   /**
@@ -174,7 +201,10 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureOrderDto,
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_오더를_수정한다(id, updateDto);
+    return await this.brochureBusinessService.브로슈어_오더를_수정한다(
+      id,
+      updateDto,
+    );
   }
 
   /**
@@ -198,7 +228,10 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureFileDto,
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_파일을_수정한다(id, updateDto);
+    return await this.brochureBusinessService.브로슈어_파일을_수정한다(
+      id,
+      updateDto,
+    );
   }
 
   /**
@@ -217,7 +250,9 @@ export class BrochureController {
     status: 404,
     description: '브로슈어를 찾을 수 없음',
   })
-  async 브로슈어를_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
+  async 브로슈어를_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     const result = await this.brochureBusinessService.브로슈어를_삭제한다(id);
     return { success: result };
   }
@@ -242,7 +277,11 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryDto,
   ): Promise<{ success: boolean }> {
-    const result = await this.brochureBusinessService.브로슈어_카테고리를_수정한다(id, updateDto);
+    const result =
+      await this.brochureBusinessService.브로슈어_카테고리를_수정한다(
+        id,
+        updateDto,
+      );
     return { success: result };
   }
 
@@ -262,7 +301,9 @@ export class BrochureController {
   async 브로슈어_카테고리를_생성한다(
     @Body() createDto: CreateBrochureCategoryDto,
   ): Promise<BrochureCategoryResponseDto> {
-    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다(createDto);
+    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다(
+      createDto,
+    );
   }
 
   /**
@@ -285,7 +326,11 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryOrderDto,
   ): Promise<{ success: boolean }> {
-    const result = await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(id, updateDto);
+    const result =
+      await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
+        id,
+        updateDto,
+      );
     return { success: result };
   }
 
@@ -305,8 +350,11 @@ export class BrochureController {
     status: 404,
     description: '카테고리를 찾을 수 없음',
   })
-  async 브로슈어_카테고리를_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
-    const result = await this.brochureBusinessService.브로슈어_카테고리를_삭제한다(id);
+  async 브로슈어_카테고리를_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    const result =
+      await this.brochureBusinessService.브로슈어_카테고리를_삭제한다(id);
     return { success: result };
   }
 }

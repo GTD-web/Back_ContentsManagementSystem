@@ -26,13 +26,65 @@ export class BrochureBusinessService {
     isPublic?: boolean,
     orderBy: 'order' | 'createdAt' = 'order',
   ): Promise<Brochure[]> {
-    this.logger.log(`브로슈어 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}`);
+    this.logger.log(
+      `브로슈어 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}`,
+    );
 
-    const result = await this.brochureContextService.브로슈어_목록을_조회한다(isPublic, orderBy);
+    const result = await this.brochureContextService.브로슈어_목록을_조회한다(
+      isPublic,
+      orderBy,
+    );
 
     this.logger.log(`브로슈어 목록 조회 완료 - 총 ${result.total}개`);
 
     return result.items;
+  }
+
+  /**
+   * 브로슈어를 생성한다
+   */
+  async 브로슈어를_생성한다(data: {
+    isPublic?: boolean;
+    status?: ContentStatus;
+    translations: Array<{
+      languageId: string;
+      title: string;
+      description?: string | null;
+    }>;
+    attachments?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+    }> | null;
+    order?: number;
+    createdBy?: string;
+  }): Promise<BrochureDetailResult> {
+    this.logger.log(
+      `브로슈어 생성 시작 - 제목: ${data.translations[0]?.title}`,
+    );
+
+    // 기본값 설정
+    const createData = {
+      isPublic: data.isPublic ?? true,
+      status: data.status ?? ContentStatus.DRAFT,
+      order: data.order ?? 0,
+      translations: data.translations.map((t) => ({
+        languageId: t.languageId,
+        title: t.title,
+        description: t.description ?? undefined, // null을 undefined로 변환
+      })),
+      attachments: data.attachments || undefined,
+      createdBy: data.createdBy,
+    };
+
+    const result =
+      await this.brochureContextService.브로슈어를_생성한다(createData);
+
+    this.logger.log(`브로슈어 생성 완료 - ID: ${result.id}`);
+
+    // 상세 정보 조회
+    return await this.brochureContextService.브로슈어_상세_조회한다(result.id);
   }
 
   /**
@@ -43,7 +95,7 @@ export class BrochureBusinessService {
 
     // TODO: 카테고리 관련 로직 구현 필요
     // Category Context Service와 통합 필요
-    
+
     this.logger.log(`브로슈어 카테고리 목록 조회 완료`);
 
     return [];
@@ -61,7 +113,10 @@ export class BrochureBusinessService {
   ): Promise<Brochure> {
     this.logger.log(`브로슈어 공개 수정 시작 - ID: ${id}`);
 
-    const result = await this.brochureContextService.브로슈어_공개를_수정한다(id, data);
+    const result = await this.brochureContextService.브로슈어_공개를_수정한다(
+      id,
+      data,
+    );
 
     this.logger.log(`브로슈어 공개 수정 완료 - ID: ${id}`);
 
@@ -106,7 +161,10 @@ export class BrochureBusinessService {
   ): Promise<Brochure> {
     this.logger.log(`브로슈어 오더 수정 시작 - ID: ${id}`);
 
-    const result = await this.brochureContextService.브로슈어_오더를_수정한다(id, data);
+    const result = await this.brochureContextService.브로슈어_오더를_수정한다(
+      id,
+      data,
+    );
 
     this.logger.log(`브로슈어 오더 수정 완료 - ID: ${id}`);
 
@@ -201,7 +259,10 @@ export class BrochureBusinessService {
   ): Promise<Brochure> {
     this.logger.log(`브로슈어 파일 수정 시작 - ID: ${id}`);
 
-    const result = await this.brochureContextService.브로슈어_파일을_수정한다(id, data);
+    const result = await this.brochureContextService.브로슈어_파일을_수정한다(
+      id,
+      data,
+    );
 
     this.logger.log(`브로슈어 파일 수정 완료 - ID: ${id}`);
 

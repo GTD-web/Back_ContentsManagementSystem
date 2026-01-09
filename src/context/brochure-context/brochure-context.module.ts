@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
+import { Language } from '@domain/common/language/language.entity';
 import { BrochureContextService } from './brochure-context.service';
 import {
   CreateBrochureHandler,
@@ -23,7 +24,7 @@ import {
 @Module({
   imports: [
     CqrsModule,
-    TypeOrmModule.forFeature([Brochure, BrochureTranslation]),
+    TypeOrmModule.forFeature([Brochure, BrochureTranslation, Language]),
   ],
   providers: [
     BrochureContextService,

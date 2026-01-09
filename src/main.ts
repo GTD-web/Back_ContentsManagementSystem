@@ -24,6 +24,9 @@ async function bootstrap() {
     }),
   );
 
+  // Global Prefix 설정
+  app.setGlobalPrefix('api');
+
   // CORS 설정
   app.enableCors({
     origin: '*',
