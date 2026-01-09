@@ -6,6 +6,44 @@
 
 루미르 컨텐츠 관리 시스템은 사내 공지사항, 주주총회, 전자공시, 교육 등 회사에서 발생하는 이벤트들의 콘텐츠를 관리하는 시스템입니다. Domain-Driven Design과 CQRS 패턴을 적용하여 확장 가능하고 유지보수가 용이한 구조로 설계되었습니다.
 
+## 🐳 Docker 실행
+
+### 1. PostgreSQL만 실행 (개발 모드)
+
+```bash
+# PostgreSQL 컨테이너만 실행
+docker-compose up postgres -d
+
+# 로컬에서 NestJS 개발 서버 실행
+npm run start:dev
+```
+
+### 2. 전체 스택 실행 (프로덕션 모드)
+
+```bash
+# Docker 이미지 빌드 및 전체 스택 실행
+docker-compose up --build -d
+
+# 로그 확인
+docker-compose logs -f
+
+# 서비스 중지
+docker-compose down
+
+# 볼륨까지 삭제
+docker-compose down -v
+```
+
+### 3. Docker 이미지 빌드 및 푸시
+
+```bash
+# 이미지 빌드
+docker build -t corejong/lumir-cms-backend:latest .
+
+# Docker Hub에 푸시
+docker push corejong/lumir-cms-backend:latest
+```
+
 
 ## 🏗️ 아키텍처
 
@@ -114,18 +152,25 @@ DB_LOGGING=true
 
 # SSO 설정
 SSO_BASE_URL=https://lsso.vercel.app
-SSO_CLIENT_ID=your-sso-client-id
-SSO_CLIENT_SECRET=your-sso-client-secret
 ```
 
 ### 2. 데이터베이스 실행 (Docker)
 
 ```bash
-# PostgreSQL 컨테이너 시작
-docker compose up -d
+# PostgreSQL 컨테이너만 시작 (개발 모드)
+docker compose up postgres -d
 
 # 로그 확인
 docker compose logs -f postgres
+
+# 전체 스택 실행 (NestJS 앱 포함)
+docker compose up --build -d
+
+# 서비스 중지
+docker compose down
+
+# 볼륨까지 삭제
+docker compose down -v
 ```
 
 > 📖 상세한 데이터베이스 관리는 [DATABASE.md](./docs/DATABASE.md) 참고
@@ -146,7 +191,53 @@ npm run start:dev
 
 브라우저에서 접속:
 ```
-http://localhost:3000/api-docs
+http://localhost:4000/api/admin/api-docs
+```
+
+## 🐳 Docker 배포
+
+### Docker 이미지 빌드
+
+```bash
+# 이미지 빌드
+docker build -t corejong/lumir-cms-backend:latest .
+
+# 이미지 테스트
+docker run -p 4000:4000 \
+  -e DATABASE_HOST=host.docker.internal \
+  -e DATABASE_PORT=5434 \
+  -e DATABASE_USERNAME=lumir_admin \
+  -e DATABASE_PASSWORD=lumir_password_2024 \
+  -e DATABASE_NAME=lumir_cms \
+  corejong/lumir-cms-backend:latest
+
+# Docker Hub에 푸시
+docker push corejong/lumir-cms-backend:latest
+```
+
+### Docker Compose로 전체 스택 실행
+
+```bash
+# 빌드 및 실행
+docker compose up --build -d
+
+# 로그 확인
+docker compose logs -f app
+
+# 헬스체크 확인
+docker compose ps
+```
+
+### 프로덕션 환경 변수
+
+프로덕션 환경에서는 다음 환경 변수를 반드시 설정해야 합니다:
+
+```bash
+NODE_ENV=production
+DB_SYNCHRONIZE=false  # 프로덕션에서는 반드시 false!
+DB_LOGGING=false
+JWT_SECRET=강력한-시크릿-키
+SSO_BASE_URL=https://sso.lumir.space
 ```
 
 ## 📚 문서

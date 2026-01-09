@@ -5,6 +5,7 @@ import { DatabaseModule } from '@libs/database/database.module';
 import { AuthInterfaceModule } from './interface/admin/auth/auth.module';
 import { LanguageInterfaceModule } from './interface/admin/language/language.module';
 import { BrochureInterfaceModule } from './interface/admin/brochure/brochure.module';
+import { HealthModule } from './interface/common/health/health.module';
 import { AuthContextModule } from '@context/auth-context';
 import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
 
@@ -31,6 +32,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     AuthContextModule,
 
     // Interface Layer 모듈
+    HealthModule,
     AuthInterfaceModule,
     LanguageInterfaceModule,
     BrochureInterfaceModule,
