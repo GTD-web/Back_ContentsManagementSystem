@@ -9,6 +9,7 @@ import { BrochureInterfaceModule } from './interface/admin/brochure/brochure.mod
 import { ElectronicDisclosureInterfaceModule } from './interface/admin/electronic-disclosure/electronic-disclosure.module';
 import { IRInterfaceModule } from './interface/admin/ir/ir.module';
 import { MainPopupInterfaceModule } from './interface/admin/main-popup/main-popup.module';
+import { ShareholdersMeetingAdminModule } from './interface/admin/shareholders-meeting/shareholders-meeting.module';
 import { HealthModule } from './interface/common/health/health.module';
 import { AuthContextModule } from '@context/auth-context';
 import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
@@ -46,6 +47,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     ElectronicDisclosureInterfaceModule,
     IRInterfaceModule,
     MainPopupInterfaceModule,
+    ShareholdersMeetingAdminModule,
   ],
   providers: [
     // 전역 JWT 인증 가드 설정

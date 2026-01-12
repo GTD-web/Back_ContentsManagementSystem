@@ -33,6 +33,7 @@ import {
   MainPopupCategoryListResponseDto,
 } from '@interface/common/dto/main-popup/main-popup-response.dto';
 import { UpdateMainPopupBatchOrderDto } from '@interface/common/dto/main-popup/update-main-popup-batch-order.dto';
+import { CreateMainPopupDto } from '@interface/common/dto/main-popup/create-main-popup.dto';
 
 @ApiTags('A-5. 관리자 - 메인 팝업')
 @ApiBearerAuth('Bearer')
@@ -92,12 +93,13 @@ export class MainPopupController {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
-    const result = await this.mainPopupBusinessService.메인_팝업_목록을_조회한다(
-      isPublicFilter,
-      orderBy || 'order',
-      pageNum,
-      limitNum,
-    );
+    const result =
+      await this.mainPopupBusinessService.메인_팝업_목록을_조회한다(
+        isPublicFilter,
+        orderBy || 'order',
+        pageNum,
+        limitNum,
+      );
 
     return result;
   }
@@ -204,24 +206,23 @@ export class MainPopupController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
-      '**예시 (한 개 언어)**:\n' +
-      '```json\n' +
-      '[{"languageId":"uuid-ko","title":"메인 팝업","description":"메인 팝업 설명입니다."}]\n' +
-      '```\n\n' +
-      '**예시 (여러 언어)**:\n' +
-      '```json\n' +
-      '[{"languageId":"uuid-ko","title":"메인 팝업","description":"메인 팝업 설명입니다."},{"languageId":"uuid-en","title":"Main Popup","description":"Main popup description."}]\n' +
-      '```',
+      '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
+      '- **translations**: JSON 문자열로 전송 (아래 스키마 참고)\n' +
+      '- **files**: 파일 배열 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX)',
     schema: {
       type: 'object',
       properties: {
         translations: {
           type: 'string',
           description:
-            '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
-          example:
-            '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"메인 팝업","description":"메인 팝업 설명입니다."}]',
+            '번역 목록 (JSON 문자열). CreateMainPopupTranslationDto 배열을 JSON.stringify()한 값',
+          example: JSON.stringify([
+            {
+              languageId: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+              title: '메인 팝업',
+              description: '메인 팝업 설명입니다.',
+            },
+          ]),
         },
         files: {
           type: 'array',
@@ -315,7 +316,7 @@ export class MainPopupController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
+      '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
@@ -326,9 +327,14 @@ export class MainPopupController {
         translations: {
           type: 'string',
           description:
-            '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
-          example:
-            '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"메인 팝업","description":"메인 팝업 설명입니다."}]',
+            '번역 목록 (JSON 문자열). CreateMainPopupTranslationDto 배열을 JSON.stringify()한 값',
+          example: JSON.stringify([
+            {
+              languageId: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+              title: '메인 팝업',
+              description: '메인 팝업 설명입니다.',
+            },
+          ]),
         },
         files: {
           type: 'array',
@@ -509,10 +515,13 @@ export class MainPopupController {
     @Body()
     updateDto: { name?: string; description?: string; isActive?: boolean },
   ): Promise<MainPopupCategoryResponseDto> {
-    return await this.mainPopupBusinessService.메인_팝업_카테고리를_수정한다(id, {
-      ...updateDto,
-      updatedBy: user.id,
-    });
+    return await this.mainPopupBusinessService.메인_팝업_카테고리를_수정한다(
+      id,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
+    );
   }
 
   /**
@@ -538,10 +547,13 @@ export class MainPopupController {
     @Body() updateDto: { order: number },
   ): Promise<MainPopupCategoryResponseDto> {
     const result =
-      await this.mainPopupBusinessService.메인_팝업_카테고리_오더를_변경한다(id, {
-        order: updateDto.order,
-        updatedBy: user.id,
-      });
+      await this.mainPopupBusinessService.메인_팝업_카테고리_오더를_변경한다(
+        id,
+        {
+          order: updateDto.order,
+          updatedBy: user.id,
+        },
+      );
     return result;
   }
 

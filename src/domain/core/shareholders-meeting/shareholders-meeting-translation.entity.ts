@@ -74,6 +74,13 @@ export class ShareholdersMeetingTranslation extends BaseEntity<ShareholdersMeeti
   })
   summary: string | null;
 
+  @Column({
+    type: 'boolean',
+    default: false,
+    comment: '자동 동기화 여부 (true: 자동 번역, false: 개별 설정)',
+  })
+  isSynced: boolean;
+
   /**
    * 엔티티를 DTO로 변환한다
    */

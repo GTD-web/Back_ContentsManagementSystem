@@ -33,6 +33,7 @@ import {
   IRCategoryListResponseDto,
 } from '@interface/common/dto/ir/ir-response.dto';
 import { UpdateIRBatchOrderDto } from '@interface/common/dto/ir/update-ir-batch-order.dto';
+import { CreateIRDto } from '@interface/common/dto/ir/create-ir.dto';
 
 @ApiTags('A-4. 관리자 - IR')
 @ApiBearerAuth('Bearer')
@@ -201,24 +202,23 @@ export class IRController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
-      '**예시 (한 개 언어)**:\n' +
-      '```json\n' +
-      '[{"languageId":"uuid-ko","title":"IR 자료","description":"투자자 정보 자료입니다."}]\n' +
-      '```\n\n' +
-      '**예시 (여러 언어)**:\n' +
-      '```json\n' +
-      '[{"languageId":"uuid-ko","title":"IR 자료","description":"투자자 정보 자료입니다."},{"languageId":"uuid-en","title":"IR Material","description":"Investor relations material."}]\n' +
-      '```',
+      '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
+      '- **translations**: JSON 문자열로 전송 (아래 스키마 참고)\n' +
+      '- **files**: 파일 배열 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX)',
     schema: {
       type: 'object',
       properties: {
         translations: {
           type: 'string',
           description:
-            '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
-          example:
-            '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"IR 자료","description":"투자자 정보 자료입니다."}]',
+            '번역 목록 (JSON 문자열). CreateIRTranslationDto 배열을 JSON.stringify()한 값',
+          example: JSON.stringify([
+            {
+              languageId: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+              title: 'IR 자료',
+              description: '투자자 정보 자료입니다.',
+            },
+          ]),
         },
         files: {
           type: 'array',
@@ -312,7 +312,7 @@ export class IRController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
+      '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
@@ -323,9 +323,14 @@ export class IRController {
         translations: {
           type: 'string',
           description:
-            '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
-          example:
-            '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"IR 자료","description":"투자자 정보 자료입니다."}]',
+            '번역 목록 (JSON 문자열). CreateIRTranslationDto 배열을 JSON.stringify()한 값',
+          example: JSON.stringify([
+            {
+              languageId: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+              title: 'IR 자료',
+              description: '투자자 정보 자료입니다.',
+            },
+          ]),
         },
         files: {
           type: 'array',
