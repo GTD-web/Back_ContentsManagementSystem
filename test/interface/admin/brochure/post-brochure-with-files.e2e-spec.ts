@@ -130,10 +130,11 @@ describe('[E2E] POST /api/admin/brochures - 파일 업로드', () => {
 
       // 파일 2개 업로드 확인
       expect(brochure.attachments).toBeDefined();
-      expect(brochure.attachments.length).toBe(2);
+      expect(brochure.attachments).not.toBeNull();
+      expect(brochure.attachments!.length).toBe(2);
 
       // 각 파일 검증
-      const fileNames = brochure.attachments.map(a => a.fileName);
+      const fileNames = brochure.attachments!.map(a => a.fileName);
       expect(fileNames).toContain(file1Name);
       expect(fileNames).toContain(file2Name);
 
@@ -172,8 +173,9 @@ describe('[E2E] POST /api/admin/brochures - 파일 업로드', () => {
 
       // 파일 추가 확인
       expect(updateResponse.body.attachments).toBeDefined();
-      expect(updateResponse.body.attachments.length).toBe(1);
-      expect(updateResponse.body.attachments[0].fileName).toBe(fileName);
+      expect(updateResponse.body.attachments).not.toBeNull();
+      expect(updateResponse.body.attachments!.length).toBe(1);
+      expect(updateResponse.body.attachments![0].fileName).toBe(fileName);
 
       // 정리
       await testHelper

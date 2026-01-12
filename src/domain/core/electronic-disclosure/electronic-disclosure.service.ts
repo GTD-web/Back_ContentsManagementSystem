@@ -195,4 +195,50 @@ export class ElectronicDisclosureService {
       relations: ['translations', 'translations.language'],
     });
   }
+
+  /**
+   * 전자공시 번역을 생성한다
+   */
+  async 전자공시_번역을_생성한다(
+    electronicDisclosureId: string,
+    translations: Array<{
+      languageId: string;
+      title: string;
+      description?: string;
+    }>,
+    createdBy?: string,
+  ): Promise<void> {
+    this.logger.log(
+      `전자공시 번역 생성 시작 - 전자공시 ID: ${electronicDisclosureId}, 번역 수: ${translations.length}`,
+    );
+
+    for (const translation of translations) {
+      const newTranslation = this.translationRepository.create({
+        electronicDisclosureId,
+        languageId: translation.languageId,
+        title: translation.title,
+        description: translation.description || null,
+        createdBy,
+      });
+      await this.translationRepository.save(newTranslation);
+    }
+
+    this.logger.log(`전자공시 번역 생성 완료 - ${translations.length}개`);
+  }
+
+  /**
+   * 전자공시 번역을 업데이트한다
+   */
+  async 전자공시_번역을_업데이트한다(
+    translationId: string,
+    data: {
+      title?: string;
+      description?: string;
+      updatedBy?: string;
+    },
+  ): Promise<void> {
+    this.logger.log(`전자공시 번역 업데이트 - ID: ${translationId}`);
+
+    await this.translationRepository.update(translationId, data);
+  }
 }

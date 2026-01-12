@@ -24,9 +24,9 @@ describe('[E2E] PATCH /api/admin/electronic-disclosures/:id/files - 파일 업�
     // 테스트용 전자공시 데이터 직접 생성
     const dataSource = testHelper['dataSource'];
     const disclosure = dataSource.getRepository(ElectronicDisclosure).create({
-      title: '파일 테스트용 전자공시',
-      content: '파일 업로드 테스트입니다',
       isPublic: false,
+      status: 'draft' as any,
+      order: 0,
       createdBy: 'test-user',
     });
     const saved = await dataSource.getRepository(ElectronicDisclosure).save(disclosure);
@@ -61,9 +61,10 @@ describe('[E2E] PATCH /api/admin/electronic-disclosures/:id/files - 파일 업�
 
       // 파일 업로드 확인
       expect(disclosure.attachments).toBeDefined();
-      expect(disclosure.attachments.length).toBe(1);
+      expect(disclosure.attachments).not.toBeNull();
+      expect(disclosure.attachments!.length).toBe(1);
 
-      const attachment = disclosure.attachments[0];
+      const attachment = disclosure.attachments![0];
       expect(attachment.fileName).toBe(fileName);
       expect(attachment.fileUrl).toContain('/uploads/electronic-disclosures/');
       expect(attachment.fileSize).toBe(pdfBuffer.length);
