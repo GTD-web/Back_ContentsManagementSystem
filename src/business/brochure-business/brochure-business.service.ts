@@ -386,7 +386,6 @@ export class BrochureBusinessService {
     }>,
     updatedBy?: string,
     files?: Express.Multer.File[],
-    deleteFileUrls?: string[],
   ): Promise<BrochureTranslation[]> {
     this.logger.log(
       `브로슈어 수정 시작 - 브로슈어 ID: ${brochureId}, 번역 수: ${translations.length}`,
@@ -396,52 +395,46 @@ export class BrochureBusinessService {
     const brochure =
       await this.brochureContextService.브로슈어_상세_조회한다(brochureId);
 
-    // 2. 파일 삭제 처리
-    let remainingAttachments = brochure.attachments || [];
-    if (deleteFileUrls && deleteFileUrls.length > 0) {
-      this.logger.log(`스토리지에서 ${deleteFileUrls.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(deleteFileUrls);
+    // 2. 기존 파일 전부 삭제
+    const currentAttachments = brochure.attachments || [];
+    if (currentAttachments.length > 0) {
+      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
+      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
+      await this.storageService.deleteFiles(filesToDelete);
       this.logger.log(`스토리지 파일 삭제 완료`);
-
-      // 삭제할 파일 제외한 첨부파일 목록 생성
-      remainingAttachments = remainingAttachments.filter(
-        (attachment) => !deleteFileUrls.includes(attachment.fileUrl),
-      );
-      this.logger.log(
-        `남은 첨부파일: ${remainingAttachments.length}개 (${deleteFileUrls.length}개 삭제됨)`,
-      );
     }
 
     // 3. 새 파일 업로드 처리
+    let finalAttachments: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+    }> = [];
+
     if (files && files.length > 0) {
       this.logger.log(`${files.length}개의 파일 업로드 시작`);
       const uploadedFiles = await this.storageService.uploadFiles(
         files,
         'brochures',
       );
-      const newAttachments = uploadedFiles.map((file) => ({
+      finalAttachments = uploadedFiles.map((file) => ({
         fileName: file.fileName,
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
       }));
-
-      // 기존 첨부파일과 새 첨부파일 병합
-      remainingAttachments = [...remainingAttachments, ...newAttachments];
-      this.logger.log(`파일 업로드 완료: ${newAttachments.length}개`);
+      this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
     }
 
-    // 4. 파일 정보 업데이트 (파일이 변경된 경우에만)
-    if (
-      (deleteFileUrls && deleteFileUrls.length > 0) ||
-      (files && files.length > 0)
-    ) {
-      await this.brochureContextService.브로슈어_파일을_수정한다(brochureId, {
-        attachments: remainingAttachments,
-        updatedBy,
-      });
-      this.logger.log(`브로슈어 파일 업데이트 완료`);
-    }
+    // 4. 파일 정보 업데이트
+    await this.brochureContextService.브로슈어_파일을_수정한다(brochureId, {
+      attachments: finalAttachments,
+      updatedBy,
+    });
+    this.logger.log(
+      `브로슈어 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
+    );
 
     // 5. 번역 수정
     const result = await this.brochureContextService.브로슈어_번역들을_수정한다(

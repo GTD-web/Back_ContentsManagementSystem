@@ -272,8 +272,10 @@ export class BrochureController {
   @ApiBody({
     description:
       '⚠️ **중요**: translations 필드는 반드시 배열 형태의 JSON 문자열로 입력해야 합니다.\n\n' +
-      '**기존 파일 삭제**: deleteFileUrls에 삭제할 파일 URL 배열을 JSON 문자열로 전달\n' +
-      '**새 파일 추가**: files 필드에 새로운 파일들을 multipart로 전달',
+      '**파일 관리 방식**:\n' +
+      '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
+      '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
     schema: {
       type: 'object',
       properties: {
@@ -284,16 +286,11 @@ export class BrochureController {
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]',
         },
-        deleteFileUrls: {
-          type: 'string',
-          description: '삭제할 파일 URL 목록 (JSON 배열 문자열) - 선택사항',
-          example: '["https://bucket.s3.amazonaws.com/brochures/file1.pdf"]',
-        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '추가할 첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능)',
+            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['translations'],
@@ -326,28 +323,11 @@ export class BrochureController {
       }
     }
 
-    // deleteFileUrls 파싱
-    let deleteFileUrls: string[] = [];
-    if (body.deleteFileUrls) {
-      if (typeof body.deleteFileUrls === 'string') {
-        try {
-          deleteFileUrls = JSON.parse(body.deleteFileUrls);
-        } catch (error) {
-          throw new BadRequestException(
-            'deleteFileUrls 파싱 실패: 올바른 JSON 형식이 아닙니다.',
-          );
-        }
-      } else {
-        deleteFileUrls = body.deleteFileUrls;
-      }
-    }
-
     return await this.brochureBusinessService.브로슈어를_수정한다(
       id,
       translations,
       user.id,
       files,
-      deleteFileUrls,
     );
   }
 
