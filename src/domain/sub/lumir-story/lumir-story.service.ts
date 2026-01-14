@@ -2,7 +2,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LumirStory } from './lumir-story.entity';
-import { ContentStatus } from '../../core/content-status.types';
 
 /**
  * 루미르스토리 서비스
@@ -34,7 +33,6 @@ export class LumirStoryService {
    * 모든 루미르스토리를 조회한다
    */
   async 모든_루미르스토리를_조회한다(options?: {
-    status?: ContentStatus;
     isPublic?: boolean;
     orderBy?: 'order' | 'createdAt';
   }): Promise<LumirStory[]> {
@@ -43,14 +41,8 @@ export class LumirStoryService {
     const queryBuilder =
       this.lumirStoryRepository.createQueryBuilder('lumirStory');
 
-    if (options?.status) {
-      queryBuilder.where('lumirStory.status = :status', {
-        status: options.status,
-      });
-    }
-
     if (options?.isPublic !== undefined) {
-      queryBuilder.andWhere('lumirStory.isPublic = :isPublic', {
+      queryBuilder.where('lumirStory.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
@@ -116,19 +108,6 @@ export class LumirStoryService {
   }
 
   /**
-   * 루미르스토리 상태를 변경한다
-   */
-  async 루미르스토리_상태를_변경한다(
-    id: string,
-    status: ContentStatus,
-    updatedBy?: string,
-  ): Promise<LumirStory> {
-    this.logger.log(`루미르스토리 상태 변경 - ID: ${id}, 상태: ${status}`);
-
-    return await this.루미르스토리를_업데이트한다(id, { status, updatedBy });
-  }
-
-  /**
    * 루미르스토리 공개 여부를 변경한다
    */
   async 루미르스토리_공개_여부를_변경한다(
@@ -165,7 +144,6 @@ export class LumirStoryService {
     return await this.lumirStoryRepository.find({
       where: {
         isPublic: true,
-        status: ContentStatus.OPENED,
       },
       order: {
         order: 'ASC',

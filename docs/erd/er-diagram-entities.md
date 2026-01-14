@@ -494,7 +494,6 @@ erDiagram
         text content
         text imageUrl "nullable - 썸네일"
         boolean isPublic
-        varchar status "draft|approved|under_review|rejected|opened"
         jsonb attachments "nullable"
         int order
     }

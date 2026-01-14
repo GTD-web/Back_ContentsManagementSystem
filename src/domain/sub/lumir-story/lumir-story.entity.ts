@@ -1,6 +1,5 @@
 import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
-import { ContentStatus } from '../../core/content-status.types';
 
 /**
  * LumirStory Entity (루미르 스토리)
@@ -9,7 +8,6 @@ import { ContentStatus } from '../../core/content-status.types';
  * 다국어 지원: 없음
  */
 @Entity('lumir_stories')
-@Index('idx_lumir_story_status', ['status'])
 @Index('idx_lumir_story_is_public', ['isPublic'])
 @Index('idx_lumir_story_order', ['order'])
 export class LumirStory extends BaseEntity<LumirStory> {
@@ -39,14 +37,6 @@ export class LumirStory extends BaseEntity<LumirStory> {
     comment: '공개 여부',
   })
   isPublic: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: ContentStatus,
-    default: ContentStatus.DRAFT,
-    comment: '상태 (draft|approved|under_review|rejected|opened)',
-  })
-  status: ContentStatus;
 
   @Column({
     type: 'jsonb',

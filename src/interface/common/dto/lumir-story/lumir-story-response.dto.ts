@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 루미르스토리 첨부파일 DTO
@@ -45,13 +44,6 @@ export class LumirStoryResponseDto {
   isPublic: boolean;
 
   @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
-
-  @ApiProperty({
     description: '첨부파일 목록',
     type: [LumirStoryAttachmentDto],
     required: false,
@@ -94,13 +86,6 @@ export class LumirStoryListItemDto {
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
-
-  @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
 
   @ApiProperty({ description: '정렬 순서', example: 1 })
   order: number;

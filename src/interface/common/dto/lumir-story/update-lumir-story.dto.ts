@@ -1,12 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsEnum,
   IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 루미르스토리 공개 상태 수정 DTO

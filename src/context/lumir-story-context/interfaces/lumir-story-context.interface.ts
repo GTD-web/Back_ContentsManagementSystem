@@ -1,5 +1,4 @@
 import { LumirStory } from '@domain/sub/lumir-story/lumir-story.entity';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 루미르스토리 생성 DTO
@@ -25,7 +24,6 @@ export interface UpdateLumirStoryDto {
   content?: string;
   imageUrl?: string | null;
   isPublic?: boolean;
-  status?: ContentStatus;
   order?: number;
   attachments?: Array<{
     fileName: string;
@@ -71,7 +69,6 @@ export interface UpdateLumirStoryFileDto {
 export interface CreateLumirStoryResult {
   id: string;
   isPublic: boolean;
-  status: ContentStatus;
   order: number;
   createdAt: Date;
 }

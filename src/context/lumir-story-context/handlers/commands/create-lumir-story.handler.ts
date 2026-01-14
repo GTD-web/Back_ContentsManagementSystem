@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { LumirStoryService } from '@domain/sub/lumir-story/lumir-story.service';
-import { ContentStatus } from '@domain/core/content-status.types';
 import {
   CreateLumirStoryDto,
   CreateLumirStoryResult,
@@ -35,13 +34,12 @@ export class CreateLumirStoryHandler
     // 자동으로 order 계산
     const nextOrder = await this.lumirStoryService.다음_순서를_계산한다();
 
-    // 루미르스토리 생성 (기본값: 비공개, DRAFT 상태)
+    // 루미르스토리 생성 (기본값: 공개)
     const saved = await this.lumirStoryService.루미르스토리를_생성한다({
       title: data.title,
       content: data.content,
       imageUrl: data.imageUrl || null,
-      isPublic: false, // 기본값: 비공개
-      status: ContentStatus.DRAFT, // 기본값: DRAFT
+      isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산
       attachments: data.attachments || null,
       createdBy: data.createdBy,
@@ -55,7 +53,6 @@ export class CreateLumirStoryHandler
     return {
       id: saved.id,
       isPublic: saved.isPublic,
-      status: saved.status,
       order: saved.order,
       createdAt: saved.createdAt,
     };
