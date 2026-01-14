@@ -51,10 +51,10 @@ export class AnnouncementBusinessService {
     @InjectRepository(SurveyCompletion)
     private readonly surveyCompletionRepository: Repository<SurveyCompletion>,
   ) {
-    this.ssoBaseUrl = this.configService.get<string>('SSO_API_URL');
+    this.ssoBaseUrl = this.configService.get<string>('SSO_API_URL') || '';
     this.notificationBaseUrl = this.configService.get<string>(
       'NOTIFICATION_API_URL',
-    );
+    ) || '';
   }
 
   /**
@@ -637,12 +637,12 @@ export class AnnouncementBusinessService {
     const orgInfo = await this.companyContextService.조직_정보를_가져온다();
 
     // 특정 직원 ID 목록
-    if (announcement.permissionEmployeeIds?.length > 0) {
+    if (announcement.permissionEmployeeIds && announcement.permissionEmployeeIds.length > 0) {
       announcement.permissionEmployeeIds.forEach((id) => employeeIds.add(id));
     }
 
     // 직급 코드로 필터링
-    if (announcement.permissionRankCodes?.length > 0) {
+    if (announcement.permissionRankCodes && announcement.permissionRankCodes.length > 0) {
       const employees = this.조직에서_직급별_직원ID를_추출한다(
         orgInfo,
         announcement.permissionRankCodes,
@@ -651,7 +651,7 @@ export class AnnouncementBusinessService {
     }
 
     // 직책 코드로 필터링
-    if (announcement.permissionPositionCodes?.length > 0) {
+    if (announcement.permissionPositionCodes && announcement.permissionPositionCodes.length > 0) {
       const employees = this.조직에서_직책별_직원ID를_추출한다(
         orgInfo,
         announcement.permissionPositionCodes,
@@ -660,7 +660,7 @@ export class AnnouncementBusinessService {
     }
 
     // 부서 코드로 필터링
-    if (announcement.permissionDepartmentCodes?.length > 0) {
+    if (announcement.permissionDepartmentCodes && announcement.permissionDepartmentCodes.length > 0) {
       const employees = this.조직에서_부서별_직원ID를_추출한다(
         orgInfo,
         announcement.permissionDepartmentCodes,

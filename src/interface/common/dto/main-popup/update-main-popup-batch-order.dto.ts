@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString, IsNumber, ValidateNested } from 'class-validator';
+import { IsArray, IsString, IsNumber, ValidateNested, ArrayMinSize, IsNotEmpty, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -11,6 +11,7 @@ export class MainPopupOrderItemDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @IsString()
+  @IsNotEmpty()
   id: string;
 
   @ApiProperty({
@@ -18,6 +19,7 @@ export class MainPopupOrderItemDto {
     example: 1,
   })
   @IsNumber()
+  @Min(0)
   order: number;
 }
 
@@ -35,6 +37,7 @@ export class UpdateMainPopupBatchOrderDto {
     ],
   })
   @IsArray()
+  @ArrayMinSize(1, { message: '최소 1개 이상의 메인 팝업이 필요합니다.' })
   @ValidateNested({ each: true })
   @Type(() => MainPopupOrderItemDto)
   mainPopups: MainPopupOrderItemDto[];

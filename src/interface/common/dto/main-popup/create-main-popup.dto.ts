@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsArray,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -14,6 +15,7 @@ import { Type } from 'class-transformer';
 export class MainPopupAttachmentDto {
   @ApiProperty({ description: '파일명', example: 'popup_image.jpg' })
   @IsString()
+  @IsNotEmpty()
   fileName: string;
 
   @ApiProperty({
@@ -21,6 +23,7 @@ export class MainPopupAttachmentDto {
     example: 'https://s3.amazonaws.com/...',
   })
   @IsString()
+  @IsNotEmpty()
   fileUrl: string;
 
   @ApiProperty({ description: '파일 크기 (bytes)', example: 512000 })
@@ -29,6 +32,7 @@ export class MainPopupAttachmentDto {
 
   @ApiProperty({ description: 'MIME 타입', example: 'image/jpeg' })
   @IsString()
+  @IsNotEmpty()
   mimeType: string;
 }
 
@@ -41,6 +45,7 @@ export class CreateMainPopupTranslationDto {
     example: 'uuid-ko',
   })
   @IsString()
+  @IsNotEmpty()
   languageId: string;
 
   @ApiProperty({
@@ -48,6 +53,7 @@ export class CreateMainPopupTranslationDto {
     example: '신제품 출시 안내',
   })
   @IsString()
+  @IsNotEmpty()
   title: string;
 
   @ApiProperty({
@@ -81,6 +87,7 @@ export class CreateMainPopupDto {
     ],
   })
   @IsArray()
+  @IsNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => CreateMainPopupTranslationDto)
   translations: CreateMainPopupTranslationDto[];
@@ -89,4 +96,28 @@ export class CreateMainPopupDto {
   @IsOptional()
   @IsString()
   createdBy?: string;
+}
+
+/**
+ * 메인 팝업 카테고리 생성 DTO
+ */
+export class CreateMainPopupCategoryDto {
+  @ApiProperty({ description: '카테고리 이름', example: '이벤트' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiProperty({
+    description: '카테고리 설명',
+    example: '이벤트 관련 팝업',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ description: '정렬 순서', example: 0, required: false })
+  @IsOptional()
+  @IsNumber()
+  order?: number;
 }

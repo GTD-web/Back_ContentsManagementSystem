@@ -18,7 +18,7 @@ describe('PUT /api/admin/announcements/batch-order (공지사항 순서 일괄 �
   describe('성공 케이스', () => {
     it('공지사항 순서를 일괄 수정해야 한다', async () => {
       // Given - 3개의 공지사항 생성
-      const announcements = [];
+      const announcements: any[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()
@@ -71,7 +71,7 @@ describe('PUT /api/admin/announcements/batch-order (공지사항 순서 일괄 �
 
     it('일부 공지사항의 순서만 수정해야 한다', async () => {
       // Given - 5개의 공지사항 생성
-      const announcements = [];
+      const announcements: any[] = [];
       for (let i = 1; i <= 5; i++) {
         const response = await testSuite
           .request()

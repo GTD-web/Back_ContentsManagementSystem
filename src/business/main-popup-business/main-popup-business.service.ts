@@ -151,7 +151,7 @@ export class MainPopupBusinessService {
     files?: Express.Multer.File[],
   ): Promise<MainPopup> {
     this.logger.log(
-      `메인 팝업 수정 시작 - ID: ${id}, 번역 수: ${translations.length}`,
+      `메인 팝업 수정 시작 - ID: ${id}, 번역 수: ${translations?.length || 0}`,
     );
 
     // 1. 기존 메인 팝업 조회

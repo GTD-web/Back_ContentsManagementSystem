@@ -144,7 +144,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
-        .send({ status: ContentStatus.CLOSED })
+        .send({ status: ContentStatus.OPENED })
         .expect(200);
 
       // Then
@@ -152,7 +152,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         id: announcementId,
       });
       // status는 응답에 포함될 수도, 안 될 수도 있음
-      // ContentStatus.CLOSED가 설정되었는지 DB에서 확인 필요
+      // ContentStatus.OPENED가 설정되었는지 DB에서 확인 필요
     });
 
     it('공지사항의 권한 정보를 수정해야 한다', async () => {
@@ -452,7 +452,7 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
 
     it('여러 공지사항을 삭제해야 한다', async () => {
       // Given
-      const ids = [];
+      const ids: string[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()

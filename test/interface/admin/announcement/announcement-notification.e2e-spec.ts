@@ -253,7 +253,7 @@ describe('공지사항 알림 API', () => {
 
     it('여러 공지사항에 대해 알림을 전송할 수 있어야 한다', async () => {
       // Given - 여러 공지사항 생성
-      const announcementIds = [];
+      const announcementIds: string[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()

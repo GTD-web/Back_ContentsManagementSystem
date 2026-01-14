@@ -264,17 +264,18 @@ export class ElectronicDisclosureService {
       throw new BadRequestException('수정할 전자공시가 없습니다.');
     }
 
-    // 전자공시 ID 목록 추출
-    const disclosureIds = items.map((item) => item.id);
+    // 전자공시 ID 목록 추출 (중복 제거)
+    const uniqueDisclosureIds = [...new Set(items.map((item) => item.id))];
 
     // 전자공시 조회
     const existingDisclosures = await this.electronicDisclosureRepository.find({
-      where: { id: In(disclosureIds) },
+      where: { id: In(uniqueDisclosureIds) },
     });
 
-    if (existingDisclosures.length !== items.length) {
+    // 존재하지 않는 ID 확인 (unique ID 개수와 비교)
+    if (existingDisclosures.length !== uniqueDisclosureIds.length) {
       const foundIds = existingDisclosures.map((d) => d.id);
-      const missingIds = disclosureIds.filter((id) => !foundIds.includes(id));
+      const missingIds = uniqueDisclosureIds.filter((id) => !foundIds.includes(id));
       throw new NotFoundException(
         `일부 전자공시를 찾을 수 없습니다. 누락된 ID: ${missingIds.join(', ')}`,
       );

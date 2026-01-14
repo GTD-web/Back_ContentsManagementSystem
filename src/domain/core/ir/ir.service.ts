@@ -253,17 +253,18 @@ export class IRService {
       throw new Error('수정할 IR이 없습니다.');
     }
 
-    // IR ID 목록 추출
-    const irIds = items.map((item) => item.id);
+    // IR ID 목록 추출 (중복 제거)
+    const uniqueIrIds = [...new Set(items.map((item) => item.id))];
 
     // IR 조회
     const existingIRs = await this.irRepository.find({
-      where: { id: In(irIds) },
+      where: { id: In(uniqueIrIds) },
     });
 
-    if (existingIRs.length !== items.length) {
+    // 존재하지 않는 ID 확인 (unique ID 개수와 비교)
+    if (existingIRs.length !== uniqueIrIds.length) {
       const foundIds = existingIRs.map((ir) => ir.id);
-      const missingIds = irIds.filter((id) => !foundIds.includes(id));
+      const missingIds = uniqueIrIds.filter((id) => !foundIds.includes(id));
       throw new NotFoundException(
         `일부 IR을 찾을 수 없습니다. 누락된 ID: ${missingIds.join(', ')}`,
       );

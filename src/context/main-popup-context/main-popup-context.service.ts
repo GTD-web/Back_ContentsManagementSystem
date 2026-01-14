@@ -202,50 +202,42 @@ export class MainPopupContextService {
 
     // 번역 업데이트 (제공된 경우)
     if (data.translations && data.translations.length > 0) {
+      // 기존 번역 조회 (한 번만)
+      const existingTranslations =
+        await this.mainPopupService.메인_팝업_번역을_조회한다(id);
+
       for (const translation of data.translations) {
-        if (translation.id) {
-          // 기존 번역 업데이트
+        // 해당 언어의 기존 번역 찾기
+        const existingTranslation = existingTranslations.find(
+          (t) => t.languageId === translation.languageId,
+        );
+
+        if (existingTranslation) {
+          // 이미 존재하면 업데이트
           await this.mainPopupService.메인_팝업_번역을_업데이트한다(
-            translation.id,
+            existingTranslation.id,
             {
               title: translation.title,
-              description: translation.description ?? undefined,
+              description: translation.description !== undefined 
+                ? translation.description 
+                : undefined,
               updatedBy: data.updatedBy,
             },
           );
         } else {
-          // 해당 언어의 번역이 이미 있는지 확인
-          const existingTranslations =
-            await this.mainPopupService.메인_팝업_번역을_조회한다(id);
-          const existingTranslation = existingTranslations.find(
-            (t) => t.languageId === translation.languageId,
-          );
-
-          if (existingTranslation) {
-            // 이미 존재하면 업데이트
-            await this.mainPopupService.메인_팝업_번역을_업데이트한다(
-              existingTranslation.id,
+          // 새 번역 생성
+          await this.mainPopupService.메인_팝업_번역을_생성한다(
+            id,
+            [
               {
+                languageId: translation.languageId,
                 title: translation.title,
-                description: translation.description ?? undefined,
-                updatedBy: data.updatedBy,
+                description: translation.description,
+                isSynced: false,
               },
-            );
-          } else {
-            // 새 번역 생성
-            await this.mainPopupService.메인_팝업_번역을_생성한다(
-              id,
-              [
-                {
-                  languageId: translation.languageId,
-                  title: translation.title,
-                  description: translation.description,
-                  isSynced: false,
-                },
-              ],
-              data.updatedBy,
-            );
-          }
+            ],
+            data.updatedBy,
+          );
         }
       }
     }

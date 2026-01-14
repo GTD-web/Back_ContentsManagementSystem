@@ -1,0 +1,697 @@
+---
+alwaysApply: false
+---
+
+# 비디오갤러리 상태 흐름 다이어그램 (API 포함)
+
+## 📋 개요
+
+비디오갤러리는 콘텐츠 관리 시스템의 핵심 엔티티로, **상태(Status)**와 **공개 여부(isPublic)** 두 가지 차원에서 관리됩니다.
+비디오 콘텐츠를 관리하며, 다국어를 지원하지 않고 단일 언어(한국어)로만 작성됩니다.
+
+## 🔄 상태(Status) 정의
+
+| 상태       | 값             | 설명                              |
+| ---------- | -------------- | --------------------------------- |
+| **초안**   | `draft`        | 작성 중인 상태, 아직 검토 요청 전 |
+| **검토중** | `under_review` | 검토 요청 후 승인 대기 중         |
+| **승인됨** | `approved`     | 검토 완료, 승인된 상태            |
+| **거부됨** | `rejected`     | 검토 결과 거부된 상태             |
+| **공개됨** | `opened`       | 최종 공개된 상태                  |
+
+## 📊 상태 전이 다이어그램 (API 포함)
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft: 비디오갤러리 생성
+
+    draft --> under_review: 검토 요청 (구현 필요)
+    draft --> draft: 수정/삭제 가능
+
+    under_review --> approved: 승인 (구현 필요)
+    under_review --> rejected: 거부 (구현 필요)
+    under_review --> draft: 검토 취소 (구현 필요)
+
+    approved --> opened: 공개 설정 (구현 필요)
+    approved --> draft: 수정 시작 (구현 필요)
+
+    rejected --> draft: 수정 시작 (구현 필요)
+
+    opened --> draft: 수정 시작
+    opened --> opened: 비공개 설정
+
+    note right of draft
+        초안 상태
+        모든 수정 가능
+        비디오 추가/수정 가능
+    end note
+
+    note right of under_review
+        검토중 상태
+        수정/삭제 불가
+    end note
+
+    note right of approved
+        승인됨 상태
+        공개 준비 완료
+    end note
+
+    note right of rejected
+        거부됨 상태
+        수정 필요
+    end note
+
+    note right of opened
+        공개됨 상태
+        사용자 노출
+    end note
+```
+
+### 🔗 상태 전이와 API 매핑
+
+| 상태 전이               | 액션              | API 엔드포인트                                                                                                                                                                      | 구현 상태 |
+| ----------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| **[생성]** → draft      | 비디오갤러리 생성 | `POST /api/admin/video-galleries`                                                                                                                                                   | ✅        |
+| draft → under_review    | 검토 요청         | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| draft → draft           | 수정/삭제         | `PUT /api/admin/video-galleries/:id`<br/>`PATCH /api/admin/video-galleries/:id/public`<br/>`PUT /api/admin/video-galleries/batch-order`<br/>`DELETE /api/admin/video-galleries/:id` | ✅        |
+| under_review → approved | 승인              | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| under_review → rejected | 거부              | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| under_review → draft    | 검토 취소         | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| approved → opened       | 공개 설정         | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| approved → draft        | 수정 시작         | `PUT /api/admin/video-galleries/:id` (자동 상태 전이, 구현 필요)                                                                                                                    | ❌        |
+| rejected → draft        | 수정 시작         | `PATCH /api/admin/video-galleries/:id/status` (구현 필요)                                                                                                                           | ❌        |
+| opened → draft          | 수정 시작         | `PUT /api/admin/video-galleries/:id` (자동 상태 전이, 구현 필요)                                                                                                                    | ❌        |
+| opened → opened         | 비공개 설정       | `PATCH /api/admin/video-galleries/:id/public`                                                                                                                                       | ✅        |
+
+## 🌐 전체 API 엔드포인트 맵
+
+### 상태와 무관한 조회 API
+
+```mermaid
+graph LR
+    A[비디오갤러리 API] --> B[GET /video-galleries]
+    A --> C[GET /video-galleries/all]
+    A --> D[GET /video-galleries/:id]
+    A --> E[GET /video-galleries/categories]
+
+    B --> B1[목록 조회 페이징]
+    C --> C1[전체 목록]
+    D --> D1[상세 조회]
+    E --> E1[카테고리 목록]
+```
+
+### 상태별 가능한 API 액션
+
+```mermaid
+graph TD
+    subgraph DRAFT["DRAFT 초안"]
+        D1[POST 생성 ✅]
+        D2[PUT 수정 ✅]
+        D3[PATCH public ✅]
+        D4[PUT batch-order ✅]
+        D5[DELETE 삭제 ✅]
+        D6[비디오 추가/수정 ✅]
+        D7[PATCH status → UNDER_REVIEW ❌]
+    end
+
+    subgraph UNDER_REVIEW["UNDER_REVIEW 검토중 구현 필요"]
+        U1[GET 조회만 가능]
+        U2[PATCH status → APPROVED ❌]
+        U3[PATCH status → REJECTED ❌]
+        U4[PATCH status → DRAFT ❌]
+    end
+
+    subgraph APPROVED["APPROVED 승인됨 구현 필요"]
+        A1[GET 조회]
+        A2[PATCH status → OPENED ❌]
+        A3[PATCH public ✅]
+        A4[PUT 수정 → DRAFT 전이 ❌]
+        A5[DELETE 삭제 ✅]
+    end
+
+    subgraph REJECTED["REJECTED 거부됨 구현 필요"]
+        R1[GET 조회]
+        R2[PATCH status → DRAFT ❌]
+        R3[DELETE 삭제 ✅]
+    end
+
+    subgraph OPENED["OPENED 공개됨"]
+        O1[GET 조회]
+        O2[PATCH public ✅]
+        O3[PUT 수정 → DRAFT 전이 ❌]
+        O4[DELETE 삭제 ✅]
+    end
+
+    style DRAFT fill:#e3f2fd
+    style UNDER_REVIEW fill:#fff3e0
+    style APPROVED fill:#e8f5e9
+    style REJECTED fill:#ffebee
+    style OPENED fill:#f3e5f5
+```
+
+## 🔄 상태 전이 시퀀스 다이어그램
+
+### 시나리오 1: 정상적인 공개 프로세스
+
+```mermaid
+sequenceDiagram
+    participant Admin as 관리자
+    participant API as API 서버
+    participant DB as 데이터베이스
+    participant S3 as S3 Storage
+
+    Note over Admin,S3: 1. 비디오갤러리 생성
+    Admin->>API: POST /api/admin/video-galleries
+    API->>S3: Upload video files
+    S3-->>API: S3 URLs
+    API->>DB: INSERT (status: 'draft', isPublic: false)
+    Note right of DB: videoSources: [{url, type}]
+    DB-->>API: 생성 완료
+    API-->>Admin: 201 Created (DRAFT)
+
+    Note over Admin,S3: 2. 비디오 및 내용 수정
+    Admin->>API: PUT /api/admin/video-galleries/:id
+    API->>S3: Upload new videos
+    S3-->>API: New S3 URLs
+    API->>DB: UPDATE title, description, videoSources
+    DB-->>API: 수정 완료
+    API-->>Admin: 200 OK
+
+    Note over Admin,S3: 3. 검토 요청 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'under_review'}
+    API->>DB: UPDATE status = 'under_review'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (UNDER_REVIEW)
+
+    Note over Admin,S3: 4. 승인 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'approved'}
+    API->>DB: UPDATE status = 'approved'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (APPROVED)
+
+    Note over Admin,S3: 5. 공개 설정 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'opened'}
+    API->>DB: UPDATE status = 'opened'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (OPENED)
+
+    Note over Admin,S3: 6. 공개 여부 활성화
+    Admin->>API: PATCH /api/admin/video-galleries/:id/public
+    Note right of API: {isPublic: true}
+    API->>DB: UPDATE isPublic = true
+    DB-->>API: 수정 완료
+    API-->>Admin: 200 OK
+
+    Note over Admin,S3: ✅ 사용자에게 노출됨
+```
+
+### 시나리오 2: 거부 후 재검토
+
+```mermaid
+sequenceDiagram
+    participant Admin as 관리자
+    participant API as API 서버
+    participant DB as 데이터베이스
+
+    Note over Admin,DB: 1-3. 생성 → 검토 요청 (생략)
+
+    Note over Admin,DB: 4. 거부 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'rejected'}
+    API->>DB: UPDATE status = 'rejected'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (REJECTED)
+
+    Note over Admin,DB: 5. 수정 시작 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'draft'}
+    API->>DB: UPDATE status = 'draft'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (DRAFT)
+
+    Note over Admin,DB: 6. 내용 수정
+    Admin->>API: PUT /api/admin/video-galleries/:id
+    API->>DB: UPDATE title, description, videoSources
+    DB-->>API: 수정 완료
+    API-->>Admin: 200 OK
+
+    Note over Admin,DB: 7. 재검토 요청 (구현 필요)
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: {status: 'under_review'}
+    API->>DB: UPDATE status = 'under_review'
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (UNDER_REVIEW)
+
+    Note over Admin,DB: 8-10. 승인 → 공개 (생략)
+```
+
+### 시나리오 3: 공개된 콘텐츠 수정 (구현 필요)
+
+```mermaid
+sequenceDiagram
+    participant Admin as 관리자
+    participant API as API 서버
+    participant DB as 데이터베이스
+    participant User as 사용자
+
+    Note over Admin,User: ✅ 현재 공개 중 (OPENED, isPublic: true)
+    User->>API: GET /api/public/video-galleries
+    API->>DB: SELECT WHERE status='opened' AND isPublic=true
+    DB-->>API: 비디오갤러리 목록
+    API-->>User: 200 OK (노출됨)
+
+    Note over Admin,User: 수정 필요 발생 (자동 상태 전이, 구현 필요)
+    Admin->>API: PUT /api/admin/video-galleries/:id
+    API->>DB: UPDATE status = 'draft' (자동 전이)
+    API->>DB: UPDATE title, description, videoSources
+    DB-->>API: 수정 완료
+    API-->>Admin: 200 OK (DRAFT)
+
+    Note over Admin,User: ❌ 사용자에게 노출 중단
+    User->>API: GET /api/public/video-galleries
+    API->>DB: SELECT WHERE status='opened' AND isPublic=true
+    DB-->>API: 해당 비디오갤러리 제외
+    API-->>User: 200 OK (노출 안 됨)
+
+    Note over Admin,User: 수정 → 검토 → 승인 → 재공개
+    Admin->>API: PATCH /api/admin/video-galleries/:id/status
+    Note right of API: under_review → approved → opened
+    API->>DB: UPDATE status
+    DB-->>API: 상태 변경 완료
+    API-->>Admin: 200 OK (OPENED)
+
+    Note over Admin,User: ✅ 사용자에게 다시 노출됨
+```
+
+## 🎯 API 엔드포인트 상세 명세
+
+### 1. 비디오갤러리 생성 ✅
+
+```
+POST /api/admin/video-galleries
+Content-Type: multipart/form-data
+
+Body:
+- title: string (필수, 제목)
+- description: string (선택, 설명)
+- youtubeUrls: JSON string (선택, YouTube URL 배열)
+  예: '["https://www.youtube.com/watch?v=abc123"]'
+- files: 비디오 파일 배열 (MP4/MPEG/MOV/AVI/WMV/WEBM)
+
+Response: 201 Created
+- status: 'draft' (기본값)
+- isPublic: false (기본값)
+- videoSources: [{url, type: 'upload' | 'youtube', title?, thumbnailUrl?}]
+```
+
+### 2. 상태 변경 (구현 필요) ❌
+
+```
+PATCH /api/admin/video-galleries/:id/status
+
+Body:
+{
+  "status": "under_review" | "approved" | "rejected" | "opened" | "draft"
+}
+
+Response: 200 OK
+- 변경된 비디오갤러리 정보
+```
+
+### 3. 공개 여부 변경 ✅
+
+```
+PATCH /api/admin/video-galleries/:id/public
+
+Body:
+{
+  "isPublic": true | false
+}
+
+Response: 200 OK
+- 변경된 비디오갤러리 정보
+```
+
+### 4. 비디오갤러리 수정 ✅
+
+```
+PUT /api/admin/video-galleries/:id
+Content-Type: multipart/form-data
+
+Body:
+- title: string (필수, 제목)
+- description: string (선택, 설명)
+- youtubeUrls: JSON string (선택, YouTube URL 배열)
+- files: 비디오 파일 배열 (전송한 것으로 완전히 교체)
+
+Response: 200 OK
+- status가 'opened'였다면 자동으로 'draft'로 전이 (구현 필요)
+```
+
+### 5. 비디오갤러리 삭제 (Soft Delete) ✅
+
+```
+DELETE /api/admin/video-galleries/:id
+
+Response: 200 OK
+{
+  "success": true
+}
+```
+
+### 6. 정렬 순서 일괄 수정 ✅
+
+```
+PUT /api/admin/video-galleries/batch-order
+
+Body:
+{
+  "videoGalleries": [
+    { "id": "uuid1", "order": 1 },
+    { "id": "uuid2", "order": 2 }
+  ]
+}
+
+Response: 200 OK
+{
+  "success": true,
+  "updatedCount": 2
+}
+```
+
+### 7. 비디오갤러리 목록 조회 (페이징) ✅
+
+```
+GET /api/admin/video-galleries?isPublic=true&orderBy=order&page=1&limit=10
+
+Response: 200 OK
+{
+  "items": [...],
+  "total": 50,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 5
+}
+```
+
+### 8. 비디오갤러리 전체 목록 조회 ✅
+
+```
+GET /api/admin/video-galleries/all
+
+Response: 200 OK
+[...비디오갤러리 배열...]
+```
+
+### 9. 비디오갤러리 상세 조회 ✅
+
+```
+GET /api/admin/video-galleries/:id
+
+Response: 200 OK
+{
+  "id": "uuid",
+  "title": "회사 소개 영상",
+  "description": "설명...",
+  "status": "draft",
+  "isPublic": false,
+  "order": 0,
+  "videoSources": [
+    {
+      "url": "https://www.youtube.com/watch?v=abc123",
+      "type": "youtube",
+      "title": "YouTube 제목"
+    },
+    {
+      "url": "https://s3.amazonaws.com/video.mp4",
+      "type": "upload",
+      "title": "video.mp4"
+    }
+  ],
+  ...
+}
+```
+
+### 10. 카테고리 관련 API ✅
+
+```
+GET /api/admin/video-galleries/categories
+POST /api/admin/video-galleries/categories
+PATCH /api/admin/video-galleries/categories/:id
+PATCH /api/admin/video-galleries/categories/:id/order
+DELETE /api/admin/video-galleries/categories/:id
+```
+
+## 🔓 공개 조건 플로우
+
+```mermaid
+flowchart TD
+    Start([비디오갤러리 API 요청])
+    Start --> CheckAPI{API 타입?}
+
+    CheckAPI -->|관리자 API| AdminAPI[전체 조회 가능]
+    CheckAPI -->|공개 API| PublicAPI[필터링 필요]
+
+    PublicAPI --> CheckDeleted{deletedAt이 null인가?}
+
+    CheckDeleted -->|No| NotVisible1[❌ 노출 안 됨]
+    CheckDeleted -->|Yes| CheckStatus{status가 opened인가?}
+
+    CheckStatus -->|No| NotVisible2[❌ 노출 안 됨]
+    CheckStatus -->|Yes| CheckPublic{isPublic이 true인가?}
+
+    CheckPublic -->|No| NotVisible3[❌ 노출 안 됨]
+    CheckPublic -->|Yes| Visible[✅ 사용자에게 노출됨]
+
+    style NotVisible1 fill:#ffcccc
+    style NotVisible2 fill:#ffcccc
+    style NotVisible3 fill:#ffcccc
+    style Visible fill:#ccffcc
+    style AdminAPI fill:#e3f2fd
+```
+
+## 📋 상태 전이 규칙 요약
+
+### 허용되는 전이
+
+| 현재 상태      | 다음 상태      | API 엔드포인트                                   | 조건        | 구현 상태 |
+| -------------- | -------------- | ------------------------------------------------ | ----------- | --------- |
+| `draft`        | `under_review` | `PATCH /api/admin/video-galleries/:id/status`    | 검토 요청   | ❌        |
+| `under_review` | `approved`     | `PATCH /api/admin/video-galleries/:id/status`    | 승인        | ❌        |
+| `under_review` | `rejected`     | `PATCH /api/admin/video-galleries/:id/status`    | 거부        | ❌        |
+| `under_review` | `draft`        | `PATCH /api/admin/video-galleries/:id/status`    | 검토 취소   | ❌        |
+| `approved`     | `opened`       | `PATCH /api/admin/video-galleries/:id/status`    | 공개 설정   | ❌        |
+| `approved`     | `draft`        | `PUT /api/admin/video-galleries/:id` (자동 전이) | 수정 시작   | ❌        |
+| `rejected`     | `draft`        | `PATCH /api/admin/video-galleries/:id/status`    | 수정 시작   | ❌        |
+| `opened`       | `draft`        | `PUT /api/admin/video-galleries/:id` (자동 전이) | 수정 시작   | ❌        |
+| `opened`       | `opened`       | `PATCH /api/admin/video-galleries/:id/public`    | 비공개 설정 | ✅        |
+
+### 금지되는 전이
+
+- ❌ `draft` → `approved` (검토 없이 승인 불가)
+- ❌ `draft` → `opened` (검토 및 승인 없이 공개 불가)
+- ❌ `rejected` → `approved` (거부 후 바로 승인 불가)
+- ❌ `rejected` → `opened` (거부된 콘텐츠 공개 불가)
+- ❌ `under_review` → `opened` (검토 중 공개 불가)
+
+## 🔧 구현 필요 사항
+
+### 현재 구현된 기능 ✅
+
+- ✅ 비디오갤러리 생성 (기본값: `status: 'draft'`)
+- ✅ 비디오갤러리 목록 조회 (페이징)
+- ✅ 비디오갤러리 전체 목록 조회
+- ✅ 비디오갤러리 상세 조회
+- ✅ 공개 여부 수정 (`isPublic`)
+- ✅ 비디오갤러리 수정 (내용 및 비디오 소스)
+- ✅ 정렬 순서 일괄 수정
+- ✅ 삭제 (Soft Delete)
+- ✅ 카테고리 CRUD
+- ✅ 하이브리드 비디오 소스 (업로드 + YouTube URL)
+
+### 구현 필요 기능 ❌
+
+- ⚠️ **상태 변경 API** (`PATCH /api/admin/video-galleries/:id/status`)
+  - 상태 전이 검증 로직
+  - 허용되지 않는 상태 전이 방지
+  - 상태별 액션 제한 검증
+
+- ⚠️ **자동 상태 전이**
+  - `opened` 또는 `approved` 상태에서 내용 수정 시 자동으로 `draft`로 전이
+  - 트랜잭션 처리 필요
+
+- ⚠️ **상태별 권한 체크**
+  - 검토중 상태에서는 수정/삭제 불가
+  - 승인 권한이 있는 사용자만 상태 변경 가능
+
+## 📚 참고 사항
+
+- 상태 변경은 **원자적(Atomic)**으로 처리되어야 함
+- 상태 전이 시 **이력 로깅** 고려 (선택사항)
+- **Optimistic Locking** (`version` 필드)을 활용하여 동시 수정 방지
+- 상태별 **권한 체크** 필요 (예: 승인 권한이 있는 사용자만 상태 변경 가능)
+
+## 🎨 다국어 전략
+
+비디오갤러리는 **다국어를 지원하지 않습니다**. 단일 언어(한국어)로만 작성되며, 제목(title)과 설명(description)이 직접 엔티티에 저장됩니다.
+
+## 🎬 비디오 소스 관리 전략
+
+비디오갤러리는 **하이브리드 비디오 소스 관리**를 지원합니다:
+
+### 비디오 소스 타입
+
+```typescript
+type VideoSource = {
+  url: string; // 비디오 URL (S3 또는 YouTube)
+  type: 'upload' | 'youtube'; // 소스 타입
+  title?: string; // 비디오 제목 (선택)
+  thumbnailUrl?: string; // 썸네일 URL (선택)
+};
+```
+
+### 비디오 소스 관리 플로우
+
+```mermaid
+flowchart TD
+    Start([비디오 소스 관리])
+    Start --> Upload{업로드 파일 있음?}
+
+    Upload -->|Yes| UploadS3[S3에 비디오 업로드]
+    Upload -->|No| CheckYT[YouTube URL 확인]
+
+    UploadS3 --> CreateUploadSource[type: 'upload'<br/>url: S3 URL<br/>title: 파일명]
+
+    CheckYT --> YouTube{YouTube URL 있음?}
+    YouTube -->|Yes| CreateYTSource[type: 'youtube'<br/>url: YouTube URL]
+    YouTube -->|No| Empty[빈 배열]
+
+    CreateUploadSource --> Merge[videoSources 배열 통합]
+    CreateYTSource --> Merge
+    Empty --> Merge
+
+    Merge --> Save[DB에 JSONB로 저장]
+
+    style CreateUploadSource fill:#c8e6c9
+    style CreateYTSource fill:#fff9c4
+    style Merge fill:#e1bee7
+```
+
+### 비디오 수정 시 처리 방식
+
+1. **기존 업로드 비디오 삭제**: S3에서 type='upload'인 비디오 파일들 삭제
+2. **YouTube URL 제거**: 기존 YouTube URL도 모두 제거 (재입력 필요)
+3. **새 비디오 업로드**: 새로운 비디오 파일들을 S3에 업로드
+4. **새 YouTube URL 추가**: 새로운 YouTube URL들 추가
+5. **통합 저장**: 업로드된 비디오와 YouTube URL을 하나의 배열로 통합하여 저장
+
+## 📹 비디오 파일 관리 전략
+
+### 지원 형식
+
+- **MP4** (video/mp4)
+- **MPEG** (video/mpeg)
+- **MOV** (video/quicktime)
+- **AVI** (video/x-msvideo)
+- **WMV** (video/x-ms-wmv)
+- **WEBM** (video/webm)
+
+### 저장 방식
+
+1. **업로드 파일**: AWS S3에 업로드되며 URL로 저장
+2. **YouTube 링크**: URL 그대로 저장
+3. **통합 관리**: videoSources JSONB 배열에 타입 구분하여 저장
+
+## 🎥 비디오갤러리의 특징
+
+비디오갤러리는 비디오 콘텐츠를 관리하는 엔티티로, 다음과 같은 특징이 있습니다:
+
+| 특징            | 설명                                          |
+| --------------- | --------------------------------------------- |
+| **대상**        | 일반 사용자 (회사 소개, 홍보 영상 등)         |
+| **다국어 지원** | ❌ 미지원 (단일 언어만 사용)                  |
+| **비디오 소스** | ✅ 하이브리드 (업로드 + YouTube URL)          |
+| **파일 형식**   | 비디오 파일 (MP4, MPEG, MOV, AVI, WMV, WEBM)  |
+| **카테고리**    | ✅ 지원 (회사 소개, 제품 소개, 이벤트 등)     |
+| **정렬**        | order(정렬순서) 또는 createdAt(생성일시) 기준 |
+| **CQRS 패턴**   | ✅ 사용 (CommandBus/QueryBus)                 |
+
+## 🆚 다른 콘텐츠 엔티티와의 비교
+
+| 특징            | 루미르스토리      | 뉴스            | 비디오갤러리                |
+| --------------- | ----------------- | --------------- | --------------------------- |
+| 다국어 지원     | ❌ 미지원         | ❌ 미지원       | ❌ 미지원                   |
+| 외부 링크 (URL) | ❌ 없음           | ✅ url 필드     | ✅ YouTube URL 지원         |
+| 파일 형식       | PDF/이미지        | PDF/이미지      | 비디오 파일 (MP4 등)        |
+| 썸네일 이미지   | ✅ imageUrl       | ❌ 없음         | ❌ 없음 (thumbnailUrl 선택) |
+| 특수 필드       | content (긴 내용) | url (외부 링크) | videoSources (하이브리드)   |
+| 대상            | 회사 스토리       | 언론 보도       | 비디오 콘텐츠               |
+| CQRS 패턴       | ✅ 사용           | ✅ 사용         | ✅ 사용                     |
+
+## 📄 비디오갤러리 엔티티 구조
+
+### 주요 필드
+
+- **title**: 비디오 제목 (필수, varchar 500)
+- **description**: 비디오 설명 (선택, text)
+- **status**: 콘텐츠 상태 (enum)
+- **isPublic**: 공개 여부 (boolean)
+- **videoSources**: 비디오 소스 목록 (jsonb)
+  - url: 비디오 URL
+  - type: 'upload' | 'youtube'
+  - title?: 비디오 제목 (선택)
+  - thumbnailUrl?: 썸네일 URL (선택)
+- **order**: 정렬 순서 (int)
+
+### 비디오갤러리만의 특징
+
+- **하이브리드 비디오 소스**: 업로드 파일과 YouTube URL을 모두 지원
+- **비디오 파일 형식**: 다양한 비디오 형식 지원 (MP4, MPEG, MOV 등)
+- **videoSources 배열**: 여러 개의 비디오를 하나의 갤러리에 저장
+- **타입 구분**: upload(업로드)와 youtube(외부링크) 타입으로 구분 관리
+
+## 🎬 비디오 소스 활용 예시
+
+### 생성/수정 시 입력 데이터
+
+```json
+{
+  "title": "회사 소개 영상 모음",
+  "description": "루미르 회사 소개 영상입니다.",
+  "youtubeUrls": [
+    "https://www.youtube.com/watch?v=abc123",
+    "https://www.youtube.com/watch?v=def456"
+  ],
+  "files": [비디오파일1.mp4, 비디오파일2.mov]
+}
+```
+
+### 저장된 videoSources 구조
+
+```json
+{
+  "videoSources": [
+    {
+      "url": "https://s3.amazonaws.com/video-galleries/비디오파일1.mp4",
+      "type": "upload",
+      "title": "비디오파일1.mp4"
+    },
+    {
+      "url": "https://s3.amazonaws.com/video-galleries/비디오파일2.mov",
+      "type": "upload",
+      "title": "비디오파일2.mov"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=abc123",
+      "type": "youtube"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=def456",
+      "type": "youtube"
+    }
+  ]
+}
+```

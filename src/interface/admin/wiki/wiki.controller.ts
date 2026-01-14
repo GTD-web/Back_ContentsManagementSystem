@@ -44,9 +44,7 @@ import {
 @ApiBearerAuth('Bearer')
 @Controller('admin/wiki')
 export class WikiController {
-  constructor(
-    private readonly wikiBusinessService: WikiBusinessService,
-  ) {}
+  constructor(private readonly wikiBusinessService: WikiBusinessService) {}
 
   /**
    * 폴더 구조를 가져온다
@@ -69,7 +67,8 @@ export class WikiController {
   async 폴더_구조를_가져온다(
     @Query('ancestorId') ancestorId?: string,
   ): Promise<WikiListResponseDto> {
-    const items = await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+    const items =
+      await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
     return {
       items: items.map((item) => WikiResponseDto.from(item)),
       total: items.length,
@@ -90,9 +89,7 @@ export class WikiController {
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
-  async 폴더를_조회한다(
-    @Param('id') id: string,
-  ): Promise<WikiResponseDto> {
+  async 폴더를_조회한다(@Param('id') id: string): Promise<WikiResponseDto> {
     const folder = await this.wikiBusinessService.폴더를_조회한다(id);
     return WikiResponseDto.from(folder);
   }
@@ -173,7 +170,9 @@ export class WikiController {
     schema: { type: 'object', properties: { success: { type: 'boolean' } } },
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
-  async 폴더를_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
+  async 폴더를_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     const success = await this.wikiBusinessService.폴더를_삭제한다(id);
     return { success };
   }
@@ -192,7 +191,9 @@ export class WikiController {
     schema: { type: 'object', properties: { success: { type: 'boolean' } } },
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
-  async 폴더만_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
+  async 폴더만_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     const success = await this.wikiBusinessService.폴더만_삭제한다(id);
     return { success };
   }
@@ -294,7 +295,9 @@ export class WikiController {
     schema: { type: 'object', properties: { success: { type: 'boolean' } } },
   })
   @ApiParam({ name: 'id', description: '파일 ID' })
-  async 파일을_삭제한다(@Param('id') id: string): Promise<{ success: boolean }> {
+  async 파일을_삭제한다(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     const success = await this.wikiBusinessService.파일을_삭제한다(id);
     return { success };
   }
@@ -363,7 +366,8 @@ export class WikiController {
   @Get('files/search')
   @ApiOperation({
     summary: '파일 검색',
-    description: '검색 텍스트로 파일을 검색합니다. 파일명, 제목, 본문을 검색하며 경로 정보를 포함합니다.',
+    description:
+      '검색 텍스트로 파일을 검색합니다. 파일명, 제목, 본문을 검색하며 경로 정보를 포함합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -441,9 +445,7 @@ export class WikiController {
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '파일 ID' })
-  async 파일을_조회한다(
-    @Param('id') id: string,
-  ): Promise<WikiResponseDto> {
+  async 파일을_조회한다(@Param('id') id: string): Promise<WikiResponseDto> {
     const file = await this.wikiBusinessService.파일을_조회한다(id);
     return WikiResponseDto.from(file);
   }
@@ -530,7 +532,8 @@ export class WikiController {
         },
         isPublic: {
           type: 'boolean',
-          description: '공개 여부 (선택, 기본값: true - 상위 폴더 권한 cascading, false - 완전 비공개)',
+          description:
+            '공개 여부 (선택, 기본값: true - 상위 폴더 권한 cascading, false - 완전 비공개)',
           example: true,
         },
         files: {
@@ -619,7 +622,8 @@ export class WikiController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description: '첨부파일 목록 (선택) - 전송한 파일들로 완전히 교체됩니다',
+          description:
+            '첨부파일 목록 (선택) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['name'],

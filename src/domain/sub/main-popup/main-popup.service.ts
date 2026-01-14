@@ -229,7 +229,27 @@ export class MainPopupService {
   ): Promise<void> {
     this.logger.log(`메인 팝업 번역 업데이트 - ID: ${translationId}`);
 
-    await this.translationRepository.update(translationId, data);
+    // 엔티티를 조회하고 업데이트
+    const translation = await this.translationRepository.findOne({
+      where: { id: translationId },
+    });
+
+    if (!translation) {
+      throw new NotFoundException(`번역을 찾을 수 없습니다: ${translationId}`);
+    }
+
+    // 값 업데이트
+    if (data.title !== undefined) {
+      translation.title = data.title;
+    }
+    if (data.description !== undefined) {
+      translation.description = data.description;
+    }
+    if (data.updatedBy !== undefined) {
+      translation.updatedBy = data.updatedBy;
+    }
+
+    await this.translationRepository.save(translation);
   }
 
   /**
@@ -243,23 +263,40 @@ export class MainPopupService {
       `메인 팝업 일괄 순서 수정 시작 - 수정할 메인 팝업 수: ${items.length}`,
     );
 
-    if (items.length === 0) {
+    if (!items || items.length === 0) {
       throw new BadRequestException('수정할 메인 팝업이 없습니다.');
     }
 
-    // 메인 팝업 ID 목록 추출
-    const popupIds = items.map((item) => item.id);
+    // ID와 order 필드 검증
+    for (const item of items) {
+      if (!item.id) {
+        throw new BadRequestException('메인 팝업 ID는 필수입니다.');
+      }
+      if (item.order === undefined || item.order === null) {
+        throw new BadRequestException('순서(order)는 필수입니다.');
+      }
+      if (typeof item.order !== 'number') {
+        throw new BadRequestException('순서(order)는 숫자여야 합니다.');
+      }
+      if (item.order < 0) {
+        throw new BadRequestException('순서(order)는 0 이상이어야 합니다.');
+      }
+    }
+
+    // 메인 팝업 ID 목록 추출 (중복 제거)
+    const uniquePopupIds = [...new Set(items.map((item) => item.id))];
 
     // 메인 팝업 조회
     const existingPopups = await this.mainPopupRepository.find({
-      where: { id: In(popupIds) },
+      where: { id: In(uniquePopupIds) },
     });
 
-    if (existingPopups.length !== items.length) {
+    // 존재하지 않는 ID 확인 (unique ID 개수와 비교)
+    if (existingPopups.length !== uniquePopupIds.length) {
       const foundIds = existingPopups.map((popup) => popup.id);
-      const missingIds = popupIds.filter((id) => !foundIds.includes(id));
+      const missingIds = uniquePopupIds.filter((id) => !foundIds.includes(id));
       throw new NotFoundException(
-        `일부 메인 팝업을 찾을 수 없습니다. 누락된 ID: ${missingIds.join(', ')}`,
+        `다음 메인 팝업을 찾을 수 없습니다: ${missingIds.join(', ')}`,
       );
     }
 
