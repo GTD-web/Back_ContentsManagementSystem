@@ -32,9 +32,12 @@ import {
   UpdateFolderDto,
   UpdateFolderNameDto,
   UpdateWikiPublicDto,
+  UpdateFilePublicDto,
   UpdateWikiPathDto,
   WikiResponseDto,
   WikiListResponseDto,
+  WikiSearchListResponseDto,
+  WikiSearchResultDto,
 } from '@interface/common/dto/wiki/wiki.dto';
 
 @ApiTags('A-10. 관리자 - Wiki')
@@ -44,6 +47,34 @@ export class WikiController {
   constructor(
     private readonly wikiBusinessService: WikiBusinessService,
   ) {}
+
+  /**
+   * 폴더 구조를 가져온다
+   */
+  @Get('folders/structure')
+  @ApiOperation({
+    summary: '폴더 구조 조회',
+    description: '전체 폴더 구조를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '폴더 구조 조회 성공',
+    type: WikiListResponseDto,
+  })
+  @ApiQuery({
+    name: 'ancestorId',
+    required: false,
+    description: '조상 폴더 ID (없으면 루트부터)',
+  })
+  async 폴더_구조를_가져온다(
+    @Query('ancestorId') ancestorId?: string,
+  ): Promise<WikiListResponseDto> {
+    const items = await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+    return {
+      items: items.map((item) => WikiResponseDto.from(item)),
+      total: items.length,
+    };
+  }
 
   /**
    * 폴더를 조회한다
@@ -101,7 +132,10 @@ export class WikiController {
   @Post('folders')
   @ApiOperation({
     summary: '폴더 생성',
-    description: '새로운 폴더를 생성합니다.',
+    description:
+      '새로운 폴더를 생성합니다.\n\n' +
+      '⚠️ **권한 정책**: 폴더는 기본적으로 전사공개로 생성됩니다.\n' +
+      '권한 설정은 폴더 공개 수정(PATCH /admin/wiki/folders/:id/public)을 통해 변경할 수 있습니다.',
   })
   @ApiResponse({
     status: 201,
@@ -115,10 +149,10 @@ export class WikiController {
     const folder = await this.wikiBusinessService.폴더를_생성한다({
       name: dto.name,
       parentId: dto.parentId,
-      isPublic: dto.isPublic,
-      permissionRankCodes: dto.permissionRankCodes,
-      permissionPositionCodes: dto.permissionPositionCodes,
-      permissionDepartmentCodes: dto.permissionDepartmentCodes,
+      isPublic: true, // 기본적으로 전사공개
+      permissionRankCodes: null,
+      permissionPositionCodes: null,
+      permissionDepartmentCodes: null,
       order: dto.order,
       createdBy: user.id,
     });
@@ -169,7 +203,7 @@ export class WikiController {
   @Patch('folders/:id')
   @ApiOperation({
     summary: '폴더 수정',
-    description: '폴더 정보를 수정합니다.',
+    description: '폴더 정보 및 권한을 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -184,6 +218,10 @@ export class WikiController {
   ): Promise<WikiResponseDto> {
     const folder = await this.wikiBusinessService.폴더를_수정한다(id, {
       name: dto.name,
+      isPublic: dto.isPublic,
+      permissionRankCodes: dto.permissionRankCodes,
+      permissionPositionCodes: dto.permissionPositionCodes,
+      permissionDepartmentCodes: dto.permissionDepartmentCodes,
       order: dto.order,
       updatedBy: user.id,
     });
@@ -243,34 +281,6 @@ export class WikiController {
   }
 
   /**
-   * 폴더 구조를 가져온다
-   */
-  @Get('folders/structure')
-  @ApiOperation({
-    summary: '폴더 구조 조회',
-    description: '전체 폴더 구조를 조회합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '폴더 구조 조회 성공',
-    type: WikiListResponseDto,
-  })
-  @ApiQuery({
-    name: 'ancestorId',
-    required: false,
-    description: '조상 폴더 ID (없으면 루트부터)',
-  })
-  async 폴더_구조를_가져온다(
-    @Query('ancestorId') ancestorId?: string,
-  ): Promise<WikiListResponseDto> {
-    const items = await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
-    return {
-      items: items.map((item) => WikiResponseDto.from(item)),
-      total: items.length,
-    };
-  }
-
-  /**
    * 파일을 삭제한다
    */
   @Delete('files/:id')
@@ -317,6 +327,73 @@ export class WikiController {
     return WikiResponseDto.from(file);
   }
 
+  /**
+   * 파일 공개를 수정한다
+   */
+  @Patch('files/:id/public')
+  @ApiOperation({
+    summary: '파일 공개 수정',
+    description:
+      '파일의 공개 여부를 수정합니다.\n\n' +
+      '⚠️ **권한 정책**:\n' +
+      '- `isPublic: true` → 상위 폴더 권한 cascading\n' +
+      '- `isPublic: false` → 완전 비공개 (아무도 접근 불가)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '파일 공개 수정 성공',
+    type: WikiResponseDto,
+  })
+  @ApiParam({ name: 'id', description: '파일 ID' })
+  async 파일_공개를_수정한다(
+    @Param('id') id: string,
+    @Body() dto: UpdateFilePublicDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<WikiResponseDto> {
+    const file = await this.wikiBusinessService.파일_공개를_수정한다(id, {
+      isPublic: dto.isPublic,
+      updatedBy: user.id,
+    });
+    return WikiResponseDto.from(file);
+  }
+
+  /**
+   * 파일들을 검색한다
+   */
+  @Get('files/search')
+  @ApiOperation({
+    summary: '파일 검색',
+    description: '검색 텍스트로 파일을 검색합니다. 파일명, 제목, 본문을 검색하며 경로 정보를 포함합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '파일 검색 성공',
+    type: WikiSearchListResponseDto,
+  })
+  @ApiQuery({
+    name: 'query',
+    required: true,
+    description: '검색 텍스트',
+    example: '회의록',
+  })
+  async 파일들을_검색한다(
+    @Query('query') query: string,
+  ): Promise<WikiSearchListResponseDto> {
+    if (!query || query.trim().length === 0) {
+      return { items: [], total: 0 };
+    }
+
+    const results = await this.wikiBusinessService.파일들을_검색한다(
+      query.trim(),
+    );
+
+    return {
+      items: results.map((result) =>
+        WikiSearchResultDto.from(result.wiki, result.path),
+      ),
+      total: results.length,
+    };
+  }
 
   /**
    * 파일들을 조회한다
@@ -372,6 +449,36 @@ export class WikiController {
   }
 
   /**
+   * 빈 파일을 생성한다
+   */
+  @Post('files/empty')
+  @ApiOperation({
+    summary: '빈 파일 생성',
+    description:
+      '빈 파일을 생성합니다.\n\n' +
+      '⚠️ **권한 정책**:\n' +
+      '- `isPublic: true` (기본값) → 상위 폴더 권한 cascading\n' +
+      '- `isPublic: false` → 완전 비공개 (아무도 접근 불가)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '빈 파일 생성 성공',
+    type: WikiResponseDto,
+  })
+  async 빈_파일을_생성한다(
+    @Body() dto: CreateEmptyFileDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<WikiResponseDto> {
+    const file = await this.wikiBusinessService.빈_파일을_생성한다(
+      dto.name,
+      dto.parentId || null,
+      user.id,
+      dto.isPublic,
+    );
+    return WikiResponseDto.from(file);
+  }
+
+  /**
    * 파일을 생성한다
    */
   @Post('files')
@@ -388,7 +495,9 @@ export class WikiController {
     summary: '파일 생성',
     description:
       '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n' +
-      '⚠️ **권한 정책**: 파일은 권한 설정이 없으며, 상위 폴더의 권한이 cascading됩니다.',
+      '⚠️ **권한 정책**:\n' +
+      '- `isPublic: true` (기본값) → 상위 폴더 권한 cascading\n' +
+      '- `isPublic: false` → 완전 비공개 (아무도 접근 불가)',
   })
   @ApiBody({
     description:
@@ -419,6 +528,11 @@ export class WikiController {
           description: '문서 본문 (선택)',
           example: '## 회의 안건\n\n1. 신제품 출시',
         },
+        isPublic: {
+          type: 'boolean',
+          description: '공개 여부 (선택, 기본값: true - 상위 폴더 권한 cascading, false - 완전 비공개)',
+          example: true,
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -442,7 +556,7 @@ export class WikiController {
     @Body() body: any,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
-    const { name, parentId, title, content } = body;
+    const { name, parentId, title, content, isPublic } = body;
 
     if (!name) {
       throw new BadRequestException('name 필드는 필수입니다.');
@@ -455,31 +569,7 @@ export class WikiController {
       content || null,
       user.id,
       files,
-    );
-    return WikiResponseDto.from(file);
-  }
-
-  /**
-   * 빈 파일을 생성한다
-   */
-  @Post('files/empty')
-  @ApiOperation({
-    summary: '빈 파일 생성',
-    description: '빈 파일을 생성합니다.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: '빈 파일 생성 성공',
-    type: WikiResponseDto,
-  })
-  async 빈_파일을_생성한다(
-    @Body() dto: CreateEmptyFileDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<WikiResponseDto> {
-    const file = await this.wikiBusinessService.빈_파일을_생성한다(
-      dto.name,
-      dto.parentId || null,
-      user.id,
+      isPublic !== undefined ? isPublic === 'true' : undefined,
     );
     return WikiResponseDto.from(file);
   }

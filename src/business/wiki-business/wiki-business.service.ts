@@ -113,6 +113,10 @@ export class WikiBusinessService {
     id: string,
     data: {
       name?: string;
+      isPublic?: boolean;
+      permissionRankCodes?: string[] | null;
+      permissionPositionCodes?: string[] | null;
+      permissionDepartmentCodes?: string[] | null;
       order?: number;
       updatedBy?: string;
     },
@@ -241,6 +245,27 @@ export class WikiBusinessService {
     return result;
   }
 
+  /**
+   * 파일 공개를 수정한다
+   */
+  async 파일_공개를_수정한다(
+    id: string,
+    data: {
+      isPublic: boolean;
+      updatedBy?: string;
+    },
+  ): Promise<WikiFileSystem> {
+    this.logger.log(`파일 공개 수정 시작 - ID: ${id}`);
+
+    const result = await this.wikiContextService.위키를_수정한다(id, {
+      isPublic: data.isPublic,
+      updatedBy: data.updatedBy,
+    });
+
+    this.logger.log(`파일 공개 수정 완료 - ID: ${id}`);
+
+    return result;
+  }
 
   /**
    * 파일들을 조회한다
@@ -253,6 +278,21 @@ export class WikiBusinessService {
     const result = await this.wikiContextService.폴더_자식들을_조회한다(parentId);
 
     this.logger.log(`파일 목록 조회 완료 - 총 ${result.length}개`);
+
+    return result;
+  }
+
+  /**
+   * 파일들을 검색한다
+   */
+  async 파일들을_검색한다(
+    query: string,
+  ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
+    this.logger.log(`파일 검색 시작 - 검색어: ${query}`);
+
+    const result = await this.wikiContextService.위키를_검색한다(query);
+
+    this.logger.log(`파일 검색 완료 - 총 ${result.length}개`);
 
     return result;
   }
@@ -280,6 +320,7 @@ export class WikiBusinessService {
     content: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
+    isPublic?: boolean,
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
@@ -314,6 +355,7 @@ export class WikiBusinessService {
       title,
       content,
       attachments,
+      isPublic,
       createdBy,
     });
 
@@ -331,12 +373,14 @@ export class WikiBusinessService {
     name: string,
     parentId: string | null,
     createdBy?: string,
+    isPublic?: boolean,
   ): Promise<WikiFileSystem> {
     this.logger.log(`빈 파일 생성 시작 - 이름: ${name}`);
 
     const result = await this.wikiContextService.파일을_생성한다({
       name,
       parentId,
+      isPublic,
       createdBy,
     });
 

@@ -695,8 +695,8 @@ ALTER TABLE wiki_file_system ADD CONSTRAINT chk_wiki_file_has_content
     ))
   );
 
--- file 타입은 권한 필드가 모두 NULL (권한은 폴더만)
-ALTER TABLE wiki_file_system ADD CONSTRAINT chk_wiki_file_no_permissions
+-- file 타입은 isPublic만 사용 가능, 나머지 권한 필드는 NULL
+ALTER TABLE wiki_file_system ADD CONSTRAINT chk_wiki_file_permissions
   CHECK (
     (type = 'folder') OR
     (type = 'file' AND 
@@ -777,11 +777,18 @@ ALTER TABLE attendee ADD CONSTRAINT chk_attendee_completed
 
 ## 변경 이력
 
+### v5.18 (2026-01-14)
+- ✅ **WikiFileSystem 파일 비공개 설정 추가**
+  - 파일의 `isPublic` 필드 활성화
+  - 파일 `isPublic: false` → 완전 비공개 (아무도 접근 불가)
+  - 파일 `isPublic: true` (기본값) → 상위 폴더 권한 cascading
+  - CHECK 제약조건 이름 변경: `chk_wiki_file_no_permissions` → `chk_wiki_file_permissions`
+
 ### v5.17 (2026-01-14)
 - ✅ **WikiFileSystem 권한 정책 변경**
   - 권한은 **폴더만** 설정 가능
   - 파일의 권한은 **상위 폴더에서 cascading**되어 결정
-  - CHECK 제약조건 추가: `chk_wiki_file_no_permissions` (파일은 권한 필드 NULL)
+  - CHECK 제약조건 추가: `chk_wiki_file_permissions` (파일은 권한 필드 NULL)
   - CHECK 제약조건 수정: `chk_wiki_folder_permissions` (폴더만 권한 체크)
 
 ### v5.16 (2026-01-14)
@@ -885,4 +892,4 @@ ALTER TABLE attendee ADD CONSTRAINT chk_attendee_completed
 
 **문서 생성일**: 2026년 1월 6일  
 **최종 업데이트**: 2026년 1월 14일  
-**버전**: v5.17
+**버전**: v5.18

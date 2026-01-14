@@ -189,23 +189,32 @@ alwaysApply: true
 ## Wiki
 
 ```
-⚠️ 권한 정책: 권한은 폴더만 설정 가능, 파일의 권한은 상위 폴더에서 cascading
+⚠️ 권한 정책:
+- 폴더: isPublic + permissionRankCodes/PositionCodes/DepartmentCodes 설정 가능
+- 파일: isPublic만 설정 가능
+  • isPublic: false → 완전 비공개 (아무도 접근 불가)
+  • isPublic: true (기본값) → 상위 폴더 권한 cascading
+- 폴더 생성 시 기본적으로 전사공개 (isPublic: true)
+- 권한 설정은 폴더 수정(PATCH /admin/wiki/folders/:id) 또는 폴더 공개 수정(PATCH /admin/wiki/folders/:id/public)에서 변경
 
 - 폴더를_조회한다 (GET /admin/wiki/folders/:id)
-- 폴더_공개를_수정한다 (PATCH /admin/wiki/folders/:id/public)
-- 폴더를_생성한다 (POST /admin/wiki/folders)
+- 폴더_공개를_수정한다 (PATCH /admin/wiki/folders/:id/public) - 권한만 설정
+- 폴더를_생성한다 (POST /admin/wiki/folders) - 전사공개로 생성
 - 폴더를_삭제한다 (DELETE /admin/wiki/folders/:id)
 - 폴더만_삭제한다 (DELETE /admin/wiki/folders/:id/only)
-- 폴더를_수정한다 (PATCH /admin/wiki/folders/:id)
+- 폴더를_수정한다 (PATCH /admin/wiki/folders/:id) - 이름, 순서, 권한 수정
 - 폴더_경로를_수정한다 (PATCH /admin/wiki/folders/:id/path)
 - 폴더_이름을_수정한다 (PATCH /admin/wiki/folders/:id/name)
 - 폴더_구조를_가져온다 (GET /admin/wiki/folders/structure)
 - 파일을_삭제한다 (DELETE /admin/wiki/files/:id)
 - 파일_경로를_수정한다 (PATCH /admin/wiki/files/:id/path)
-- 파일들을_조회한다 (GET /admin/wiki/files)
+- 파일_공개를_수정한다 (PATCH /admin/wiki/files/:id/public) - isPublic만 수정 가능
+- 파일들을_검색한다 (GET /admin/wiki/files/search) - 검색 텍스트로 파일 검색, 경로 정보 포함
+- 파일들을_조회한다 (GET /admin/wiki/files) - parentId로 목록 조회
 - 파일을_조회한다 (GET /admin/wiki/files/:id)
 - 파일을_생성한다 (POST /admin/wiki/files)
 - 빈_파일을_생성한다 (POST /admin/wiki/files/empty)
 - 파일을_수정한다 (PUT /admin/wiki/files/:id)
+
 ```
 

@@ -14,9 +14,11 @@ import { WikiPermissionLog } from './wiki-permission-log.entity';
  *   - 문서형: title + content + attachments
  *   - 첨부파일형: fileUrl + fileSize + mimeType
  * - 권한 정책:
- *   - 권한은 폴더만 설정 가능 (isPublic, permissionRankCodes, permissionPositionCodes, permissionDepartmentCodes)
- *   - 파일의 권한은 상위 폴더에서 cascading되어 결정
- *   - 파일은 권한 필드가 항상 NULL
+ *   - 폴더: isPublic, permissionRankCodes, permissionPositionCodes, permissionDepartmentCodes 설정 가능
+ *   - 파일: isPublic만 설정 가능
+ *     - isPublic: false → 완전 비공개 (아무도 접근 불가)
+ *     - isPublic: true (기본값) → 상위 폴더 권한 cascading
+ *   - 파일의 permissionRankCodes/PositionCodes/DepartmentCodes는 항상 NULL
  * 다국어 지원: 없음
  */
 @Entity('wiki_file_systems')
@@ -115,7 +117,7 @@ export class WikiFileSystem extends BaseEntity<WikiFileSystem> {
   @Column({
     type: 'boolean',
     default: true,
-    comment: '공개 여부 (folder만 사용 - 파일은 상위 폴더에서 cascading)',
+    comment: '공개 여부 (folder: 권한 설정, file: false면 비공개, true면 상위 폴더 cascading)',
   })
   isPublic: boolean;
 

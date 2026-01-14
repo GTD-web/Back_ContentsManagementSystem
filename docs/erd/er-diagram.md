@@ -855,6 +855,13 @@ enum WikiPermissionAction {
 
 ## 변경 이력
 
+### v5.18 (2026-01-14)
+- ✅ **WikiFileSystem 파일 비공개 설정 추가**
+  - 파일의 `isPublic` 필드 활성화
+  - 파일 `isPublic: false` → 완전 비공개 (아무도 접근 불가)
+  - 파일 `isPublic: true` (기본값) → 상위 폴더 권한 cascading
+  - 파일의 `permissionRankCodes/PositionCodes/DepartmentCodes`는 여전히 NULL
+
 ### v5.17 (2026-01-14)
 - ✅ **WikiFileSystem 권한 정책 변경**
   - 권한은 **폴더만** 설정 가능 (isPublic, permissionRankCodes, permissionPositionCodes, permissionDepartmentCodes)
@@ -939,4 +946,4 @@ enum WikiPermissionAction {
 
 **문서 생성일**: 2026년 1월 6일  
 **최종 업데이트**: 2026년 1월 14일  
-**버전**: v5.17
+**버전**: v5.18

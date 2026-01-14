@@ -10,6 +10,7 @@ import { GetWikiDetailHandler } from './queries/get-wiki-detail.handler';
 import { GetFolderChildrenHandler } from './queries/get-folder-children.handler';
 import { GetFolderStructureHandler } from './queries/get-folder-structure.handler';
 import { GetWikiBreadcrumbHandler } from './queries/get-wiki-breadcrumb.handler';
+import { SearchWikiHandler } from './queries/search-wiki.handler';
 
 export const WikiCommandHandlers = [
   CreateFolderHandler,
@@ -27,6 +28,7 @@ export const WikiQueryHandlers = [
   GetFolderChildrenHandler,
   GetFolderStructureHandler,
   GetWikiBreadcrumbHandler,
+  SearchWikiHandler,
 ];
 
 export const WikiHandlers = [...WikiCommandHandlers, ...WikiQueryHandlers];

@@ -71,6 +71,7 @@ export class WikiFileSystemService {
       fileSize: number;
       mimeType: string;
     }> | null;
+    isPublic?: boolean;
     order?: number;
     createdBy?: string;
   }): Promise<WikiFileSystem> {
@@ -86,8 +87,9 @@ export class WikiFileSystemService {
       fileSize: data.fileSize || null,
       mimeType: data.mimeType || null,
       attachments: data.attachments || null,
-      // 파일은 권한 필드 사용 안함 (폴더에서 cascading)
-      isPublic: true, // 기본값
+      // 파일의 isPublic 설정 (기본값: true - 상위 폴더 cascading)
+      isPublic: data.isPublic ?? true,
+      // 파일은 나머지 권한 필드 사용 안함
       permissionRankCodes: null,
       permissionPositionCodes: null,
       permissionDepartmentCodes: null,
@@ -218,6 +220,10 @@ export class WikiFileSystemService {
         fileSize: number;
         mimeType: string;
       }> | null;
+      isPublic?: boolean;
+      permissionRankCodes?: string[] | null;
+      permissionPositionCodes?: string[] | null;
+      permissionDepartmentCodes?: string[] | null;
       order?: number;
       updatedBy?: string;
     },
@@ -231,6 +237,13 @@ export class WikiFileSystemService {
     if (data.fileSize !== undefined) wiki.fileSize = data.fileSize;
     if (data.mimeType !== undefined) wiki.mimeType = data.mimeType;
     if (data.attachments !== undefined) wiki.attachments = data.attachments;
+    if (data.isPublic !== undefined) wiki.isPublic = data.isPublic;
+    if (data.permissionRankCodes !== undefined)
+      wiki.permissionRankCodes = data.permissionRankCodes;
+    if (data.permissionPositionCodes !== undefined)
+      wiki.permissionPositionCodes = data.permissionPositionCodes;
+    if (data.permissionDepartmentCodes !== undefined)
+      wiki.permissionDepartmentCodes = data.permissionDepartmentCodes;
     if (data.order !== undefined) wiki.order = data.order;
     if (data.updatedBy) wiki.updatedBy = data.updatedBy;
 
@@ -341,7 +354,8 @@ export class WikiFileSystemService {
    * 위키 항목의 접근 권한을 체크한다 (Cascading)
    * 
    * 파일/폴더 모두 사용 가능
-   * 상위 폴더들의 권한을 cascading하여 체크
+   * - 파일: isPublic false면 무조건 접근 불가, true면 상위 폴더 권한 cascading
+   * - 폴더: 상위 폴더들의 권한을 cascading하여 체크
    */
   async 접근_권한을_체크한다(
     wikiId: string,
@@ -352,7 +366,15 @@ export class WikiFileSystemService {
       departmentCode?: string;
     },
   ): Promise<boolean> {
-    // Closure Table로 한 번의 쿼리로 모든 조상 폴더 조회
+    // 대상 항목 조회
+    const targetWiki = await this.ID로_조회한다(wikiId);
+
+    // 파일인 경우: isPublic이 false면 무조건 접근 불가
+    if (targetWiki.type === WikiFileSystemType.FILE && !targetWiki.isPublic) {
+      return false;
+    }
+
+    // 파일의 isPublic이 true이거나, 폴더인 경우: 상위 폴더 권한 체크
     const ancestorFolders = await this.closureRepository
       .createQueryBuilder('closure')
       .innerJoinAndSelect('closure.ancestorNode', 'wiki')
@@ -389,5 +411,38 @@ export class WikiFileSystemService {
     }
 
     return true;
+  }
+
+  /**
+   * 위키를 검색한다
+   */
+  async 위키를_검색한다(
+    query: string,
+  ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
+    this.logger.log(`위키 검색 시작 - 검색어: ${query}`);
+
+    // 파일만 검색 (이름, 제목, 본문)
+    const files = await this.wikiRepository
+      .createQueryBuilder('wiki')
+      .where('wiki.type = :type', { type: WikiFileSystemType.FILE })
+      .andWhere('wiki.deletedAt IS NULL')
+      .andWhere(
+        '(LOWER(wiki.name) LIKE LOWER(:query) OR LOWER(wiki.title) LIKE LOWER(:query) OR LOWER(wiki.content) LIKE LOWER(:query))',
+        { query: `%${query}%` },
+      )
+      .orderBy('wiki.updatedAt', 'DESC')
+      .getMany();
+
+    this.logger.log(`검색된 파일: ${files.length}개`);
+
+    // 각 파일의 경로 정보 조회
+    const results = await Promise.all(
+      files.map(async (file) => {
+        const path = await this.상위_경로를_조회한다(file.id);
+        return { wiki: file, path };
+      }),
+    );
+
+    return results;
   }
 }

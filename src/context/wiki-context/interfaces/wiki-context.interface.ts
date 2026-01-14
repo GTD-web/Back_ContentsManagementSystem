@@ -31,6 +31,7 @@ export interface CreateFileDto {
     fileSize: number;
     mimeType: string;
   }> | null;
+  isPublic?: boolean;
   order?: number;
   createdBy?: string;
 }
@@ -42,6 +43,10 @@ export interface UpdateWikiDto {
   name?: string;
   title?: string | null;
   content?: string | null;
+  isPublic?: boolean;
+  permissionRankCodes?: string[] | null;
+  permissionPositionCodes?: string[] | null;
+  permissionDepartmentCodes?: string[] | null;
   order?: number;
   updatedBy?: string;
 }
