@@ -36,7 +36,7 @@ import { UpdateIRBatchOrderDto } from '@interface/common/dto/ir/update-ir-batch-
 import { CreateIRDto } from '@interface/common/dto/ir/create-ir.dto';
 import { UpdateIRCategoryDto, UpdateIRCategoryOrderDto } from '@interface/common/dto/ir/update-ir.dto';
 
-@ApiTags('A-4. 관리자 - IR')
+@ApiTags('A-3. 관리자 - IR')
 @ApiBearerAuth('Bearer')
 @Controller('admin/irs')
 export class IRController {

@@ -36,7 +36,7 @@ import { UpdateMainPopupBatchOrderDto } from '@interface/common/dto/main-popup/u
 import { CreateMainPopupDto } from '@interface/common/dto/main-popup/create-main-popup.dto';
 import { UpdateMainPopupCategoryDto, UpdateMainPopupCategoryOrderDto } from '@interface/common/dto/main-popup/update-main-popup.dto';
 
-@ApiTags('A-5. 관리자 - 메인 팝업')
+@ApiTags('A-4. 관리자 - 메인 팝업')
 @ApiBearerAuth('Bearer')
 @Controller('admin/main-popups')
 export class MainPopupController {

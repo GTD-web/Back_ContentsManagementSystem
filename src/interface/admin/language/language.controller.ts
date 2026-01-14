@@ -24,7 +24,7 @@ import {
   LanguageListResponseDto,
 } from '@interface/common/dto/language/language-response.dto';
 
-@ApiTags('A-1. 관리자 - 언어')
+@ApiTags('공통. 관리자 - 언어')
 @ApiBearerAuth('Bearer')
 @Controller('admin/languages')
 export class LanguageController {

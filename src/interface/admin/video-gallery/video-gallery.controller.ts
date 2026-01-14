@@ -39,7 +39,7 @@ import {
   VideoGalleryCategoryResponseDto,
 } from '@interface/common/dto/video-gallery/video-gallery-response.dto';
 
-@ApiTags('A-8. 관리자 - 비디오갤러리')
+@ApiTags('A-7. 관리자 - 비디오갤러리')
 @ApiBearerAuth('Bearer')
 @Controller('admin/video-galleries')
 export class VideoGalleryController {

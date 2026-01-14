@@ -21,7 +21,7 @@ import { LoginDto } from '@interface/common/dto/auth/login.dto';
  *
  * 로그인, 사용자 정보 조회 등 인증 관련 API를 제공합니다.
  */
-@ApiTags('A-0. 인증')
+@ApiTags('공통. 인증')
 @Controller('admin/auth')
 export class AuthController {
   constructor(private readonly authContextService: AuthContextService) {}

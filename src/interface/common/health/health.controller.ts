@@ -7,7 +7,7 @@ import { Public } from '../decorators/public.decorator';
  *
  * 애플리케이션의 상태를 확인하는 API를 제공합니다.
  */
-@ApiTags('헬스체크')
+@ApiTags('공통. 헬스체크')
 @Controller('health')
 export class HealthController {
   /**

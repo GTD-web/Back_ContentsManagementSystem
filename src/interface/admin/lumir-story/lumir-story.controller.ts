@@ -39,7 +39,7 @@ import {
   LumirStoryCategoryResponseDto,
 } from '@interface/common/dto/lumir-story/lumir-story-response.dto';
 
-@ApiTags('A-7. 관리자 - 루미르스토리')
+@ApiTags('A-6. 관리자 - 루미르스토리')
 @ApiBearerAuth('Bearer')
 @Controller('admin/lumir-stories')
 export class LumirStoryController {

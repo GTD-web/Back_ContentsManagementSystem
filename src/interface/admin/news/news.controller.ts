@@ -39,7 +39,7 @@ import {
   NewsCategoryResponseDto,
 } from '@interface/common/dto/news/news-response.dto';
 
-@ApiTags('A-9. 관리자 - 뉴스')
+@ApiTags('A-8. 관리자 - 뉴스')
 @ApiBearerAuth('Bearer')
 @Controller('admin/news')
 export class NewsController {

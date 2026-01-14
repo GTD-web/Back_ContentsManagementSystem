@@ -39,7 +39,7 @@ import {
   ElectronicDisclosureCategoryListResponseDto,
 } from '@interface/common/dto/electronic-disclosure/electronic-disclosure-response.dto';
 
-@ApiTags('A-3. 관리자 - 전자공시')
+@ApiTags('A-2. 관리자 - 전자공시')
 @ApiBearerAuth('Bearer')
 @Controller('admin/electronic-disclosures')
 export class ElectronicDisclosureController {

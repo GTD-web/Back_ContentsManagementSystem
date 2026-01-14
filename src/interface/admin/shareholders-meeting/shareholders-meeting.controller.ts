@@ -28,7 +28,7 @@ import { ShareholdersMeetingBusinessService } from '@business/shareholders-meeti
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
 import { UpdateShareholdersMeetingCategoryDto, UpdateShareholdersMeetingCategoryOrderDto } from '@interface/common/dto/shareholders-meeting/update-shareholders-meeting.dto';
 
-@ApiTags('A-6. 관리자 - 주주총회')
+@ApiTags('A-5. 관리자 - 주주총회')
 @ApiBearerAuth('Bearer')
 @Controller('admin/shareholders-meetings')
 export class ShareholdersMeetingController {

@@ -40,7 +40,7 @@ import {
   BrochureCategoryResponseDto,
 } from '@interface/common/dto/brochure/brochure-response.dto';
 
-@ApiTags('A-2. 관리자 - 브로슈어')
+@ApiTags('A-1. 관리자 - 브로슈어')
 @ApiBearerAuth('Bearer')
 @Controller('admin/brochures')
 export class BrochureController {
