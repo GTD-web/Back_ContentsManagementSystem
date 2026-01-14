@@ -2,7 +2,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VideoGallery } from './video-gallery.entity';
-import { ContentStatus } from '../../core/content-status.types';
 
 /**
  * 비디오갤러리 서비스
@@ -34,7 +33,6 @@ export class VideoGalleryService {
    * 모든 비디오갤러리를 조회한다
    */
   async 모든_비디오갤러리를_조회한다(options?: {
-    status?: ContentStatus;
     isPublic?: boolean;
     orderBy?: 'order' | 'createdAt';
   }): Promise<VideoGallery[]> {
@@ -43,14 +41,8 @@ export class VideoGalleryService {
     const queryBuilder =
       this.videoGalleryRepository.createQueryBuilder('videoGallery');
 
-    if (options?.status) {
-      queryBuilder.where('videoGallery.status = :status', {
-        status: options.status,
-      });
-    }
-
     if (options?.isPublic !== undefined) {
-      queryBuilder.andWhere('videoGallery.isPublic = :isPublic', {
+      queryBuilder.where('videoGallery.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
@@ -116,19 +108,6 @@ export class VideoGalleryService {
   }
 
   /**
-   * 비디오갤러리 상태를 변경한다
-   */
-  async 비디오갤러리_상태를_변경한다(
-    id: string,
-    status: ContentStatus,
-    updatedBy?: string,
-  ): Promise<VideoGallery> {
-    this.logger.log(`비디오갤러리 상태 변경 - ID: ${id}, 상태: ${status}`);
-
-    return await this.비디오갤러리를_업데이트한다(id, { status, updatedBy });
-  }
-
-  /**
    * 비디오갤러리 공개 여부를 변경한다
    */
   async 비디오갤러리_공개_여부를_변경한다(
@@ -165,7 +144,6 @@ export class VideoGalleryService {
     return await this.videoGalleryRepository.find({
       where: {
         isPublic: true,
-        status: ContentStatus.OPENED,
       },
       order: {
         order: 'ASC',

@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { VideoGalleryService } from '@domain/sub/video-gallery/video-gallery.service';
-import { ContentStatus } from '@domain/core/content-status.types';
 import {
   CreateVideoGalleryDto,
   CreateVideoGalleryResult,
@@ -35,12 +34,11 @@ export class CreateVideoGalleryHandler
     // 자동으로 order 계산
     const nextOrder = await this.videoGalleryService.다음_순서를_계산한다();
 
-    // 비디오갤러리 생성 (기본값: 비공개, DRAFT 상태)
+    // 비디오갤러리 생성 (기본값: 공개)
     const saved = await this.videoGalleryService.비디오갤러리를_생성한다({
       title: data.title,
       description: data.description || null,
-      isPublic: false, // 기본값: 비공개
-      status: ContentStatus.DRAFT, // 기본값: DRAFT
+      isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산
       videoSources: data.videoSources || null,
       createdBy: data.createdBy,
@@ -54,7 +52,6 @@ export class CreateVideoGalleryHandler
     return {
       id: saved.id,
       isPublic: saved.isPublic,
-      status: saved.status,
       order: saved.order,
       createdAt: saved.createdAt,
     };

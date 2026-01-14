@@ -1,5 +1,4 @@
 import { VideoGallery } from '@domain/sub/video-gallery/video-gallery.entity';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 비디오 소스 DTO
@@ -28,7 +27,6 @@ export interface UpdateVideoGalleryDto {
   title?: string;
   description?: string | null;
   isPublic?: boolean;
-  status?: ContentStatus;
   order?: number;
   videoSources?: VideoSourceDto[];
   updatedBy?: string;
@@ -64,7 +62,6 @@ export interface UpdateVideoGalleryFileDto {
 export interface CreateVideoGalleryResult {
   id: string;
   isPublic: boolean;
-  status: ContentStatus;
   order: number;
   createdAt: Date;
 }

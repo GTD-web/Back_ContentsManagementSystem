@@ -520,7 +520,6 @@ erDiagram
         varchar title
         text description
         boolean isPublic
-        varchar status "draft|approved|under_review|rejected|opened"
         jsonb attachments "nullable"
         int order
     }

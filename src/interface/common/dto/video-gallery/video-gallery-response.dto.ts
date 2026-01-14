@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 비디오 소스 DTO
@@ -55,13 +54,6 @@ export class VideoGalleryResponseDto {
   isPublic: boolean;
 
   @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
-
-  @ApiProperty({
     description: '비디오 소스 목록 (업로드 파일 + YouTube URL)',
     type: [VideoSourceDto],
     required: false,
@@ -104,13 +96,6 @@ export class VideoGalleryListItemDto {
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
-
-  @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
 
   @ApiProperty({ description: '정렬 순서', example: 1 })
   order: number;
