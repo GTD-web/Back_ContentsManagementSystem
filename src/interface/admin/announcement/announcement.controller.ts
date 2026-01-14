@@ -496,4 +496,137 @@ export class AnnouncementController {
       await this.announcementBusinessService.공지사항_카테고리를_삭제한다(id);
     return { success: result };
   }
+
+  /**
+   * 공지사항에 포함된 전체 직원에게 알림을 보낸다
+   */
+  @Post(':id/notifications/all')
+  @ApiOperation({
+    summary: '공지사항 포함된 전체 직원에게 알림 전송',
+    description:
+      '공지사항의 권한 설정을 기반으로 대상 직원 전체에게 알림을 전송합니다. 전사공개인 경우 모든 직원에게, 제한공개인 경우 권한이 있는 직원들에게 알림을 전송합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '알림 전송 성공',
+    schema: {
+      properties: {
+        success: { type: 'boolean' },
+        sentCount: { type: 'number', description: '전송 성공 건수' },
+        failedCount: { type: 'number', description: '전송 실패 건수' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  async 공지사항에_포함된_전체직원에게_알림을보낸다(
+    @Param('id') id: string,
+  ): Promise<{
+    success: boolean;
+    sentCount: number;
+    failedCount: number;
+    message: string;
+  }> {
+    return await this.announcementBusinessService.공지사항에_포함된_전체직원에게_알림을보낸다(
+      id,
+    );
+  }
+
+  /**
+   * 공지사항에 포함된 직원 중 미답변자들에게 알림을 보낸다
+   */
+  @Post(':id/notifications/unanswered')
+  @ApiOperation({
+    summary: '공지사항 설문 미답변자에게 알림 전송',
+    description:
+      '공지사항에 연결된 설문에 아직 응답하지 않은 직원들에게 알림을 전송합니다. 설문이 없는 공지사항인 경우 오류를 반환합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '알림 전송 성공',
+    schema: {
+      properties: {
+        success: { type: 'boolean' },
+        sentCount: { type: 'number', description: '전송 성공 건수' },
+        failedCount: { type: 'number', description: '전송 실패 건수' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '설문이 없는 공지사항',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  async 공지사항에_포함된_직원중_미답변자들에게_알림을보낸다(
+    @Param('id') id: string,
+  ): Promise<{
+    success: boolean;
+    sentCount: number;
+    failedCount: number;
+    message: string;
+  }> {
+    return await this.announcementBusinessService.공지사항에_포함된_직원중_미답변자들에게_알림을보낸다(
+      id,
+    );
+  }
+
+  /**
+   * 공지사항에 포함된 미열람자들에게 알림을 보낸다
+   */
+  @Post(':id/notifications/unread')
+  @ApiOperation({
+    summary: '공지사항 미열람자에게 알림 전송',
+    description:
+      '공지사항을 아직 읽지 않은 직원들에게 알림을 전송합니다. 권한 설정을 기반으로 대상 직원 중 열람하지 않은 직원에게만 알림을 전송합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '알림 전송 성공',
+    schema: {
+      properties: {
+        success: { type: 'boolean' },
+        sentCount: { type: 'number', description: '전송 성공 건수' },
+        failedCount: { type: 'number', description: '전송 실패 건수' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  async 공지사항에_포함된_미열람자들에게_알림을보낸다(
+    @Param('id') id: string,
+  ): Promise<{
+    success: boolean;
+    sentCount: number;
+    failedCount: number;
+    message: string;
+  }> {
+    return await this.announcementBusinessService.공지사항에_포함된_미열람자들에게_알림을보낸다(
+      id,
+    );
+  }
 }
