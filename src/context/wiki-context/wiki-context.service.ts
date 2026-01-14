@@ -24,6 +24,7 @@ import {
   FolderStructureResult,
 } from './interfaces/wiki-context.interface';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
+import { WikiFileSystemService } from '@domain/sub/wiki-file-system/wiki-file-system.service';
 
 /**
  * Wiki 컨텍스트 서비스
@@ -35,6 +36,7 @@ export class WikiContextService {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    private readonly wikiFileSystemService: WikiFileSystemService,
   ) {}
 
   /**
@@ -157,5 +159,12 @@ export class WikiContextService {
   ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
     const searchQuery = new SearchWikiQuery(query);
     return await this.queryBus.execute(searchQuery);
+  }
+
+  /**
+   * 모든 위키를 조회한다
+   */
+  async 모든_위키를_조회한다(): Promise<WikiFileSystem[]> {
+    return await this.wikiFileSystemService.모든_위키를_조회한다();
   }
 }

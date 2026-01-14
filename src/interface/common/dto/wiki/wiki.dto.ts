@@ -456,7 +456,13 @@ export class WikiResponseDto {
   @ApiPropertyOptional({ description: '수정자 ID' })
   updatedBy: string | null;
 
-  static from(wiki: WikiFileSystem): WikiResponseDto {
+  @ApiPropertyOptional({
+    description: '하위 폴더 및 파일 목록 (폴더인 경우에만)',
+    type: [WikiResponseDto],
+  })
+  children?: WikiResponseDto[];
+
+  static from(wiki: WikiFileSystem, children?: WikiFileSystem[]): WikiResponseDto {
     const dto = new WikiResponseDto();
     dto.id = wiki.id;
     dto.name = wiki.name;
@@ -478,6 +484,12 @@ export class WikiResponseDto {
     dto.updatedAt = wiki.updatedAt;
     dto.createdBy = wiki.createdBy;
     dto.updatedBy = wiki.updatedBy;
+    
+    // 하위 항목이 있으면 추가
+    if (children && children.length > 0) {
+      dto.children = children.map((child) => WikiResponseDto.from(child));
+    }
+    
     return dto;
   }
 }

@@ -203,6 +203,25 @@ export class WikiFileSystemService {
   }
 
   /**
+   * 모든 위키를 조회한다 (폴더 구조 트리용)
+   */
+  async 모든_위키를_조회한다(): Promise<WikiFileSystem[]> {
+    this.logger.log('모든 위키 조회 시작');
+
+    const wikis = await this.wikiRepository.find({
+      order: {
+        depth: 'ASC',
+        order: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
+
+    this.logger.log(`모든 위키 조회 완료 - 총 ${wikis.length}개`);
+
+    return wikis;
+  }
+
+  /**
    * 위키를 수정한다
    */
   async 위키를_수정한다(

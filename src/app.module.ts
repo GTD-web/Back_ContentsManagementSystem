@@ -15,6 +15,7 @@ import { AdminVideoGalleryModule } from './interface/admin/video-gallery/video-g
 import { AdminNewsModule } from './interface/admin/news/news.module';
 import { AnnouncementModule } from './interface/admin/announcement/announcement.module';
 import { WikiModule } from './interface/admin/wiki/wiki.module';
+import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
 import { HealthModule } from './interface/common/health/health.module';
 import { CompanyModule } from './interface/common/company/company.module';
 import { AuthContextModule } from '@context/auth-context';
@@ -59,6 +60,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     AdminNewsModule,
     AnnouncementModule,
     WikiModule,
+    SeedDataModule,
     CompanyModule,
   ],
   providers: [

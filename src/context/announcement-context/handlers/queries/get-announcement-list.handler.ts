@@ -22,9 +22,7 @@ export class GetAnnouncementListQuery {
  * 공지사항 목록 조회 핸들러
  */
 @QueryHandler(GetAnnouncementListQuery)
-export class GetAnnouncementListHandler
-  implements IQueryHandler<GetAnnouncementListQuery>
-{
+export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncementListQuery> {
   private readonly logger = new Logger(GetAnnouncementListHandler.name);
 
   constructor(

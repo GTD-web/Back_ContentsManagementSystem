@@ -35,6 +35,19 @@ export class WikiBusinessService {
   }
 
   /**
+   * 폴더의 하위 항목을 조회한다
+   */
+  async 폴더_하위_항목을_조회한다(folderId: string): Promise<WikiFileSystem[]> {
+    this.logger.log(`폴더 하위 항목 조회 시작 - 폴더 ID: ${folderId}`);
+
+    const children = await this.wikiContextService.폴더_자식들을_조회한다(folderId);
+
+    this.logger.log(`폴더 하위 항목 조회 완료 - 총 ${children.length}개`);
+
+    return children;
+  }
+
+  /**
    * 폴더 공개를 수정한다
    */
   async 폴더_공개를_수정한다(
@@ -169,22 +182,24 @@ export class WikiBusinessService {
   }
 
   /**
-   * 폴더 구조를 가져온다
+   * 폴더 구조를 가져온다 (모든 하위 항목 포함)
    */
   async 폴더_구조를_가져온다(
     ancestorId?: string,
   ): Promise<WikiFileSystem[]> {
-    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '루트'}`);
+    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '루트 (모든 항목)'}`);
 
     let result: WikiFileSystem[];
 
     if (ancestorId) {
+      // 특정 폴더의 하위 구조 조회
       const structure = await this.wikiContextService.폴더_구조를_조회한다(
         ancestorId,
       );
       result = structure.map((s) => s.wiki);
     } else {
-      result = await this.wikiContextService.폴더_자식들을_조회한다(null);
+      // 루트부터 전체 구조 조회 - 모든 wiki 항목 가져오기
+      result = await this.wikiContextService.모든_위키를_조회한다();
     }
 
     this.logger.log(`폴더 구조 조회 완료 - 총 ${result.length}개`);

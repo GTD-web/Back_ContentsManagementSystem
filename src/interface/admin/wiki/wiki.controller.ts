@@ -26,6 +26,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
+import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import {
   CreateFolderDto,
   CreateEmptyFileDto,
@@ -47,16 +48,17 @@ export class WikiController {
   constructor(private readonly wikiBusinessService: WikiBusinessService) {}
 
   /**
-   * 폴더 구조를 가져온다
+   * 폴더 구조를 가져온다 (트리 구조)
    */
   @Get('folders/structure')
   @ApiOperation({
     summary: '폴더 구조 조회',
-    description: '전체 폴더 구조를 조회합니다.',
+    description:
+      '전체 폴더 구조를 트리 형태로 조회합니다. 각 폴더는 하위 폴더와 파일을 포함합니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '폴더 구조 조회 성공',
+    description: '폴더 구조 조회 성공 (트리 구조)',
     type: WikiListResponseDto,
   })
   @ApiQuery({
@@ -69,29 +71,93 @@ export class WikiController {
   ): Promise<WikiListResponseDto> {
     const items =
       await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+
+    // 트리 구조로 변환
+    const tree = await this.buildTree(items);
+
     return {
-      items: items.map((item) => WikiResponseDto.from(item)),
+      items: tree,
       total: items.length,
     };
   }
 
   /**
-   * 폴더를 조회한다
+   * 평탄한 목록을 트리 구조로 변환하는 헬퍼 메서드
+   */
+  private async buildTree(items: WikiFileSystem[]): Promise<WikiResponseDto[]> {
+    // parentId별로 그룹화
+    const itemsByParent = new Map<string | null, WikiFileSystem[]>();
+    for (const item of items) {
+      const parentId = item.parentId || null;
+      if (!itemsByParent.has(parentId)) {
+        itemsByParent.set(parentId, []);
+      }
+      itemsByParent.get(parentId)!.push(item);
+    }
+
+    // 재귀적으로 트리 구조 생성
+    const buildChildren = (parentId: string | null): WikiResponseDto[] => {
+      const children = itemsByParent.get(parentId) || [];
+      return children.map((child) => {
+        const childDto = WikiResponseDto.from(child);
+        // 폴더인 경우 하위 항목 재귀적으로 추가
+        if (child.type === 'folder') {
+          const subChildren = buildChildren(child.id);
+          if (subChildren.length > 0) {
+            childDto.children = subChildren;
+          }
+        }
+        return childDto;
+      });
+    };
+
+    // 루트 항목들부터 시작
+    const rootParentId = items.length > 0 && items[0].parentId ? items[0].parentId : null;
+    return buildChildren(rootParentId);
+  }
+
+  /**
+   * 폴더를 조회한다 (하위 항목 포함)
    */
   @Get('folders/:id')
   @ApiOperation({
     summary: '폴더 상세 조회',
-    description: '폴더 상세 정보를 조회합니다.',
+    description: '폴더 상세 정보와 하위 폴더/파일 목록을 조회합니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '폴더 조회 성공',
+    description: '폴더 조회 성공 (하위 항목 포함)',
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
   async 폴더를_조회한다(@Param('id') id: string): Promise<WikiResponseDto> {
     const folder = await this.wikiBusinessService.폴더를_조회한다(id);
-    return WikiResponseDto.from(folder);
+    const children = await this.wikiBusinessService.폴더_하위_항목을_조회한다(id);
+    return WikiResponseDto.from(folder, children);
+  }
+
+  /**
+   * 폴더의 하위 항목들을 조회한다
+   */
+  @Get('folders/:id/children')
+  @ApiOperation({
+    summary: '폴더 하위 항목 조회',
+    description: '폴더의 하위 폴더 및 파일 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '하위 항목 조회 성공',
+    type: WikiListResponseDto,
+  })
+  @ApiParam({ name: 'id', description: '폴더 ID' })
+  async 폴더_하위_항목들을_조회한다(
+    @Param('id') id: string,
+  ): Promise<WikiListResponseDto> {
+    const items = await this.wikiBusinessService.폴더_하위_항목을_조회한다(id);
+    return {
+      items: items.map((item) => WikiResponseDto.from(item)),
+      total: items.length,
+    };
   }
 
   /**
