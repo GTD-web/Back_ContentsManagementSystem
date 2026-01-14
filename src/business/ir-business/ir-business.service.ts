@@ -259,7 +259,6 @@ export class IRBusinessService {
       return {
         id: ir.id,
         isPublic: ir.isPublic,
-        status: ir.status,
         order: ir.order,
         title: koreanTranslation?.title || '',
         description: koreanTranslation?.description || null,

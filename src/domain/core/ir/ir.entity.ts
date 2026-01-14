@@ -1,6 +1,5 @@
 import { Entity, Column, OneToMany, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
-import { ContentStatus } from '../content-status.types';
 import { IRTranslation } from './ir-translation.entity';
 
 /**
@@ -10,7 +9,6 @@ import { IRTranslation } from './ir-translation.entity';
  * 다국어 지원: IRTranslation
  */
 @Entity('irs')
-@Index('idx_ir_status', ['status'])
 @Index('idx_ir_is_public', ['isPublic'])
 @Index('idx_ir_order', ['order'])
 export class IR extends BaseEntity<IR> {
@@ -20,14 +18,6 @@ export class IR extends BaseEntity<IR> {
     comment: '공개 여부',
   })
   isPublic: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: ContentStatus,
-    default: ContentStatus.DRAFT,
-    comment: '상태 (draft|approved|under_review|rejected|opened)',
-  })
-  status: ContentStatus;
 
   @Column({
     type: 'jsonb',

@@ -264,7 +264,6 @@ erDiagram
     IR {
         uuid id PK
         boolean isPublic
-        varchar status "draft|approved|under_review|rejected|opened"
         jsonb attachments "nullable - 첨부파일"
         int order
     }

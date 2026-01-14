@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { IR } from './ir.entity';
 import { IRTranslation } from './ir-translation.entity';
-import { ContentStatus } from '../content-status.types';
 
 /**
  * IR 서비스
@@ -42,7 +41,6 @@ export class IRService {
    * 모든 IR을 조회한다
    */
   async 모든_IR을_조회한다(options?: {
-    status?: ContentStatus;
     isPublic?: boolean;
     orderBy?: 'order' | 'createdAt';
   }): Promise<IR[]> {
@@ -53,14 +51,8 @@ export class IRService {
       .leftJoinAndSelect('ir.translations', 'translations')
       .leftJoinAndSelect('translations.language', 'language');
 
-    if (options?.status) {
-      queryBuilder.where('ir.status = :status', {
-        status: options.status,
-      });
-    }
-
     if (options?.isPublic !== undefined) {
-      queryBuilder.andWhere('ir.isPublic = :isPublic', {
+      queryBuilder.where('ir.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
@@ -124,19 +116,6 @@ export class IRService {
   }
 
   /**
-   * IR 상태를 변경한다
-   */
-  async IR_상태를_변경한다(
-    id: string,
-    status: ContentStatus,
-    updatedBy?: string,
-  ): Promise<IR> {
-    this.logger.log(`IR 상태 변경 - ID: ${id}, 상태: ${status}`);
-
-    return await this.IR을_업데이트한다(id, { status, updatedBy });
-  }
-
-  /**
    * IR 공개 여부를 변경한다
    */
   async IR_공개_여부를_변경한다(
@@ -183,7 +162,6 @@ export class IRService {
     return await this.irRepository.find({
       where: {
         isPublic: true,
-        status: ContentStatus.OPENED,
       },
       order: {
         order: 'ASC',
