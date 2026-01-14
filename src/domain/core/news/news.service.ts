@@ -2,7 +2,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { News } from './news.entity';
-import { ContentStatus } from '../content-status.types';
 
 /**
  * 뉴스 서비스
@@ -34,19 +33,14 @@ export class NewsService {
    * 모든 뉴스를 조회한다
    */
   async 모든_뉴스를_조회한다(options?: {
-    status?: ContentStatus;
     isPublic?: boolean;
   }): Promise<News[]> {
     this.logger.debug(`뉴스 목록 조회`);
 
     const queryBuilder = this.repository.createQueryBuilder('news');
 
-    if (options?.status) {
-      queryBuilder.where('news.status = :status', { status: options.status });
-    }
-
     if (options?.isPublic !== undefined) {
-      queryBuilder.andWhere('news.isPublic = :isPublic', {
+      queryBuilder.where('news.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
@@ -103,19 +97,6 @@ export class NewsService {
 
     this.logger.log(`뉴스 삭제 완료 - ID: ${id}`);
     return true;
-  }
-
-  /**
-   * 뉴스 상태를 변경한다
-   */
-  async 뉴스_상태를_변경한다(
-    id: string,
-    status: ContentStatus,
-    updatedBy?: string,
-  ): Promise<News> {
-    this.logger.log(`뉴스 상태 변경 - ID: ${id}, 상태: ${status}`);
-
-    return await this.뉴스를_업데이트한다(id, { status, updatedBy });
   }
 
   /**
@@ -185,7 +166,6 @@ export class NewsService {
 
     return await this.repository.find({
       where: {
-        status: ContentStatus.OPENED,
         isPublic: true,
       },
       order: {

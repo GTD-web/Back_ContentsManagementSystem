@@ -716,7 +716,6 @@ enum ContentStatus {
 type ShareholdersMeetingStatus = ContentStatus;
 type LumirStoryStatus = ContentStatus;
 type VideoGalleryStatus = ContentStatus;
-type NewsStatus = ContentStatus;
 type MainPopupStatus = ContentStatus;
 ```
 

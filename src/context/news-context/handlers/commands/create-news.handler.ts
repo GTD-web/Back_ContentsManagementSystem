@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { NewsService } from '@domain/core/news/news.service';
-import { ContentStatus } from '@domain/core/content-status.types';
 import {
   CreateNewsDto,
   CreateNewsResult,
@@ -31,13 +30,12 @@ export class CreateNewsHandler implements ICommandHandler<CreateNewsCommand> {
     // 자동으로 order 계산
     const nextOrder = await this.newsService.다음_순서를_계산한다();
 
-    // 뉴스 생성 (기본값: 비공개, DRAFT 상태)
+    // 뉴스 생성 (기본값: 공개)
     const saved = await this.newsService.뉴스를_생성한다({
       title: data.title,
       description: data.description || null,
       url: data.url || null,
-      isPublic: false, // 기본값: 비공개
-      status: ContentStatus.DRAFT, // 기본값: DRAFT
+      isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산
       attachments: data.attachments || null,
       createdBy: data.createdBy,
@@ -49,7 +47,6 @@ export class CreateNewsHandler implements ICommandHandler<CreateNewsCommand> {
     return {
       id: saved.id,
       isPublic: saved.isPublic,
-      status: saved.status,
       order: saved.order,
       createdAt: saved.createdAt,
     };

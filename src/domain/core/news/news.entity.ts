@@ -1,6 +1,5 @@
 import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
-import { ContentStatus } from '../content-status.types';
 
 /**
  * News Entity (뉴스)
@@ -9,7 +8,6 @@ import { ContentStatus } from '../content-status.types';
  * 다국어 지원: 없음
  */
 @Entity('news')
-@Index('idx_news_status', ['status'])
 @Index('idx_news_is_public', ['isPublic'])
 @Index('idx_news_order', ['order'])
 export class News extends BaseEntity<News> {
@@ -40,14 +38,6 @@ export class News extends BaseEntity<News> {
     comment: '공개 여부',
   })
   isPublic: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: ContentStatus,
-    default: ContentStatus.DRAFT,
-    comment: '상태 (draft|approved|under_review|rejected|opened)',
-  })
-  status: ContentStatus;
 
   @Column({
     type: 'jsonb',

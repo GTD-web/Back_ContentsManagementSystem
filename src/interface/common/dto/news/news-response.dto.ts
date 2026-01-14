@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 뉴스 첨부파일 DTO
@@ -51,13 +50,6 @@ export class NewsResponseDto {
   isPublic: boolean;
 
   @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
-
-  @ApiProperty({
     description: '첨부파일 목록',
     type: [NewsAttachmentDto],
     required: false,
@@ -107,13 +99,6 @@ export class NewsListItemDto {
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
-
-  @ApiProperty({
-    description: '상태',
-    enum: ContentStatus,
-    example: ContentStatus.OPENED,
-  })
-  status: ContentStatus;
 
   @ApiProperty({ description: '정렬 순서', example: 1 })
   order: number;

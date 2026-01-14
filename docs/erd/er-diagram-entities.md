@@ -335,7 +335,6 @@ erDiagram
         text description "설명"
         text url "외부 링크"
         boolean isPublic
-        varchar status "draft|approved|under_review|rejected|opened"
         jsonb attachments "nullable - 첨부파일"
         int order
     }
@@ -357,8 +356,8 @@ erDiagram
 ```
 
 **특징**:
-- **단일 언어**: 번역 테이블 없음
-- **외부 링크**: url 필드로 뉴스 원문 연결
+- **다국어 미지원**: 단일 언어만 지원 (필요 시 다국어 추가 가능)
+- **외부 링크**: url 필드로 외부 뉴스 페이지 연결 가능
 - **첨부파일**: JSONB 배열로 관리
 
 ---

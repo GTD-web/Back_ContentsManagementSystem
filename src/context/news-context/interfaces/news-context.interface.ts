@@ -1,5 +1,4 @@
 import { News } from '@domain/core/news/news.entity';
-import { ContentStatus } from '@domain/core/content-status.types';
 
 /**
  * 뉴스 생성 DTO
@@ -25,7 +24,6 @@ export interface UpdateNewsDto {
   description?: string | null;
   url?: string | null;
   isPublic?: boolean;
-  status?: ContentStatus;
   order?: number;
   attachments?: Array<{
     fileName: string;
@@ -71,7 +69,6 @@ export interface UpdateNewsFileDto {
 export interface CreateNewsResult {
   id: string;
   isPublic: boolean;
-  status: ContentStatus;
   order: number;
   createdAt: Date;
 }
