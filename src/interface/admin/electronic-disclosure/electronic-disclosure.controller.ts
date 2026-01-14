@@ -28,7 +28,7 @@ import { ElectronicDisclosureBusinessService } from '@business/electronic-disclo
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import {
   CreateElectronicDisclosureCategoryDto,
-  UpdateCategoryEntityDto,
+  UpdateElectronicDisclosureCategoryEntityDto,
   UpdateElectronicDisclosureCategoryOrderDto,
 } from '@interface/common/dto/electronic-disclosure/update-electronic-disclosure.dto';
 import { UpdateElectronicDisclosureBatchOrderDto } from '@interface/common/dto/electronic-disclosure/update-electronic-disclosure-batch-order.dto';
@@ -180,7 +180,7 @@ export class ElectronicDisclosureController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -237,7 +237,7 @@ export class ElectronicDisclosureController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -292,7 +292,7 @@ export class ElectronicDisclosureController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -344,7 +344,7 @@ export class ElectronicDisclosureController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['translations'],
@@ -517,7 +517,7 @@ export class ElectronicDisclosureController {
   async 전자공시_카테고리를_수정한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() updateDto: UpdateCategoryEntityDto,
+    @Body() updateDto: UpdateElectronicDisclosureCategoryEntityDto,
   ): Promise<ElectronicDisclosureCategoryResponseDto> {
     return await this.electronicDisclosureBusinessService.전자공시_카테고리를_수정한다(
       id,

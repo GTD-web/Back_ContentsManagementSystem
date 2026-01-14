@@ -7,9 +7,9 @@ import {
 } from 'class-validator';
 
 /**
- * 카테고리 엔티티 수정 DTO
+ * IR 카테고리 엔티티 수정 DTO
  */
-export class UpdateCategoryEntityDto {
+export class UpdateIRCategoryDto {
   @ApiProperty({ description: '카테고리 이름', example: '실적 자료', required: false })
   @IsOptional()
   @IsString()
@@ -35,9 +35,9 @@ export class UpdateCategoryEntityDto {
 }
 
 /**
- * 카테고리 오더 수정 DTO
+ * IR 카테고리 오더 수정 DTO
  */
-export class UpdateCategoryOrderDto {
+export class UpdateIRCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;

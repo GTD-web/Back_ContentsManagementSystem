@@ -127,7 +127,7 @@ export class NewsController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP
         const allowedMimeTypes = [
@@ -185,7 +185,7 @@ export class NewsController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description: '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP만 가능)',
         },
       },
       required: ['title'],
@@ -225,7 +225,7 @@ export class NewsController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP
         const allowedMimeTypes = [
@@ -284,7 +284,7 @@ export class NewsController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP만 가능) - 전송한 파일들로 완전히 교체됩니다',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['title'],

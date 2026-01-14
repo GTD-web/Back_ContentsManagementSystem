@@ -163,9 +163,9 @@ export class UpdateElectronicDisclosureCategoryDto {
 }
 
 /**
- * 카테고리 엔티티 수정 DTO
+ * 전자공시 카테고리 엔티티 수정 DTO
  */
-export class UpdateCategoryEntityDto {
+export class UpdateElectronicDisclosureCategoryEntityDto {
   @ApiProperty({ description: '카테고리 이름', example: '실적 공시', required: false })
   @IsOptional()
   @IsString()

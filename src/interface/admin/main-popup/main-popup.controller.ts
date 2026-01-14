@@ -34,7 +34,7 @@ import {
 } from '@interface/common/dto/main-popup/main-popup-response.dto';
 import { UpdateMainPopupBatchOrderDto } from '@interface/common/dto/main-popup/update-main-popup-batch-order.dto';
 import { CreateMainPopupDto } from '@interface/common/dto/main-popup/create-main-popup.dto';
-import { UpdateCategoryEntityDto, UpdateCategoryOrderDto } from '@interface/common/dto/main-popup/update-main-popup.dto';
+import { UpdateMainPopupCategoryDto, UpdateMainPopupCategoryOrderDto } from '@interface/common/dto/main-popup/update-main-popup.dto';
 
 @ApiTags('A-5. 관리자 - 메인 팝업')
 @ApiBearerAuth('Bearer')
@@ -173,7 +173,7 @@ export class MainPopupController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -209,7 +209,7 @@ export class MainPopupController {
     description:
       '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
       '- **translations**: JSON 문자열로 전송 (아래 스키마 참고)\n' +
-      '- **files**: 파일 배열 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX)',
+      '- **files**: 파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)',
     schema: {
       type: 'object',
       properties: {
@@ -229,7 +229,7 @@ export class MainPopupController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -284,7 +284,7 @@ export class MainPopupController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -341,7 +341,7 @@ export class MainPopupController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['translations'],
@@ -513,7 +513,7 @@ export class MainPopupController {
   async 메인_팝업_카테고리를_수정한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() updateDto: UpdateCategoryEntityDto,
+    @Body() updateDto: UpdateMainPopupCategoryDto,
   ): Promise<MainPopupCategoryResponseDto> {
     return await this.mainPopupBusinessService.메인_팝업_카테고리를_수정한다(
       id,
@@ -544,7 +544,7 @@ export class MainPopupController {
   async 메인_팝업_카테고리_오더를_변경한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() updateDto: UpdateCategoryOrderDto,
+    @Body() updateDto: UpdateMainPopupCategoryOrderDto,
   ): Promise<MainPopupCategoryResponseDto> {
     const result =
       await this.mainPopupBusinessService.메인_팝업_카테고리_오더를_변경한다(

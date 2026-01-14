@@ -7,9 +7,9 @@ import {
 } from 'class-validator';
 
 /**
- * 카테고리 엔티티 수정 DTO
+ * 주주총회 카테고리 엔티티 수정 DTO
  */
-export class UpdateCategoryEntityDto {
+export class UpdateShareholdersMeetingCategoryDto {
   @ApiProperty({ description: '카테고리 이름', example: '정기 주주총회', required: false })
   @IsOptional()
   @IsString()
@@ -35,9 +35,9 @@ export class UpdateCategoryEntityDto {
 }
 
 /**
- * 카테고리 오더 수정 DTO
+ * 주주총회 카테고리 오더 수정 DTO
  */
-export class UpdateCategoryOrderDto {
+export class UpdateShareholdersMeetingCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;

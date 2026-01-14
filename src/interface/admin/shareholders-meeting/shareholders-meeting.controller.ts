@@ -26,7 +26,7 @@ import { CurrentUser } from '@interface/common/decorators/current-user.decorator
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { ShareholdersMeetingBusinessService } from '@business/shareholders-meeting-business/shareholders-meeting-business.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
-import { UpdateCategoryEntityDto, UpdateCategoryOrderDto } from '@interface/common/dto/shareholders-meeting/update-shareholders-meeting.dto';
+import { UpdateShareholdersMeetingCategoryDto, UpdateShareholdersMeetingCategoryOrderDto } from '@interface/common/dto/shareholders-meeting/update-shareholders-meeting.dto';
 
 @ApiTags('A-6. 관리자 - 주주총회')
 @ApiBearerAuth('Bearer')
@@ -168,7 +168,7 @@ export class ShareholdersMeetingController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -207,7 +207,7 @@ export class ShareholdersMeetingController {
       '- **location**: 주주총회 장소\n' +
       '- **meetingDate**: 주주총회 일시\n' +
       '- **voteResults**: JSON 문자열 (CreateVoteResultDto[], 선택사항)\n' +
-      '- **files**: 파일 배열 (최대 10개)',
+      '- **files**: 파일 배열',
     schema: {
       type: 'object',
       properties: {
@@ -259,7 +259,7 @@ export class ShareholdersMeetingController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations', 'location', 'meetingDate'],
@@ -346,7 +346,7 @@ export class ShareholdersMeetingController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -441,7 +441,7 @@ export class ShareholdersMeetingController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (최대 10개, PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
+            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
       required: ['translations'],
@@ -640,7 +640,7 @@ export class ShareholdersMeetingController {
   async 주주총회_카테고리를_수정한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() updateDto: UpdateCategoryEntityDto,
+    @Body() updateDto: UpdateShareholdersMeetingCategoryDto,
   ): Promise<any> {
     return await this.shareholdersMeetingBusinessService.주주총회_카테고리를_수정한다(
       id,
@@ -670,7 +670,7 @@ export class ShareholdersMeetingController {
   async 주주총회_카테고리_오더를_변경한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() updateDto: UpdateCategoryOrderDto,
+    @Body() updateDto: UpdateShareholdersMeetingCategoryOrderDto,
   ): Promise<any> {
     const result =
       await this.shareholdersMeetingBusinessService.주주총회_카테고리_오더를_변경한다(

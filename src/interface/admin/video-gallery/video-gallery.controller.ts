@@ -132,7 +132,7 @@ export class VideoGalleryController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: 비디오 파일들
         const allowedMimeTypes = [
@@ -168,7 +168,7 @@ export class VideoGalleryController {
       '⚠️ **중요**: 제목은 필수입니다.\n\n' +
       '**비디오 소스 (여러 개 가능)**:\n' +
       '- `youtubeUrls`: YouTube 비디오 URL 배열 (여러 개 가능)\n' +
-      '- `files`: 직접 비디오 파일 업로드 (여러 개 가능, 최대 10개)\n' +
+      '- `files`: 직접 비디오 파일 업로드 (여러 개 가능)\n' +
       '- 둘 다 입력 가능하며, 모든 URL은 하나의 배열로 통합되어 저장됩니다\n' +
       '- 파일은 S3에 업로드되고 URL로 변환되어 저장됩니다',
     schema: {
@@ -193,7 +193,7 @@ export class VideoGalleryController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description: '비디오 파일 목록 (최대 10개)',
+          description: '비디오 파일 목록',
         },
       },
       required: ['title'],
@@ -249,7 +249,7 @@ export class VideoGalleryController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
+    FilesInterceptor('files', undefined, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: 비디오 파일들
         const allowedMimeTypes = [
@@ -284,7 +284,7 @@ export class VideoGalleryController {
       '⚠️ **중요**: 제목은 필수입니다.\n\n' +
       '**비디오 소스 (여러 개 가능)**:\n' +
       '- `youtubeUrls`: YouTube 비디오 URL 배열 (여러 개 가능)\n' +
-      '- `files`: 직접 비디오 파일 업로드 (여러 개 가능, 최대 10개)\n' +
+      '- `files`: 직접 비디오 파일 업로드 (여러 개 가능)\n' +
       '- 둘 다 입력 가능하며, 모든 URL은 하나의 배열로 통합되어 저장됩니다\n' +
       '- 파일은 S3에 업로드되고 URL로 변환되어 저장됩니다\n\n' +
       '**비디오 관리 방식 (완전 교체)**:\n' +
@@ -313,7 +313,7 @@ export class VideoGalleryController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '비디오 파일 목록 (최대 10개) - 전송한 것으로 완전히 교체됩니다',
+            '비디오 파일 목록 - 전송한 것으로 완전히 교체됩니다',
         },
       },
       required: ['title'],
