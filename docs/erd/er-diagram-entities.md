@@ -166,7 +166,6 @@ erDiagram
     ShareholdersMeeting {
         uuid id PK
         boolean isPublic
-        varchar status "draft|approved|under_review|rejected|opened"
         varchar location
         date meetingDate
         timestamp releasedAt "nullable"

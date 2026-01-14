@@ -318,7 +318,6 @@ export class ShareholdersMeetingBusinessService {
       return {
         id: meeting.id,
         isPublic: meeting.isPublic,
-        status: meeting.status,
         order: meeting.order,
         location: meeting.location,
         meetingDate: meeting.meetingDate,

@@ -713,7 +713,6 @@ enum ContentStatus {
 }
 
 // ContentStatus를 사용하는 엔티티
-type ShareholdersMeetingStatus = ContentStatus;
 type VideoGalleryStatus = ContentStatus;
 ```
 

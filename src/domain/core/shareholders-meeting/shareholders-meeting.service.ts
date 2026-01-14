@@ -5,7 +5,6 @@ import { ShareholdersMeeting } from './shareholders-meeting.entity';
 import { ShareholdersMeetingTranslation } from './shareholders-meeting-translation.entity';
 import { VoteResult } from './vote-result.entity';
 import { VoteResultTranslation } from './vote-result-translation.entity';
-import { ContentStatus } from '../content-status.types';
 
 /**
  * 주주총회 서비스
@@ -45,7 +44,6 @@ export class ShareholdersMeetingService {
    * 모든 주주총회를 조회한다
    */
   async 모든_주주총회를_조회한다(options?: {
-    status?: ContentStatus;
     isPublic?: boolean;
     orderBy?: 'order' | 'meetingDate' | 'createdAt';
   }): Promise<ShareholdersMeeting[]> {
@@ -54,14 +52,8 @@ export class ShareholdersMeetingService {
     const queryBuilder =
       this.shareholdersMeetingRepository.createQueryBuilder('meeting');
 
-    if (options?.status) {
-      queryBuilder.where('meeting.status = :status', {
-        status: options.status,
-      });
-    }
-
     if (options?.isPublic !== undefined) {
-      queryBuilder.andWhere('meeting.isPublic = :isPublic', {
+      queryBuilder.where('meeting.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
@@ -136,19 +128,6 @@ export class ShareholdersMeetingService {
   }
 
   /**
-   * 주주총회 상태를 변경한다
-   */
-  async 주주총회_상태를_변경한다(
-    id: string,
-    status: ContentStatus,
-    updatedBy?: string,
-  ): Promise<ShareholdersMeeting> {
-    this.logger.log(`주주총회 상태 변경 - ID: ${id}, 상태: ${status}`);
-
-    return await this.주주총회를_업데이트한다(id, { status, updatedBy });
-  }
-
-  /**
    * 주주총회 공개 여부를 변경한다
    */
   async 주주총회_공개_여부를_변경한다(
@@ -197,7 +176,6 @@ export class ShareholdersMeetingService {
     return await this.shareholdersMeetingRepository.find({
       where: {
         isPublic: true,
-        status: ContentStatus.OPENED,
       },
       order: {
         meetingDate: 'DESC',

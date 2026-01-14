@@ -134,10 +134,9 @@ export class ShareholdersMeetingContextService {
     const nextOrder =
       await this.shareholdersMeetingService.다음_순서를_계산한다();
 
-    // 5. 주주총회 생성 (기본값: 비공개, DRAFT 상태)
+    // 5. 주주총회 생성 (기본값: 공개)
     const meeting = await this.shareholdersMeetingService.주주총회를_생성한다({
-      isPublic: false,
-      status: 'draft' as any,
+      isPublic: true,
       order: nextOrder,
       location: meetingData.location,
       meetingDate: meetingData.meetingDate,
@@ -261,7 +260,6 @@ export class ShareholdersMeetingContextService {
       location?: string;
       meetingDate?: Date;
       isPublic?: boolean;
-      status?: string;
       order?: number;
       translations?: Array<{
         id?: string;
@@ -294,7 +292,6 @@ export class ShareholdersMeetingContextService {
     if (data.meetingDate !== undefined)
       updateData.meetingDate = data.meetingDate;
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
-    if (data.status) updateData.status = data.status;
     if (data.order !== undefined) updateData.order = data.order;
     if (data.updatedBy) updateData.updatedBy = data.updatedBy;
 

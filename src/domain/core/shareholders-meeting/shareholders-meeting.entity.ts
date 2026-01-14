@@ -1,6 +1,5 @@
 import { Entity, Column, OneToMany, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
-import { ContentStatus } from '../content-status.types';
 import { VoteResult } from './vote-result.entity';
 import { ShareholdersMeetingTranslation } from './shareholders-meeting-translation.entity';
 
@@ -11,7 +10,6 @@ import { ShareholdersMeetingTranslation } from './shareholders-meeting-translati
  * 다국어 지원: ShareholdersMeetingTranslation
  */
 @Entity('shareholders_meetings')
-@Index('idx_shareholders_meeting_status', ['status'])
 @Index('idx_shareholders_meeting_is_public', ['isPublic'])
 @Index('idx_shareholders_meeting_date', ['meetingDate'])
 @Index('idx_shareholders_meeting_order', ['order'])
@@ -22,14 +20,6 @@ export class ShareholdersMeeting extends BaseEntity<ShareholdersMeeting> {
     comment: '공개 여부',
   })
   isPublic: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: ContentStatus,
-    default: ContentStatus.DRAFT,
-    comment: '상태 (draft|approved|under_review|rejected|opened)',
-  })
-  status: ContentStatus;
 
   @Column({
     type: 'varchar',
