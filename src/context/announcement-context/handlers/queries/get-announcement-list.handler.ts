@@ -91,6 +91,9 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
+    // Survey 관계 조인 (설문조사 포함 여부 확인용)
+    queryBuilder.leftJoinAndSelect('announcement.survey', 'survey');
+
     const [items, total] = await queryBuilder.getManyAndCount();
 
     return { items, total, page, limit };

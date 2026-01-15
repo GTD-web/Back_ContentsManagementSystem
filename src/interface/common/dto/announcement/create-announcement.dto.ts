@@ -8,6 +8,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateSurveyWithoutAnnouncementDto } from '../survey/create-survey.dto';
 
 /**
  * 공지사항 첨부파일 DTO
@@ -154,4 +155,14 @@ export class CreateAnnouncementDto {
   @IsOptional()
   @IsString()
   createdBy?: string;
+
+  @ApiProperty({
+    description: '설문조사 정보',
+    type: CreateSurveyWithoutAnnouncementDto,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateSurveyWithoutAnnouncementDto)
+  survey?: CreateSurveyWithoutAnnouncementDto;
 }

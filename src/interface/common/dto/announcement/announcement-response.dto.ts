@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { SurveyResponseDto } from '@interface/common/dto/survey/survey-response.dto';
 
 /**
  * 공지사항 첨부파일 응답 DTO
@@ -116,6 +117,14 @@ export class AnnouncementResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({
+    description: '연결된 설문조사',
+    type: SurveyResponseDto,
+    required: false,
+    nullable: true,
+  })
+  survey?: SurveyResponseDto | null;
 }
 
 /**
@@ -148,6 +157,9 @@ export class AnnouncementListItemDto {
 
   @ApiProperty({ description: '수정 일시' })
   updatedAt: Date;
+
+  @ApiProperty({ description: '설문조사 포함 여부', example: false })
+  hasSurvey: boolean;
 }
 
 /**

@@ -70,13 +70,14 @@ export class AnnouncementService {
   }
 
   /**
-   * ID로 공지사항을 조회한다
+   * ID로 공지사항을 조회한다 (설문조사 포함)
    */
   async ID로_공지사항을_조회한다(id: string): Promise<Announcement> {
     this.logger.debug(`공지사항 조회 - ID: ${id}`);
 
     const announcement = await this.announcementRepository.findOne({
       where: { id },
+      relations: ['survey', 'survey.questions'],
     });
 
     if (!announcement) {

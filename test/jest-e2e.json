@@ -7,7 +7,7 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "transformIgnorePatterns": [
-    "node_modules/(?!(uuid)/)"
+    "node_modules/(?!(uuid|@faker-js)/)"
   ],
   "moduleNameMapper": {
     "^uuid$": "<rootDir>/../node_modules/uuid/dist/index.js",

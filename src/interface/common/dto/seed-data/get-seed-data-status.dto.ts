@@ -17,6 +17,12 @@ export class GetSeedDataStatusDto {
   announcementCount: number;
 
   @ApiProperty({
+    description: '설문조사 데이터 개수',
+    example: 3,
+  })
+  surveyCount: number;
+
+  @ApiProperty({
     description: '뉴스 데이터 개수',
     example: 10,
   })

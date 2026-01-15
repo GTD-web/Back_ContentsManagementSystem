@@ -23,6 +23,9 @@ import { MainPopupTranslation } from '@domain/sub/main-popup/main-popup-translat
 import { LumirStory } from '@domain/sub/lumir-story/lumir-story.entity';
 import { VideoGallery } from '@domain/sub/video-gallery/video-gallery.entity';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
+import { Survey } from '@domain/sub/survey/survey.entity';
+import { SurveyQuestion } from '@domain/sub/survey/survey-question.entity';
+import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
 
 // Domain Modules
 import { LanguageModule } from '@domain/common/language/language.module';
@@ -37,6 +40,7 @@ import { MainPopupModule } from '@domain/sub/main-popup/main-popup.module';
 import { LumirStoryModule } from '@domain/sub/lumir-story/lumir-story.module';
 import { VideoGalleryModule } from '@domain/sub/video-gallery/video-gallery.module';
 import { WikiFileSystemModule } from '@domain/sub/wiki-file-system/wiki-file-system.module';
+import { SurveyModule } from '@domain/sub/survey/survey.module';
 
 // Context Modules
 import { CompanyContextModule } from '@context/company-context';
@@ -73,6 +77,9 @@ import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
       LumirStory,
       VideoGallery,
       WikiFileSystem,
+      Survey,
+      SurveyQuestion,
+      SurveyCompletion,
     ]),
     // Domain Modules
     LanguageModule,
@@ -87,6 +94,7 @@ import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
     LumirStoryModule,
     VideoGalleryModule,
     WikiFileSystemModule,
+    SurveyModule,
     // Context Modules
     CompanyContextModule,
     BrochureContextModule,

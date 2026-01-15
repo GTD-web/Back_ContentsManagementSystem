@@ -16,12 +16,14 @@ import { MainPopup } from '@domain/sub/main-popup/main-popup.entity';
 import { LumirStory } from '@domain/sub/lumir-story/lumir-story.entity';
 import { VideoGallery } from '@domain/sub/video-gallery/video-gallery.entity';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
+import { Survey } from '@domain/sub/survey/survey.entity';
 
 // Domain Services
 import { LanguageService } from '@domain/common/language/language.service';
 import { CategoryService } from '@domain/common/category/category.service';
 import { AnnouncementService } from '@domain/core/announcement/announcement.service';
 import { NewsService } from '@domain/core/news/news.service';
+import { SurveyService } from '@domain/sub/survey/survey.service';
 
 // Context Services
 import { CompanyContextService } from '@context/company-context/company-context.service';
@@ -39,6 +41,7 @@ import { SeedScenario } from '@interface/common/dto/seed-data/seed-data-config.d
 import { LanguageCode } from '@domain/common/language/language-code.types';
 import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
 import { GetSeedDataStatusDto } from '@interface/common/dto/seed-data';
+import { InqueryType } from '@domain/sub/survey/inquery-type.types';
 
 /**
  * 시드 데이터 Context 서비스
@@ -74,12 +77,15 @@ export class SeedDataContextService {
     private readonly videoGalleryRepository: Repository<VideoGallery>,
     @InjectRepository(WikiFileSystem)
     private readonly wikiFileSystemRepository: Repository<WikiFileSystem>,
+    @InjectRepository(Survey)
+    private readonly surveyRepository: Repository<Survey>,
 
     // Services
     private readonly languageService: LanguageService,
     private readonly categoryService: CategoryService,
     private readonly announcementService: AnnouncementService,
     private readonly newsService: NewsService,
+    private readonly surveyService: SurveyService,
     private readonly companyContextService: CompanyContextService,
     private readonly brochureContextService: BrochureContextService,
     private readonly electronicDisclosureContextService: ElectronicDisclosureContextService,
@@ -298,6 +304,7 @@ export class SeedDataContextService {
     }
 
     let created = 0;
+    const createdAnnouncements: Announcement[] = [];
 
     for (let i = 0; i < count; i++) {
       const isFixed = i < 3; // 처음 3개는 고정
@@ -370,7 +377,7 @@ export class SeedDataContextService {
         }
       }
 
-      await this.announcementService.공지사항을_생성한다({
+      const announcement = await this.announcementService.공지사항을_생성한다({
         title: `${faker.lorem.sentence()} - 공지사항 ${i + 1}`,
         content: faker.lorem.paragraphs(3),
         isFixed,
@@ -387,12 +394,174 @@ export class SeedDataContextService {
         createdBy: 'seed',
       });
 
+      createdAnnouncements.push(announcement);
       created++;
     }
 
     this.logger.log(
       `공지사항 시드 데이터 생성 완료 - 생성된 개수: ${created}`,
     );
+
+    // 일부 공지사항에 설문조사 추가 (3개)
+    this.logger.log('공지사항에 설문조사 추가 시작...');
+    let surveyCreated = 0;
+
+    // 첫 번째 설문: 만족도 조사 (선형 척도)
+    if (createdAnnouncements[0]) {
+      await this.surveyService.설문조사를_생성한다({
+        announcementId: createdAnnouncements[0].id,
+        title: '2024년 직원 만족도 조사',
+        description: '우리 회사의 발전을 위한 소중한 의견을 들려주세요.',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30일 후
+        order: 0,
+        questions: [
+          {
+            title: '회사에 대한 전반적인 만족도를 평가해주세요',
+            type: InqueryType.LINEAR_SCALE,
+            form: {
+              minScale: 1,
+              maxScale: 10,
+            },
+            isRequired: true,
+            order: 0,
+          },
+          {
+            title: '복리후생에 만족하시나요?',
+            type: InqueryType.LINEAR_SCALE,
+            form: {
+              minScale: 1,
+              maxScale: 5,
+            },
+            isRequired: true,
+            order: 1,
+          },
+          {
+            title: '개선이 필요한 부분을 선택해주세요 (복수 선택 가능)',
+            type: InqueryType.CHECKBOXES,
+            form: {
+              options: ['업무 환경', '복리후생', '커뮤니케이션', '교육/성장', '워라밸', '기타'],
+            },
+            isRequired: false,
+            order: 2,
+          },
+          {
+            title: '추가 의견이 있으시면 작성해주세요',
+            type: InqueryType.PARAGRAPH,
+            form: null,
+            isRequired: false,
+            order: 3,
+          },
+        ],
+      });
+      surveyCreated++;
+      this.logger.debug(`설문조사 생성 - 공지사항 "${createdAnnouncements[0].title}"`);
+    }
+
+    // 두 번째 설문: 교육 프로그램 선호도 (객관식, 체크박스)
+    if (createdAnnouncements[3]) {
+      await this.surveyService.설문조사를_생성한다({
+        announcementId: createdAnnouncements[3].id,
+        title: '2024년 교육 프로그램 수요 조사',
+        description: '직원 여러분의 성장을 위한 교육 프로그램을 기획하고 있습니다.',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14일 후
+        order: 0,
+        questions: [
+          {
+            title: '소속 부서를 선택해주세요',
+            type: InqueryType.MULTIPLE_CHOICE,
+            form: {
+              options: ['개발팀', '디자인팀', '마케팅팀', '영업팀', '경영지원팀', '기타'],
+            },
+            isRequired: true,
+            order: 0,
+          },
+          {
+            title: '관심있는 교육 분야를 모두 선택해주세요',
+            type: InqueryType.CHECKBOXES,
+            form: {
+              options: [
+                '프로그래밍 언어',
+                'AI/머신러닝',
+                '클라우드 기술',
+                '프로젝트 관리',
+                '커뮤니케이션',
+                '리더십',
+                '외국어',
+              ],
+            },
+            isRequired: true,
+            order: 1,
+          },
+          {
+            title: '선호하는 교육 방식을 선택해주세요',
+            type: InqueryType.MULTIPLE_CHOICE,
+            form: {
+              options: ['온라인 강의', '오프라인 워크샵', '사내 멘토링', '외부 교육 과정', '도서 지원'],
+            },
+            isRequired: true,
+            order: 2,
+          },
+          {
+            title: '교육 프로그램에 대한 제안사항이 있으시면 작성해주세요',
+            type: InqueryType.PARAGRAPH,
+            form: null,
+            isRequired: false,
+            order: 3,
+          },
+        ],
+      });
+      surveyCreated++;
+      this.logger.debug(`설문조사 생성 - 공지사항 "${createdAnnouncements[3].title}"`);
+    }
+
+    // 세 번째 설문: 간단한 의견 수렴 (단답형, 객관식)
+    if (createdAnnouncements[7]) {
+      await this.surveyService.설문조사를_생성한다({
+        announcementId: createdAnnouncements[7].id,
+        title: '사내 식당 메뉴 개선 설문',
+        description: '더 나은 식사 환경을 위한 의견을 수렴합니다.',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 후
+        order: 0,
+        questions: [
+          {
+            title: '선호하는 메뉴 스타일을 선택해주세요',
+            type: InqueryType.MULTIPLE_CHOICE,
+            form: {
+              options: ['한식', '중식', '일식', '양식', '분식', '샐러드/헬시'],
+            },
+            isRequired: true,
+            order: 0,
+          },
+          {
+            title: '식사 시간에 만족하시나요?',
+            type: InqueryType.LINEAR_SCALE,
+            form: {
+              minScale: 1,
+              maxScale: 5,
+            },
+            isRequired: true,
+            order: 1,
+          },
+          {
+            title: '추가하고 싶은 메뉴가 있으시면 작성해주세요',
+            type: InqueryType.SHORT_ANSWER,
+            form: null,
+            isRequired: false,
+            order: 2,
+          },
+        ],
+      });
+      surveyCreated++;
+      this.logger.debug(`설문조사 생성 - 공지사항 "${createdAnnouncements[7].title}"`);
+    }
+
+    this.logger.log(
+      `설문조사 추가 완료 - 생성된 설문조사: ${surveyCreated}개`,
+    );
+
     return created;
   }
 
@@ -996,6 +1165,7 @@ export class SeedDataContextService {
       this.logger.log('하드 삭제 실행 - 데이터베이스에서 완전히 제거됩니다.');
       
       // QueryBuilder를 사용하여 모든 데이터 삭제 (빈 criteria 에러 방지)
+      // Survey는 Announcement CASCADE로 자동 삭제되므로 명시적 삭제 불필요
       await this.announcementRepository.createQueryBuilder().delete().execute();
       await this.newsRepository.createQueryBuilder().delete().execute();
       await this.brochureRepository.createQueryBuilder().delete().execute();
@@ -1038,6 +1208,7 @@ export class SeedDataContextService {
     const status: GetSeedDataStatusDto = {
       languageCount: await this.languageRepository.count(),
       announcementCount: await this.announcementRepository.count(),
+      surveyCount: await this.surveyRepository.count(),
       newsCount: await this.newsRepository.count(),
       brochureCount: await this.brochureRepository.count(),
       categoryCount: await this.categoryRepository.count(),

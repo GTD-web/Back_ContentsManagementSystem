@@ -1,6 +1,7 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
+import { Entity, Column, OneToMany, OneToOne, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
 import { AnnouncementRead } from './announcement-read.entity';
+import { Survey } from '../../sub/survey/survey.entity';
 
 /**
  * Announcement Entity (공지사항)
@@ -114,6 +115,9 @@ export class Announcement extends BaseEntity<Announcement> {
 
   @OneToMany(() => AnnouncementRead, (read) => read.announcement)
   reads: AnnouncementRead[];
+
+  @OneToOne(() => Survey, (survey) => survey.announcement)
+  survey: Survey | null;
 
   /**
    * 엔티티를 DTO로 변환한다

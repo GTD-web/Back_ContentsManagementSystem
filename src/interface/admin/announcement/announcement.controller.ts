@@ -133,7 +133,10 @@ export class AnnouncementController {
       });
 
     return {
-      items: result.items,
+      items: result.items.map((item) => ({
+        ...item,
+        hasSurvey: !!item.survey,
+      })),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -317,7 +320,31 @@ export class AnnouncementController {
   async 공지사항을_조회한다(
     @Param('id') id: string,
   ): Promise<AnnouncementResponseDto> {
-    return await this.announcementBusinessService.공지사항을_조회한다(id);
+    const announcement = await this.announcementBusinessService.공지사항을_조회한다(id);
+    
+    // Survey 정보를 포함하여 반환
+    return {
+      ...announcement,
+      survey: announcement.survey ? {
+        id: announcement.survey.id,
+        announcementId: announcement.survey.announcementId,
+        title: announcement.survey.title,
+        description: announcement.survey.description,
+        startDate: announcement.survey.startDate,
+        endDate: announcement.survey.endDate,
+        order: announcement.survey.order,
+        questions: announcement.survey.questions?.map(q => ({
+          id: q.id,
+          title: q.title,
+          type: q.type,
+          form: q.form,
+          isRequired: q.isRequired,
+          order: q.order,
+        })) || [],
+        createdAt: announcement.survey.createdAt,
+        updatedAt: announcement.survey.updatedAt,
+      } : null,
+    };
   }
 
   /**

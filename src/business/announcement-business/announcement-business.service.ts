@@ -4,6 +4,7 @@ import { Repository, In, Not } from 'typeorm';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { AnnouncementContextService } from '@context/announcement-context/announcement-context.service';
+import { SurveyContextService } from '@context/survey-context/survey-context.service';
 import { CompanyContextService } from '@context/company-context/company-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
 import { Announcement } from '@domain/core/announcement/announcement.entity';
@@ -40,6 +41,7 @@ export class AnnouncementBusinessService {
 
   constructor(
     private readonly announcementContextService: AnnouncementContextService,
+    private readonly surveyContextService: SurveyContextService,
     private readonly companyContextService: CompanyContextService,
     private readonly categoryService: CategoryService,
     private readonly configService: ConfigService,
@@ -118,16 +120,35 @@ export class AnnouncementBusinessService {
    * 공지사항을 생성한다
    */
   async 공지사항을_생성한다(
-    data: CreateAnnouncementDto,
+    data: CreateAnnouncementDto & { survey?: any },
   ): Promise<Announcement> {
     this.logger.log(`공지사항 생성 시작 - 제목: ${data.title}`);
 
+    // 1. 공지사항 생성 (survey 필드 제외)
+    const { survey, ...announcementData } = data;
     const result =
-      await this.announcementContextService.공지사항을_생성한다(data);
+      await this.announcementContextService.공지사항을_생성한다(announcementData);
 
     this.logger.log(`공지사항 생성 완료 - ID: ${result.id}`);
 
-    // 생성 후 상세 정보 조회
+    // 2. 설문조사가 있으면 생성
+    if (survey) {
+      this.logger.log(`설문조사 생성 시작 - 공지사항 ID: ${result.id}`);
+      
+      await this.surveyContextService.설문조사를_생성한다({
+        announcementId: result.id,
+        title: survey.title,
+        description: survey.description,
+        startDate: survey.startDate,
+        endDate: survey.endDate,
+        order: survey.order,
+        questions: survey.questions,
+      });
+
+      this.logger.log(`설문조사 생성 완료 - 공지사항 ID: ${result.id}`);
+    }
+
+    // 3. 생성 후 상세 정보 조회
     return await this.announcementContextService.공지사항을_조회한다(result.id);
   }
 
@@ -136,14 +157,48 @@ export class AnnouncementBusinessService {
    */
   async 공지사항을_수정한다(
     id: string,
-    data: UpdateAnnouncementDto,
+    data: UpdateAnnouncementDto & { survey?: any },
   ): Promise<Announcement> {
     this.logger.log(`공지사항 수정 시작 - ID: ${id}`);
 
+    // 1. 공지사항 수정 (survey 필드 제외)
+    const { survey, ...announcementData } = data;
     const result =
-      await this.announcementContextService.공지사항을_수정한다(id, data);
+      await this.announcementContextService.공지사항을_수정한다(id, announcementData);
 
     this.logger.log(`공지사항 수정 완료 - ID: ${id}`);
+
+    // 2. 설문조사 처리
+    if (survey !== undefined) {
+      // 기존 설문조사 확인
+      const existingSurvey =
+        await this.surveyContextService.공지사항의_설문조사를_조회한다(id);
+
+      if (survey === null) {
+        // 설문조사 삭제 요청
+        if (existingSurvey) {
+          this.logger.log(`설문조사 삭제 시작 - 공지사항 ID: ${id}`);
+          await this.surveyContextService.설문조사를_삭제한다(existingSurvey.id);
+          this.logger.log(`설문조사 삭제 완료 - 공지사항 ID: ${id}`);
+        }
+      } else if (existingSurvey) {
+        // 기존 설문조사 수정
+        this.logger.log(`설문조사 수정 시작 - 설문 ID: ${existingSurvey.id}`);
+        await this.surveyContextService.설문조사를_수정한다(
+          existingSurvey.id,
+          survey,
+        );
+        this.logger.log(`설문조사 수정 완료 - 설문 ID: ${existingSurvey.id}`);
+      } else {
+        // 새 설문조사 생성
+        this.logger.log(`설문조사 생성 시작 - 공지사항 ID: ${id}`);
+        await this.surveyContextService.설문조사를_생성한다({
+          announcementId: id,
+          ...survey,
+        });
+        this.logger.log(`설문조사 생성 완료 - 공지사항 ID: ${id}`);
+      }
+    }
 
     return result;
   }

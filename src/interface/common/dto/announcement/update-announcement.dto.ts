@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AnnouncementAttachmentDto } from './create-announcement.dto';
+import { CreateSurveyWithoutAnnouncementDto } from '../survey/create-survey.dto';
 
 /**
  * 공지사항 수정 DTO
@@ -138,6 +139,16 @@ export class UpdateAnnouncementDto {
   @IsOptional()
   @IsString()
   updatedBy?: string;
+
+  @ApiProperty({
+    description: '설문조사 정보 (수정 또는 생성)',
+    type: CreateSurveyWithoutAnnouncementDto,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateSurveyWithoutAnnouncementDto)
+  survey?: CreateSurveyWithoutAnnouncementDto;
 }
 
 /**

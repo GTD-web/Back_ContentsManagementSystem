@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AnnouncementBusinessService } from './announcement-business.service';
 import { AnnouncementContextModule } from '@context/announcement-context/announcement-context.module';
+import { SurveyContextModule } from '@context/survey-context/survey-context.module';
 import { CompanyContextModule } from '@context/company-context/company-context.module';
 import { CategoryModule } from '@domain/common/category/category.module';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
@@ -25,6 +26,7 @@ import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
     ]),
     ConfigModule,
     AnnouncementContextModule,
+    SurveyContextModule,
     CompanyContextModule,
     CategoryModule,
   ],
