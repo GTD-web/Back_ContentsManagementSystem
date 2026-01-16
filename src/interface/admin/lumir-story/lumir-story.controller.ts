@@ -245,6 +245,47 @@ export class LumirStoryController {
   }
 
   /**
+   * 루미르스토리 오더를 일괄 수정한다
+   *
+   * 주의: 이 라우트는 :id 라우트보다 앞에 와야 합니다.
+   * 그렇지 않으면 /batch-order가 :id로 매칭됩니다.
+   */
+  @Put('batch-order')
+  @ApiOperation({
+    summary: '루미르스토리 오더 일괄 수정',
+    description:
+      '여러 루미르스토리의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 루미르스토리 목록을 전달하면 됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '루미르스토리 오더 일괄 수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        updatedCount: { type: 'number', example: 5 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (수정할 루미르스토리가 없음)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '일부 루미르스토리를 찾을 수 없음',
+  })
+  async 루미르스토리_오더를_일괄_수정한다(
+    @Body() updateDto: UpdateLumirStoryBatchOrderDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    return await this.lumirStoryBusinessService.루미르스토리_오더를_일괄_수정한다(
+      updateDto.lumirStories,
+      user.id,
+    );
+  }
+
+  /**
    * 루미르스토리를 수정한다 (파일 포함)
    */
   @Put(':id')
@@ -421,44 +462,6 @@ export class LumirStoryController {
     return await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(
       id,
       updateDto,
-    );
-  }
-
-  /**
-   * 루미르스토리 오더를 일괄 수정한다
-   */
-  @Put('batch-order')
-  @ApiOperation({
-    summary: '루미르스토리 오더 일괄 수정',
-    description:
-      '여러 루미르스토리의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 루미르스토리 목록을 전달하면 됩니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '루미르스토리 오더 일괄 수정 성공',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        updatedCount: { type: 'number', example: 5 },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청 (수정할 루미르스토리가 없음)',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '일부 루미르스토리를 찾을 수 없음',
-  })
-  async 루미르스토리_오더를_일괄_수정한다(
-    @Body() updateDto: UpdateLumirStoryBatchOrderDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<{ success: boolean; updatedCount: number }> {
-    return await this.lumirStoryBusinessService.루미르스토리_오더를_일괄_수정한다(
-      updateDto.lumirStories,
-      user.id,
     );
   }
 
