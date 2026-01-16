@@ -21,6 +21,7 @@ import {
   AnnouncementDetailResult,
 } from './interfaces/announcement-context.interface';
 import { Announcement } from '@domain/core/announcement/announcement.entity';
+import { AnnouncementService } from '@domain/core/announcement/announcement.service';
 
 /**
  * 공지사항 컨텍스트 서비스
@@ -32,6 +33,7 @@ export class AnnouncementContextService {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    private readonly announcementService: AnnouncementService,
   ) {}
 
   /**
@@ -136,5 +138,13 @@ export class AnnouncementContextService {
   async 공지사항을_조회한다(id: string): Promise<AnnouncementDetailResult> {
     const query = new GetAnnouncementDetailQuery(id);
     return await this.queryBus.execute(query);
+  }
+
+  /**
+   * 부서 변경 대상 공지사항 목록을 조회한다
+   * (permissionDepartmentIds가 null이거나 빈 배열인 공지사항)
+   */
+  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<Announcement[]> {
+    return await this.announcementService.부서_변경_대상_공지사항_목록을_조회한다();
   }
 }

@@ -20,6 +20,7 @@ import {
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
+import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { CreateAnnouncementDto } from '@interface/common/dto/announcement/create-announcement.dto';
 import {
   UpdateAnnouncementDto,
@@ -44,6 +45,7 @@ import {
 export class AnnouncementController {
   constructor(
     private readonly announcementBusinessService: AnnouncementBusinessService,
+    private readonly announcementPermissionScheduler: AnnouncementPermissionScheduler,
   ) {}
 
   /**
@@ -132,6 +134,23 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
       });
 
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = result.items.some(
+      (item) =>
+        !item.permissionDepartmentIds ||
+        item.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.announcementPermissionScheduler
+        .모든_공지사항_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
     return {
       items: result.items.map((item) => ({
         ...item,
@@ -159,6 +178,26 @@ export class AnnouncementController {
   })
   async 공지사항_전체_목록을_조회한다(): Promise<AnnouncementResponseDto[]> {
     return await this.announcementBusinessService.공지사항_전체_목록을_조회한다();
+  }
+
+  /**
+   * 부서 변경 대상 공지사항 목록을 조회한다
+   */
+  @Get('department-change-targets')
+  @ApiOperation({
+    summary: '부서 변경 대상 공지사항 목록 조회',
+    description:
+      'permissionDepartmentIds가 비어있는 공지사항 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '부서 변경 대상 공지사항 목록 조회 성공',
+    type: [AnnouncementResponseDto],
+  })
+  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<
+    AnnouncementResponseDto[]
+  > {
+    return await this.announcementBusinessService.부서_변경_대상_공지사항_목록을_조회한다();
   }
 
   /**
@@ -320,30 +359,34 @@ export class AnnouncementController {
   async 공지사항을_조회한다(
     @Param('id') id: string,
   ): Promise<AnnouncementResponseDto> {
-    const announcement = await this.announcementBusinessService.공지사항을_조회한다(id);
-    
+    const announcement =
+      await this.announcementBusinessService.공지사항을_조회한다(id);
+
     // Survey 정보를 포함하여 반환
     return {
       ...announcement,
-      survey: announcement.survey ? {
-        id: announcement.survey.id,
-        announcementId: announcement.survey.announcementId,
-        title: announcement.survey.title,
-        description: announcement.survey.description,
-        startDate: announcement.survey.startDate,
-        endDate: announcement.survey.endDate,
-        order: announcement.survey.order,
-        questions: announcement.survey.questions?.map(q => ({
-          id: q.id,
-          title: q.title,
-          type: q.type,
-          form: q.form,
-          isRequired: q.isRequired,
-          order: q.order,
-        })) || [],
-        createdAt: announcement.survey.createdAt,
-        updatedAt: announcement.survey.updatedAt,
-      } : null,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
     };
   }
 

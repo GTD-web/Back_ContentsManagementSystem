@@ -474,4 +474,18 @@ export class WikiBusinessService {
 
     return result;
   }
+
+  /**
+   * 부서 변경 대상 위키 목록을 조회한다
+   * (permissionDepartmentIds가 null이거나 빈 배열인 위키)
+   */
+  async 부서_변경_대상_위키_목록을_조회한다(): Promise<WikiFileSystem[]> {
+    this.logger.log('부서 변경 대상 위키 목록 조회 시작');
+
+    const wikis = await this.wikiContextService.부서_변경_대상_위키_목록을_조회한다();
+
+    this.logger.log(`부서 변경 대상 위키 목록 조회 완료 - 총 ${wikis.length}개`);
+
+    return wikis;
+  }
 }

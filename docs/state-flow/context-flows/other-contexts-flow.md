@@ -481,7 +481,7 @@ interface Position {
 
 ```typescript
 async 조직_정보를_조회한다(): Promise<OrganizationInfo> {
-  const ssoUrl = this.configService.get('SSO_API_URL');
+  const ssoUrl = this.configService.get('SSO_BASE_URL');
 
   // SSO API 호출
   const response = await axios.get(`${ssoUrl}/organization`);
@@ -519,7 +519,7 @@ interface UserInfo {
 }
 
 async getUserInfo(userId: string): Promise<UserInfo> {
-  const ssoUrl = this.configService.get('SSO_API_URL');
+  const ssoUrl = this.configService.get('SSO_BASE_URL');
 
   const response = await axios.get(`${ssoUrl}/users/${userId}`);
 

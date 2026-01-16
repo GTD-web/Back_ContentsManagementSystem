@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Announcement } from './announcement.entity';
 import { AnnouncementRead } from './announcement-read.entity';
 
@@ -27,7 +27,9 @@ export class AnnouncementService {
   /**
    * 공지사항을 생성한다
    */
-  async 공지사항을_생성한다(data: Partial<Announcement>): Promise<Announcement> {
+  async 공지사항을_생성한다(
+    data: Partial<Announcement>,
+  ): Promise<Announcement> {
     this.logger.log(`공지사항 생성 시작 - 제목: ${data.title}`);
 
     const announcement = this.announcementRepository.create(data);
@@ -258,7 +260,9 @@ export class AnnouncementService {
     isPublic: boolean,
     userId?: string,
   ): Promise<Announcement> {
-    this.logger.log(`공지사항 공개 상태 변경 시작 - ID: ${id}, isPublic: ${isPublic}`);
+    this.logger.log(
+      `공지사항 공개 상태 변경 시작 - ID: ${id}, isPublic: ${isPublic}`,
+    );
 
     const announcement = await this.ID로_공지사항을_조회한다(id);
 
@@ -282,7 +286,11 @@ export class AnnouncementService {
   /**
    * 정렬 순서를 변경한다 (공개 상태에서도 가능)
    */
-  async 정렬_순서를_변경한다(id: string, order: number, userId?: string): Promise<Announcement> {
+  async 정렬_순서를_변경한다(
+    id: string,
+    order: number,
+    userId?: string,
+  ): Promise<Announcement> {
     this.logger.log(`공지사항 정렬 순서 변경 - ID: ${id}, order: ${order}`);
 
     const announcement = await this.ID로_공지사항을_조회한다(id);
@@ -299,7 +307,11 @@ export class AnnouncementService {
   /**
    * 고정 여부를 변경한다 (공개 상태에서도 가능)
    */
-  async 고정_여부를_변경한다(id: string, isFixed: boolean, userId?: string): Promise<Announcement> {
+  async 고정_여부를_변경한다(
+    id: string,
+    isFixed: boolean,
+    userId?: string,
+  ): Promise<Announcement> {
     this.logger.log(`공지사항 고정 여부 변경 - ID: ${id}, isFixed: ${isFixed}`);
 
     const announcement = await this.ID로_공지사항을_조회한다(id);
@@ -330,7 +342,8 @@ export class AnnouncementService {
     }
 
     // 트랜잭션 내에서 처리
-    const queryRunner = this.announcementRepository.manager.connection.createQueryRunner();
+    const queryRunner =
+      this.announcementRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -340,9 +353,12 @@ export class AnnouncementService {
     try {
       // 먼저 모든 ID가 존재하는지 확인
       const ids = announcements.map((item) => item.id);
-      const existingAnnouncements = await queryRunner.manager.find(Announcement, {
-        where: ids.map((id) => ({ id })),
-      });
+      const existingAnnouncements = await queryRunner.manager.find(
+        Announcement,
+        {
+          where: ids.map((id) => ({ id })),
+        },
+      );
 
       const existingIds = new Set(existingAnnouncements.map((a) => a.id));
       const missingIds = ids.filter((id) => !existingIds.has(id));
@@ -366,7 +382,9 @@ export class AnnouncementService {
             },
           );
           updatedCount++;
-          this.logger.debug(`공지사항 오더 업데이트 성공 - ID: ${item.id}, Order: ${item.order}`);
+          this.logger.debug(
+            `공지사항 오더 업데이트 성공 - ID: ${item.id}, Order: ${item.order}`,
+          );
         } catch (error) {
           this.logger.error(
             `공지사항 오더 업데이트 실패 - ID: ${item.id}, 에러: ${error.message}`,
@@ -391,11 +409,11 @@ export class AnnouncementService {
     } catch (error) {
       // 에러 발생 시 롤백
       await queryRunner.rollbackTransaction();
-      
+
       this.logger.error(
         `공지사항 오더 일괄 업데이트 실패 - 롤백됨: ${error.message}`,
       );
-      
+
       throw error;
     } finally {
       // QueryRunner 해제
@@ -477,5 +495,24 @@ export class AnnouncementService {
     if (announcement.title.length < 3) {
       throw new ConflictException('제목은 최소 3자 이상이어야 합니다.');
     }
+  }
+
+  /**
+   * 부서 변경 대상 공지사항 목록을 조회한다
+   * (permissionDepartmentIds가 null이거나 빈 배열인 공지사항)
+   */
+  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<Announcement[]> {
+    this.logger.debug('부서 변경 대상 공지사항 목록 조회');
+
+    const announcements = await this.announcementRepository.find({
+      where: { deletedAt: IsNull() },
+    });
+
+    // permissionDepartmentIds가 null이거나 빈 배열인 항목만 필터링
+    return announcements.filter(
+      (announcement) =>
+        !announcement.permissionDepartmentIds ||
+        announcement.permissionDepartmentIds.length === 0,
+    );
   }
 }

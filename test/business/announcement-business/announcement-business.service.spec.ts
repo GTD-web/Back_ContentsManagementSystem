@@ -77,7 +77,7 @@ describe('AnnouncementBusinessService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'SSO_API_URL') return 'http://test-sso.com';
+      if (key === 'SSO_BASE_URL') return 'http://test-sso.com';
       if (key === 'NOTIFICATION_API_URL') return 'http://test-notification.com';
       return null;
     }),

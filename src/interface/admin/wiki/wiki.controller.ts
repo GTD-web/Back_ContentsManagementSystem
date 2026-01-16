@@ -26,6 +26,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
+import { WikiPermissionScheduler } from '@context/wiki-context/wiki-permission.scheduler';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import {
   CreateFolderDto,
@@ -45,7 +46,10 @@ import {
 @ApiBearerAuth('Bearer')
 @Controller('admin/wiki')
 export class WikiController {
-  constructor(private readonly wikiBusinessService: WikiBusinessService) {}
+  constructor(
+    private readonly wikiBusinessService: WikiBusinessService,
+    private readonly wikiPermissionScheduler: WikiPermissionScheduler,
+  ) {}
 
   /**
    * 폴더 구조를 가져온다 (트리 구조)
@@ -71,6 +75,23 @@ export class WikiController {
   ): Promise<WikiListResponseDto> {
     const items =
       await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = items.some(
+      (item) =>
+        !item.permissionDepartmentIds ||
+        item.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.wikiPermissionScheduler
+        .모든_위키_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
 
     // 트리 구조로 변환
     const tree = await this.buildTree(items);
@@ -489,6 +510,27 @@ export class WikiController {
     const items = await this.wikiBusinessService.파일들을_조회한다(
       parentId || null,
     );
+    return {
+      items: items.map((item) => WikiResponseDto.from(item)),
+      total: items.length,
+    };
+  }
+
+  /**
+   * 부서 변경 대상 위키 목록을 조회한다
+   */
+  @Get('department-change-targets')
+  @ApiOperation({
+    summary: '부서 변경 대상 위키 목록 조회',
+    description: 'permissionDepartmentIds가 비어있는 위키 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '부서 변경 대상 위키 목록 조회 성공',
+    type: WikiListResponseDto,
+  })
+  async 부서_변경_대상_위키_목록을_조회한다(): Promise<WikiListResponseDto> {
+    const items = await this.wikiBusinessService.부서_변경_대상_위키_목록을_조회한다();
     return {
       items: items.map((item) => WikiResponseDto.from(item)),
       total: items.length,

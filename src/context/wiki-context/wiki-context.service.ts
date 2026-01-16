@@ -167,4 +167,12 @@ export class WikiContextService {
   async 모든_위키를_조회한다(): Promise<WikiFileSystem[]> {
     return await this.wikiFileSystemService.모든_위키를_조회한다();
   }
+
+  /**
+   * 부서 변경 대상 위키 목록을 조회한다
+   * (permissionDepartmentIds가 null이거나 빈 배열인 위키)
+   */
+  async 부서_변경_대상_위키_목록을_조회한다(): Promise<WikiFileSystem[]> {
+    return await this.wikiFileSystemService.부서_변경_대상_위키_목록을_조회한다();
+  }
 }

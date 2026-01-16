@@ -79,7 +79,7 @@ export class LoginHandler {
   ) {}
 
   async execute(command: LoginCommand): Promise<LoginResult> {
-    const ssoUrl = this.configService.get('SSO_API_URL');
+    const ssoUrl = this.configService.get('SSO_BASE_URL');
 
     // 1. SSO 인증
     const response = await axios.post(`${ssoUrl}/auth/login`, {
@@ -190,7 +190,7 @@ export class VerifyTokenHandler {
   }
 
   private async verifyUserStatus(userId: string): Promise<void> {
-    const ssoUrl = this.configService.get('SSO_API_URL');
+    const ssoUrl = this.configService.get('SSO_BASE_URL');
     const response = await axios.get(`${ssoUrl}/users/${userId}`);
 
     if (!response.data.isActive) {

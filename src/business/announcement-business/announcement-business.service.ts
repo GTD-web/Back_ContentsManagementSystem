@@ -54,7 +54,7 @@ export class AnnouncementBusinessService {
     @InjectRepository(SurveyCompletion)
     private readonly surveyCompletionRepository: Repository<SurveyCompletion>,
   ) {
-    this.ssoBaseUrl = this.configService.get<string>('SSO_API_URL') || '';
+    this.ssoBaseUrl = this.configService.get<string>('SSO_BASE_URL') || '';
     this.notificationBaseUrl =
       this.configService.get<string>('NOTIFICATION_API_URL') || '';
   }
@@ -101,6 +101,20 @@ export class AnnouncementBusinessService {
     this.logger.log(`공지사항 전체 목록 조회 완료 - 총 ${result.total}개`);
 
     return result.items;
+  }
+
+  /**
+   * 부서 변경 대상 공지사항 목록을 조회한다
+   * (permissionDepartmentIds가 null이거나 빈 배열인 공지사항)
+   */
+  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<Announcement[]> {
+    this.logger.log('부서 변경 대상 공지사항 목록 조회 시작');
+
+    const announcements = await this.announcementContextService.부서_변경_대상_공지사항_목록을_조회한다();
+
+    this.logger.log(`부서 변경 대상 공지사항 목록 조회 완료 - 총 ${announcements.length}개`);
+
+    return announcements;
   }
 
   /**
