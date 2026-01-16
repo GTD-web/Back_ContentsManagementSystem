@@ -189,6 +189,12 @@ export class MainPopupController {
     description: '메인 팝업을 찾을 수 없음',
   })
   async 메인_팝업_상세를_조회한다(@Param('id') id: string): Promise<MainPopup> {
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     return await this.mainPopupBusinessService.메인_팝업_상세를_조회한다(id);
   }
 
@@ -274,7 +280,7 @@ export class MainPopupController {
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<MainPopupResponseDto> {
     // translations가 JSON 문자열로 전달될 수 있으므로 파싱
-    let translations = body.translations;
+    let translations = body?.translations;
 
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
@@ -296,22 +302,55 @@ export class MainPopupController {
       );
     }
 
-    // 각 번역 검증
-    for (const translation of translations) {
+    // 각 translation 항목의 필수 필드 검증
+    for (let i = 0; i < translations.length; i++) {
+      const translation = translations[i];
+      
       if (!translation.languageId) {
-        throw new BadRequestException('languageId는 필수입니다.');
+        throw new BadRequestException(
+          `translations[${i}].languageId는 필수 필드입니다.`,
+        );
       }
+
+      // languageId가 문자열인지 확인
       if (typeof translation.languageId !== 'string') {
-        throw new BadRequestException('languageId는 문자열이어야 합니다.');
+        throw new BadRequestException(
+          `translations[${i}].languageId는 문자열이어야 합니다.`,
+        );
       }
+
+      // UUID 형식 검증 (간단한 정규식)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(translation.languageId)) {
+        throw new BadRequestException(
+          `translations[${i}].languageId는 유효한 UUID 형식이어야 합니다.`,
+        );
+      }
+
+      // title이 존재하고 문자열인지 확인
       if (!translation.title) {
-        throw new BadRequestException('title은 필수입니다.');
+        throw new BadRequestException(
+          `translations[${i}].title는 필수 필드입니다.`,
+        );
       }
+
       if (typeof translation.title !== 'string') {
-        throw new BadRequestException('title은 문자열이어야 합니다.');
+        throw new BadRequestException(
+          `translations[${i}].title는 문자열이어야 합니다.`,
+        );
       }
+
+      if (translation.title.trim() === '') {
+        throw new BadRequestException(
+          `translations[${i}].title는 빈 문자열일 수 없습니다.`,
+        );
+      }
+
+      // description이 있다면 문자열인지 확인
       if (translation.description !== undefined && typeof translation.description !== 'string') {
-        throw new BadRequestException('description은 문자열이어야 합니다.');
+        throw new BadRequestException(
+          `translations[${i}].description은 문자열이어야 합니다.`,
+        );
       }
     }
 
@@ -445,6 +484,12 @@ export class MainPopupController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<MainPopupResponseDto> {
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     // translations 파싱
     let translations = body.translations;
 
@@ -476,11 +521,19 @@ export class MainPopupController {
       if (typeof translation.languageId !== 'string') {
         throw new BadRequestException('languageId는 문자열이어야 합니다.');
       }
+      // UUID 형식 검증
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(translation.languageId)) {
+        throw new BadRequestException('languageId는 유효한 UUID 형식이어야 합니다.');
+      }
       if (!translation.title) {
         throw new BadRequestException('title은 필수입니다.');
       }
       if (typeof translation.title !== 'string') {
         throw new BadRequestException('title은 문자열이어야 합니다.');
+      }
+      if (translation.title.trim() === '') {
+        throw new BadRequestException('title은 빈 문자열일 수 없습니다.');
       }
       if (translation.description !== undefined && typeof translation.description !== 'string') {
         throw new BadRequestException('description은 문자열이어야 합니다.');
@@ -517,6 +570,12 @@ export class MainPopupController {
     @Param('id') id: string,
     @Body() body: UpdateMainPopupPublicDto,
   ): Promise<MainPopup> {
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     if (body.isPublic === undefined || body.isPublic === null) {
       throw new BadRequestException('isPublic 필드는 필수입니다.');
     }
@@ -550,6 +609,12 @@ export class MainPopupController {
   async 메인_팝업을_삭제한다(
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const result = await this.mainPopupBusinessService.메인_팝업을_삭제한다(id);
     return { success: result };
   }
@@ -681,6 +746,12 @@ export class MainPopupController {
   async 메인_팝업_카테고리를_삭제한다(
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const result =
       await this.mainPopupBusinessService.메인_팝업_카테고리를_삭제한다(id);
     return { success: result };
