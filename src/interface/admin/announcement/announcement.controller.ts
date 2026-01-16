@@ -419,7 +419,7 @@ export class AnnouncementController {
   @Put(':id')
   @ApiOperation({
     summary: '공지사항 수정',
-    description: '공지사항을 수정합니다.',
+    description: '공지사항을 수정합니다. (비공개 상태에서만 가능)',
   })
   @ApiParam({
     name: 'id',
@@ -430,6 +430,14 @@ export class AnnouncementController {
     status: 200,
     description: '공지사항 수정 성공',
     type: AnnouncementResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '공개된 공지사항은 수정할 수 없음. 먼저 비공개로 전환 필요',
   })
   async 공지사항을_수정한다(
     @Param('id') id: string,
@@ -514,7 +522,7 @@ export class AnnouncementController {
   @Delete(':id')
   @ApiOperation({
     summary: '공지사항 삭제',
-    description: '공지사항을 삭제합니다.',
+    description: '공지사항을 삭제합니다. (비공개 상태에서만 가능)',
   })
   @ApiParam({
     name: 'id',
@@ -524,6 +532,14 @@ export class AnnouncementController {
   @ApiResponse({
     status: 200,
     description: '공지사항 삭제 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '공개된 공지사항은 삭제할 수 없음. 먼저 비공개로 전환 필요',
   })
   async 공지사항을_삭제한다(@Param('id') id: string): Promise<{
     success: boolean;

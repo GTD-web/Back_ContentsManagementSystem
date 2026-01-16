@@ -34,10 +34,12 @@ export class UpdateAnnouncementPublicHandler
       `공지사항 공개 상태 수정 시작 - ID: ${id}, 공개: ${data.isPublic}`,
     );
 
-    const updated = await this.announcementService.공지사항을_업데이트한다(id, {
-      isPublic: data.isPublic,
-      updatedBy: data.updatedBy,
-    });
+    // 공개 상태 전환 전용 메서드 사용
+    const updated = await this.announcementService.공지사항_공개_상태를_변경한다(
+      id,
+      data.isPublic,
+      data.updatedBy,
+    );
 
     this.logger.log(`공지사항 공개 상태 수정 완료 - ID: ${id}`);
 

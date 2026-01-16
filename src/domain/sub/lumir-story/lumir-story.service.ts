@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { LumirStory } from './lumir-story.entity';
@@ -19,7 +24,9 @@ export class LumirStoryService {
   /**
    * 루미르스토리를 생성한다
    */
-  async 루미르스토리를_생성한다(data: Partial<LumirStory>): Promise<LumirStory> {
+  async 루미르스토리를_생성한다(
+    data: Partial<LumirStory>,
+  ): Promise<LumirStory> {
     this.logger.log(`루미르스토리 생성 시작`);
 
     const lumirStory = this.lumirStoryRepository.create(data);
@@ -115,7 +122,9 @@ export class LumirStoryService {
     isPublic: boolean,
     updatedBy?: string,
   ): Promise<LumirStory> {
-    this.logger.log(`루미르스토리 공개 여부 변경 - ID: ${id}, 공개: ${isPublic}`);
+    this.logger.log(
+      `루미르스토리 공개 여부 변경 - ID: ${id}, 공개: ${isPublic}`,
+    );
 
     return await this.루미르스토리를_업데이트한다(id, { isPublic, updatedBy });
   }

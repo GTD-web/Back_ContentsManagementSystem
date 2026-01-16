@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NewsBusinessModule } from '@business/news-business/news-business.module';
 import { NewsController } from './news.controller';
+import { StrictBooleanValidationGuard } from '@interface/common/guards/strict-boolean-validation.guard';
 
 /**
  * 뉴스 관리자 인터페이스 모듈
@@ -9,5 +10,6 @@ import { NewsController } from './news.controller';
 @Module({
   imports: [NewsBusinessModule],
   controllers: [NewsController],
+  providers: [StrictBooleanValidationGuard],
 })
 export class AdminNewsModule {}

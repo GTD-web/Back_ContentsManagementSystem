@@ -1,5 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString, IsNumber, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsString,
+  IsNumber,
+  ValidateNested,
+  IsUUID,
+  ArrayMinSize,
+  IsNotEmpty,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -10,7 +19,8 @@ export class NewsOrderItemDto {
     description: '뉴스 ID',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  @IsString()
+  @IsUUID()
+  @IsNotEmpty()
   id: string;
 
   @ApiProperty({
@@ -18,6 +28,7 @@ export class NewsOrderItemDto {
     example: 1,
   })
   @IsNumber()
+  @Min(0)
   order: number;
 }
 
@@ -35,6 +46,7 @@ export class UpdateNewsBatchOrderDto {
     ],
   })
   @IsArray()
+  @ArrayMinSize(1, { message: '최소 1개 이상의 뉴스가 필요합니다.' })
   @ValidateNested({ each: true })
   @Type(() => NewsOrderItemDto)
   news: NewsOrderItemDto[];

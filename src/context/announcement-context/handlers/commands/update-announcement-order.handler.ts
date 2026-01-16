@@ -34,10 +34,12 @@ export class UpdateAnnouncementOrderHandler
       `공지사항 오더 수정 시작 - ID: ${id}, Order: ${data.order}`,
     );
 
-    const updated = await this.announcementService.공지사항을_업데이트한다(id, {
-      order: data.order,
-      updatedBy: data.updatedBy,
-    });
+    // 정렬 순서 변경 전용 메서드 사용 (공개 상태에서도 가능)
+    const updated = await this.announcementService.정렬_순서를_변경한다(
+      id,
+      data.order,
+      data.updatedBy,
+    );
 
     this.logger.log(`공지사항 오더 수정 완료 - ID: ${id}`);
 

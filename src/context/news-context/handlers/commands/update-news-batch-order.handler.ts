@@ -21,9 +21,7 @@ export class UpdateNewsBatchOrderCommand {
  * 뉴스 오더 일괄 수정 핸들러
  */
 @CommandHandler(UpdateNewsBatchOrderCommand)
-export class UpdateNewsBatchOrderHandler
-  implements ICommandHandler<UpdateNewsBatchOrderCommand>
-{
+export class UpdateNewsBatchOrderHandler implements ICommandHandler<UpdateNewsBatchOrderCommand> {
   private readonly logger = new Logger(UpdateNewsBatchOrderHandler.name);
 
   constructor(private readonly newsService: NewsService) {}

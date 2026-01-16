@@ -46,7 +46,7 @@ export class NewsService {
     }
 
     return await queryBuilder
-      .orderBy('news.order', 'DESC')
+      .orderBy('news.order', 'ASC')
       .addOrderBy('news.createdAt', 'DESC')
       .getMany();
   }
@@ -144,7 +144,7 @@ export class NewsService {
         });
         updatedCount++;
       } catch (error) {
-        this.logger.error(`뉴스 오더 업데이트 실패 - ID: ${item.id}`, error);
+        this.logger.warn(`뉴스 오더 업데이트 실패 - ID: ${item.id}`);
       }
     }
 
@@ -169,7 +169,7 @@ export class NewsService {
         isPublic: true,
       },
       order: {
-        order: 'DESC',
+        order: 'ASC',
         createdAt: 'DESC',
       },
     });

@@ -11,6 +11,7 @@ import {
   Patch,
   UseInterceptors,
   UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +26,8 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { NewsBusinessService } from '@business/news-business/news-business.service';
+import { StrictBooleanValidationGuard } from '@interface/common/guards/strict-boolean-validation.guard';
+import { StrictBooleanFields } from '@interface/common/decorators/strict-boolean-fields.decorator';
 import {
   UpdateNewsPublicDto,
   CreateNewsCategoryDto,
@@ -239,6 +242,44 @@ export class NewsController {
   }
 
   /**
+   * 뉴스 오더를 일괄 수정한다
+   */
+  @Put('batch-order')
+  @ApiOperation({
+    summary: '뉴스 오더 일괄 수정',
+    description:
+      '여러 뉴스의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 뉴스 목록을 전달하면 됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '뉴스 오더 일괄 수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        updatedCount: { type: 'number', example: 5 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (수정할 뉴스가 없음)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '일부 뉴스를 찾을 수 없음',
+  })
+  async 뉴스_오더를_일괄_수정한다(
+    @Body() updateDto: UpdateNewsBatchOrderDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    return await this.newsBusinessService.뉴스_오더를_일괄_수정한다(
+      updateDto.news,
+      user.id,
+    );
+  }
+
+  /**
    * 뉴스를 수정한다 (파일 포함)
    */
   @Put(':id')
@@ -323,6 +364,13 @@ export class NewsController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<any> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const { title, description, url } = body;
 
     if (!title) {
@@ -383,6 +431,13 @@ export class NewsController {
     description: '뉴스를 찾을 수 없음',
   })
   async 뉴스_상세_조회한다(@Param('id') id: string): Promise<NewsResponseDto> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     return await this.newsBusinessService.뉴스_상세_조회한다(id);
   }
 
@@ -390,6 +445,8 @@ export class NewsController {
    * 뉴스 공개를 수정한다
    */
   @Patch(':id/public')
+  @UseGuards(StrictBooleanValidationGuard)
+  @StrictBooleanFields('isPublic')
   @ApiOperation({
     summary: '뉴스 공개 상태 수정',
     description: '뉴스의 공개 상태를 수정합니다.',
@@ -407,45 +464,14 @@ export class NewsController {
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsPublicDto,
   ): Promise<NewsResponseDto> {
-    return await this.newsBusinessService.뉴스_공개를_수정한다(id, updateDto);
-  }
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
 
-  /**
-   * 뉴스 오더를 일괄 수정한다
-   */
-  @Put('batch-order')
-  @ApiOperation({
-    summary: '뉴스 오더 일괄 수정',
-    description:
-      '여러 뉴스의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 뉴스 목록을 전달하면 됩니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '뉴스 오더 일괄 수정 성공',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        updatedCount: { type: 'number', example: 5 },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청 (수정할 뉴스가 없음)',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '일부 뉴스를 찾을 수 없음',
-  })
-  async 뉴스_오더를_일괄_수정한다(
-    @Body() updateDto: UpdateNewsBatchOrderDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<{ success: boolean; updatedCount: number }> {
-    return await this.newsBusinessService.뉴스_오더를_일괄_수정한다(
-      updateDto.news,
-      user.id,
-    );
+    return await this.newsBusinessService.뉴스_공개를_수정한다(id, updateDto);
   }
 
   /**
@@ -467,6 +493,13 @@ export class NewsController {
   async 뉴스를_삭제한다(
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const result = await this.newsBusinessService.뉴스를_삭제한다(id);
     return { success: result };
   }
@@ -510,6 +543,13 @@ export class NewsController {
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsCategoryDto,
   ): Promise<NewsCategoryResponseDto> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     return await this.newsBusinessService.뉴스_카테고리를_수정한다(
       id,
       updateDto,
@@ -536,6 +576,13 @@ export class NewsController {
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsCategoryOrderDto,
   ): Promise<NewsCategoryResponseDto> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const result = await this.newsBusinessService.뉴스_카테고리_오더를_변경한다(
       id,
       updateDto,
@@ -562,6 +609,13 @@ export class NewsController {
   async 뉴스_카테고리를_삭제한다(
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
+    // UUID 형식 검증
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
+    }
+
     const result = await this.newsBusinessService.뉴스_카테고리를_삭제한다(id);
     return { success: result };
   }

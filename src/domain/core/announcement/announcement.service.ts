@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Announcement } from './announcement.entity';
@@ -89,6 +94,7 @@ export class AnnouncementService {
 
   /**
    * 공지사항을 업데이트한다
+   * @throws ConflictException 공개된 공지사항은 수정 불가
    */
   async 공지사항을_업데이트한다(
     id: string,
@@ -98,7 +104,31 @@ export class AnnouncementService {
 
     const announcement = await this.ID로_공지사항을_조회한다(id);
 
-    Object.assign(announcement, data);
+    // 수정 가능 여부 검증
+    this.수정_가능_여부를_검증한다(announcement);
+
+    // 허용된 필드만 수정 (화이트리스트 방식)
+    const allowedFields = [
+      'title',
+      'content',
+      'mustRead',
+      'permissionEmployeeIds',
+      'permissionRankIds',
+      'permissionPositionIds',
+      'permissionDepartmentIds',
+      'attachments',
+      'releasedAt',
+      'expiredAt',
+    ];
+
+    const filteredData = Object.keys(data)
+      .filter((key) => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = data[key];
+        return obj;
+      }, {});
+
+    Object.assign(announcement, filteredData);
 
     const updated = await this.announcementRepository.save(announcement);
 
@@ -108,11 +138,15 @@ export class AnnouncementService {
 
   /**
    * 공지사항을 삭제한다 (Soft Delete)
+   * @throws ConflictException 공개된 공지사항은 삭제 불가
    */
   async 공지사항을_삭제한다(id: string): Promise<boolean> {
     this.logger.log(`공지사항 삭제 시작 - ID: ${id}`);
 
     const announcement = await this.ID로_공지사항을_조회한다(id);
+
+    // 삭제 가능 여부 검증
+    this.삭제_가능_여부를_검증한다(announcement);
 
     await this.announcementRepository.softRemove(announcement);
 
@@ -216,6 +250,70 @@ export class AnnouncementService {
   }
 
   /**
+   * 공지사항 공개 상태를 변경한다
+   * @throws ConflictException 공개 전환 시 필수 필드 누락
+   */
+  async 공지사항_공개_상태를_변경한다(
+    id: string,
+    isPublic: boolean,
+    userId?: string,
+  ): Promise<Announcement> {
+    this.logger.log(`공지사항 공개 상태 변경 시작 - ID: ${id}, isPublic: ${isPublic}`);
+
+    const announcement = await this.ID로_공지사항을_조회한다(id);
+
+    // 비공개 → 공개 전환 시 검증
+    if (isPublic && !announcement.isPublic) {
+      this.공개_전환_가능_여부를_검증한다(announcement);
+    }
+
+    announcement.isPublic = isPublic;
+
+    if (userId) {
+      announcement.updatedBy = userId;
+    }
+
+    const updated = await this.announcementRepository.save(announcement);
+
+    this.logger.log(`공지사항 공개 상태 변경 완료 - ID: ${id}`);
+    return updated;
+  }
+
+  /**
+   * 정렬 순서를 변경한다 (공개 상태에서도 가능)
+   */
+  async 정렬_순서를_변경한다(id: string, order: number, userId?: string): Promise<Announcement> {
+    this.logger.log(`공지사항 정렬 순서 변경 - ID: ${id}, order: ${order}`);
+
+    const announcement = await this.ID로_공지사항을_조회한다(id);
+
+    announcement.order = order;
+
+    if (userId) {
+      announcement.updatedBy = userId;
+    }
+
+    return await this.announcementRepository.save(announcement);
+  }
+
+  /**
+   * 고정 여부를 변경한다 (공개 상태에서도 가능)
+   */
+  async 고정_여부를_변경한다(id: string, isFixed: boolean, userId?: string): Promise<Announcement> {
+    this.logger.log(`공지사항 고정 여부 변경 - ID: ${id}, isFixed: ${isFixed}`);
+
+    const announcement = await this.ID로_공지사항을_조회한다(id);
+
+    announcement.isFixed = isFixed;
+
+    if (userId) {
+      announcement.updatedBy = userId;
+    }
+
+    return await this.announcementRepository.save(announcement);
+  }
+
+  /**
    * 공지사항 오더를 일괄 업데이트한다
    */
   async 공지사항_오더를_일괄_업데이트한다(
@@ -302,6 +400,82 @@ export class AnnouncementService {
     } finally {
       // QueryRunner 해제
       await queryRunner.release();
+    }
+  }
+
+  /**
+   * 현재 공개 상태인지 확인한다
+   * @private
+   */
+  private is현재_공개_상태(announcement: Announcement): boolean {
+    if (!announcement.isPublic) {
+      return false; // 비공개
+    }
+
+    const now = new Date();
+
+    // 공개 시작 일시가 미래라면 아직 공개되지 않음 (공개 예약)
+    if (announcement.releasedAt && announcement.releasedAt > now) {
+      return false;
+    }
+
+    // 공개 종료 일시가 과거라도 isPublic = true면 공개 상태로 간주
+    return true;
+  }
+
+  /**
+   * 수정 가능 여부를 검증한다
+   * @private
+   * @throws ConflictException 공개된 공지사항은 수정 불가
+   */
+  private 수정_가능_여부를_검증한다(announcement: Announcement): void {
+    // 1. 삭제된 엔티티 체크
+    if (announcement.deletedAt) {
+      throw new ConflictException('삭제된 공지사항은 수정할 수 없습니다');
+    }
+
+    // 2. 공개 상태 체크
+    if (this.is현재_공개_상태(announcement)) {
+      throw new ConflictException(
+        '공개된 공지사항은 수정할 수 없습니다. 먼저 비공개로 전환해주세요.',
+      );
+    }
+  }
+
+  /**
+   * 삭제 가능 여부를 검증한다
+   * @private
+   * @throws ConflictException 공개된 공지사항은 삭제 불가
+   */
+  private 삭제_가능_여부를_검증한다(announcement: Announcement): void {
+    // 1. 이미 삭제된 엔티티 체크
+    if (announcement.deletedAt) {
+      throw new ConflictException('이미 삭제된 공지사항입니다');
+    }
+
+    // 2. 공개 상태 체크 (isPublic만 확인)
+    if (announcement.isPublic) {
+      throw new ConflictException(
+        '공개된 공지사항은 삭제할 수 없습니다. 먼저 비공개로 전환해주세요.',
+      );
+    }
+  }
+
+  /**
+   * 공개 전환 가능 여부를 검증한다
+   * @private
+   * @throws ConflictException 필수 필드 누락 시
+   */
+  private 공개_전환_가능_여부를_검증한다(announcement: Announcement): void {
+    // 필수 필드 검증
+    if (!announcement.title || !announcement.content) {
+      throw new ConflictException(
+        '제목과 내용은 필수입니다. 공개 전환 전에 입력해주세요.',
+      );
+    }
+
+    if (announcement.title.length < 3) {
+      throw new ConflictException('제목은 최소 3자 이상이어야 합니다.');
     }
   }
 }

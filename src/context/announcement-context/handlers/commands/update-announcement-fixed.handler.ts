@@ -34,10 +34,12 @@ export class UpdateAnnouncementFixedHandler
       `공지사항 고정 상태 수정 시작 - ID: ${id}, 고정: ${data.isFixed}`,
     );
 
-    const updated = await this.announcementService.공지사항을_업데이트한다(id, {
-      isFixed: data.isFixed,
-      updatedBy: data.updatedBy,
-    });
+    // 고정 여부 변경 전용 메서드 사용 (공개 상태에서도 가능)
+    const updated = await this.announcementService.고정_여부를_변경한다(
+      id,
+      data.isFixed,
+      data.updatedBy,
+    );
 
     this.logger.log(`공지사항 고정 상태 수정 완료 - ID: ${id}`);
 

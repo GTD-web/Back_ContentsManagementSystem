@@ -40,16 +40,22 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
         const response = await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
-            {
-              languageId: testLanguageId,
-              title: `팝업${i}`,
-              description: `설명${i}`,
-            },
-          ]));
-        
+          .field(
+            'translations',
+            JSON.stringify([
+              {
+                languageId: testLanguageId,
+                title: `팝업${i}`,
+                description: `설명${i}`,
+              },
+            ]),
+          );
+
         if (response.status !== 201) {
-          console.error(`❌ 메인 팝업 생성 실패 (status: ${response.status}):`, JSON.stringify(response.body, null, 2));
+          console.error(
+            `❌ 메인 팝업 생성 실패 (status: ${response.status}):`,
+            JSON.stringify(response.body, null, 2),
+          );
         }
         expect(response.status).toBe(201);
         popups.push(response.body);
@@ -104,13 +110,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
         const response = await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
-            {
-              languageId: testLanguageId,
-              title: `팝업${i}`,
-              description: `설명${i}`,
-            },
-          ]))
+          .field(
+            'translations',
+            JSON.stringify([
+              {
+                languageId: testLanguageId,
+                title: `팝업${i}`,
+                description: `설명${i}`,
+              },
+            ]),
+          )
           .expect(201);
         popups.push(response.body);
       }
@@ -142,13 +151,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const mainPopupId = createResponse.body.id;
@@ -186,13 +198,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
         const response = await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
-            {
-              languageId: testLanguageId,
-              title: `팝업${i}`,
-              description: `설명${i}`,
-            },
-          ]))
+          .field(
+            'translations',
+            JSON.stringify([
+              {
+                languageId: testLanguageId,
+                title: `팝업${i}`,
+                description: `설명${i}`,
+              },
+            ]),
+          )
           .expect(201);
         popups.push(response.body);
       }
@@ -263,13 +278,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const updateDto = {
@@ -292,13 +310,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const updateDto = {
@@ -334,13 +355,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const updateDto = {
@@ -360,13 +384,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const updateDto = {
@@ -388,13 +415,16 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
-          {
-            languageId: testLanguageId,
-            title: '팝업1',
-            description: '설명1',
-          },
-        ]))
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '팝업1',
+              description: '설명1',
+            },
+          ]),
+        )
         .expect(201);
 
       const mainPopupId = createResponse.body.id;

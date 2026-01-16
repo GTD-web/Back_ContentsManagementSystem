@@ -7,6 +7,7 @@ docs/state-flow/
 ├── README.md                                    # 폴더 개요
 ├── DOCUMENT-INDEX.md                            # 이 파일 (전체 문서 색인)
 ├── data-state-flow.md                           # 전체 아키텍처 설계 문서
+├── public-state-management-policy.md            # 공개 상태 관리 정책 ⭐ NEW
 └── context-flows/                               # Context별 상세 흐름
     ├── README.md                                # Context 목록 및 공통 패턴
     ├── announcement-context-flow.md             # 공지사항
@@ -53,6 +54,38 @@ docs/state-flow/
 - 신규 팀원 (필수)
 - 아키텍처 검토자
 - 기술 문서 작성자
+
+---
+
+#### [public-state-management-policy.md](./public-state-management-policy.md) ⭐ NEW
+**비공개 상태에서만 수정/삭제 가능 정책**
+
+**목차**:
+1. 정책 개요
+2. 공개 상태 정의 (비공개/공개/공개예약/공개종료)
+3. 상태 전환 규칙
+4. 수정/삭제 제한 정책
+5. 레이어별 구현 가이드 (Domain/Context/Business/Interface)
+6. 예외 케이스 (긴급 수정, 관리자 권한)
+7. 에러 처리
+8. 테스트 전략
+9. 적용 대상 엔티티 (10개)
+10. 마이그레이션 가이드
+11. 모니터링 및 감사
+12. FAQ
+
+**핵심 내용**:
+- ✅ 공개/비공개 상태 관리 정책
+- ✅ 수정/삭제 제한 규칙
+- ✅ 레이어별 검증 로직 구현
+- ✅ 상태 전환 다이어그램
+- ✅ 전체 코드 예시 (Domain → Interface)
+- ✅ 테스트 코드 예시
+
+**추천 대상**:
+- 백엔드 개발자 (필수)
+- 코드 리뷰어
+- QA 테스터
 
 ---
 
@@ -320,8 +353,9 @@ docs/state-flow/
 ## 📊 문서 통계
 
 ### 파일 개수
-- **총 11개 파일**
+- **총 12개 파일**
   - 메인 문서: 1개 (data-state-flow.md)
+  - 정책 문서: 1개 (public-state-management-policy.md)
   - Context 문서: 8개
   - 가이드 문서: 2개 (README, 색인)
 
@@ -455,6 +489,7 @@ docs/state-flow/
 | v1.0 | 2026-01-14 | 초기 문서 작성 (전체 아키텍처) |
 | v2.0 | 2026-01-14 | Context별 상세 문서 추가 (9개) |
 | v2.1 | 2026-01-14 | Survey Context 추가, 문서 색인 추가 |
+| v2.2 | 2026-01-16 | 공개 상태 관리 정책 문서 추가 |
 
 ---
 

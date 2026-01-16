@@ -101,7 +101,14 @@ export class NewsContextService {
     startDate?: Date,
     endDate?: Date,
   ): Promise<NewsListResult> {
-    const query = new GetNewsListQuery(isPublic, orderBy, page, limit, startDate, endDate);
+    const query = new GetNewsListQuery(
+      isPublic,
+      orderBy,
+      page,
+      limit,
+      startDate,
+      endDate,
+    );
     return await this.queryBus.execute(query);
   }
 

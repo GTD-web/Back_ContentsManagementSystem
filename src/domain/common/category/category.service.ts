@@ -98,7 +98,12 @@ export class CategoryService {
 
     const category = await this.ID로_카테고리를_조회한다(id);
 
-    Object.assign(category, data);
+    // undefined 값을 제외하고 업데이트
+    Object.keys(data).forEach((key) => {
+      if (data[key] !== undefined) {
+        category[key] = data[key];
+      }
+    });
 
     const updated = await this.categoryRepository.save(category);
 
