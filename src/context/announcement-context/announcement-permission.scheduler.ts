@@ -11,7 +11,7 @@ import { SsoService } from '@domain/common/sso/sso.service';
  * 공지사항 권한 검증 스케줄러
  *
  * 매일 새벽 3시에 모든 공지사항의 권한을 검증하고,
- * SSO 시스템에서 삭제된 부서/직원 정보가 있으면 로그를 남깁니다.
+ * SSO 시스템에서 삭제되었거나 비활성화(isActive=false)된 부서/직원 정보가 있으면 로그를 남깁니다.
  */
 @Injectable()
 export class AnnouncementPermissionScheduler {
@@ -27,7 +27,7 @@ export class AnnouncementPermissionScheduler {
 
   /**
    * 매일 새벽 3시에 모든 공지사항의 권한을 검증한다
-   * 
+   *
    * 수동 실행이 필요한 경우 관리자 API를 통해 즉시 실행 가능
    */
   @Cron('0 3 * * *') // 매일 새벽 3시
@@ -72,58 +72,40 @@ export class AnnouncementPermissionScheduler {
     const hasDepartments =
       announcement.permissionDepartmentIds &&
       announcement.permissionDepartmentIds.length > 0;
-    const hasEmployees =
-      announcement.permissionEmployeeIds &&
-      announcement.permissionEmployeeIds.length > 0;
 
-    if (!hasDepartments && !hasEmployees) {
-      // 부서/직원 권한이 없으면 검증할 필요 없음
+    if (!hasDepartments) {
+      // 부서 권한이 없으면 검증할 필요 없음 (직원 권한은 검증하지 않음)
       return false;
     }
 
     let invalidDepartments: Array<{ id: string; name: string | null }> = [];
-    let invalidEmployees: Array<{ id: string; name: string | null }> = [];
     let validDepartments: Array<{ id: string; name: string | null }> = [];
-    let validEmployees: Array<{ id: string; name: string | null }> = [];
 
     // 부서 정보 검증
-    if (hasDepartments) {
-      const departmentInfoMap =
-        await this.ssoService.부서_정보_목록을_조회한다(
-          announcement.permissionDepartmentIds!,
+    // SSO에서 조회 후 isActive: false인 부서만 invalid로 처리
+    const departmentInfoMap = await this.ssoService.부서_정보_목록을_조회한다(
+      announcement.permissionDepartmentIds!,
+    );
+
+    for (const departmentId of announcement.permissionDepartmentIds!) {
+      const info = departmentInfoMap.get(departmentId);
+      if (!info) {
+        // SSO에서 조회 실패한 경우 (존재하지 않음) - 로그에 기록하지 않음
+        this.logger.debug(
+          `부서 정보 조회 실패 (로그 기록 안 함) - ID: ${departmentId}`,
         );
-
-      for (const departmentId of announcement.permissionDepartmentIds!) {
-        const info = departmentInfoMap.get(departmentId);
-        if (info) {
-          validDepartments.push({ id: departmentId, name: info.name });
-        } else {
-          invalidDepartments.push({ id: departmentId, name: null });
-        }
+        validDepartments.push({ id: departmentId, name: null });
+      } else if (!info.isActive) {
+        // 비활성 부서 - 로그에 기록
+        invalidDepartments.push({ id: departmentId, name: info.name });
+      } else {
+        // 활성 부서
+        validDepartments.push({ id: departmentId, name: info.name });
       }
     }
 
-    // 직원 정보 검증
-    if (hasEmployees) {
-      const employeeInfoMap = await this.ssoService.직원_정보_목록을_조회한다(
-        announcement.permissionEmployeeIds!,
-      );
-
-      for (const employeeId of announcement.permissionEmployeeIds!) {
-        const info = employeeInfoMap.get(employeeId);
-        if (info) {
-          validEmployees.push({ id: employeeId, name: info.name });
-        } else {
-          invalidEmployees.push({ id: employeeId, name: null });
-        }
-      }
-    }
-
-    // 무효한 데이터가 없으면 종료
-    if (
-      invalidDepartments.length === 0 &&
-      invalidEmployees.length === 0
-    ) {
+    // 무효한 부서가 없으면 종료
+    if (invalidDepartments.length === 0) {
       return false;
     }
 
@@ -147,85 +129,33 @@ export class AnnouncementPermissionScheduler {
 
     this.logger.warn(
       `공지사항 "${announcement.title}" (ID: ${announcement.id})에서 ` +
-        `무효한 부서 ${invalidDepartments.length}개, 직원 ${invalidEmployees.length}개 발견`,
+        `무효한 부서 ${invalidDepartments.length}개 발견`,
     );
 
     // 변경 전 스냅샷 (ID와 이름 모두 포함)
     const originalSnapshot = {
       permissionRankIds: announcement.permissionRankIds,
       permissionPositionIds: announcement.permissionPositionIds,
-      permissionDepartments: [
-        ...validDepartments,
-        ...invalidDepartments,
-      ],
-      permissionEmployees: [
-        ...validEmployees,
-        ...invalidEmployees,
-      ],
+      permissionDepartments: [...validDepartments, ...invalidDepartments],
+      permissionEmployees: null, // 직원은 추적하지 않음
     };
 
-    // DETECTED 로그 생성
+    // DETECTED 로그 생성 (자동 제거하지 않고 로그만 남김)
     await this.permissionLogRepository.save({
       announcementId: announcement.id,
       invalidDepartments:
         invalidDepartments.length > 0 ? invalidDepartments : null,
-      invalidEmployees:
-        invalidEmployees.length > 0 ? invalidEmployees : null,
+      invalidEmployees: null, // 직원은 추적하지 않음
       invalidRankCodes: null,
       invalidPositionCodes: null,
       snapshotPermissions: originalSnapshot,
       action: AnnouncementPermissionAction.DETECTED,
-      note: this.생성_감지_메모(invalidDepartments, invalidEmployees),
+      note: this.생성_감지_메모(invalidDepartments, []),
       detectedAt: new Date(),
     });
 
-    // 공지사항에서 무효한 데이터 제거
-    if (invalidDepartments.length > 0) {
-      announcement.permissionDepartmentIds = validDepartments.map(
-        (d) => d.id,
-      );
-    }
-    if (invalidEmployees.length > 0) {
-      announcement.permissionEmployeeIds = validEmployees.map((e) => e.id);
-    }
-    await this.announcementRepository.save(announcement);
-
-    // REMOVED 로그 생성
-    await this.permissionLogRepository.save({
-      announcementId: announcement.id,
-      invalidDepartments:
-        invalidDepartments.length > 0 ? invalidDepartments : null,
-      invalidEmployees:
-        invalidEmployees.length > 0 ? invalidEmployees : null,
-      invalidRankCodes: null,
-      invalidPositionCodes: null,
-      snapshotPermissions: originalSnapshot,
-      action: AnnouncementPermissionAction.REMOVED,
-      note: '무효한 권한 데이터 자동 제거 완료',
-      detectedAt: new Date(),
-    });
-
-    // 관리자에게 알림
-    this.관리자에게_알림을_전송한다(
-      announcement,
-      invalidDepartments,
-      invalidEmployees,
-    );
-
-    // NOTIFIED 로그 생성
-    await this.permissionLogRepository.save({
-      announcementId: announcement.id,
-      invalidDepartments:
-        invalidDepartments.length > 0 ? invalidDepartments : null,
-      invalidEmployees:
-        invalidEmployees.length > 0 ? invalidEmployees : null,
-      invalidRankCodes: null,
-      invalidPositionCodes: null,
-      snapshotPermissions: originalSnapshot,
-      action: AnnouncementPermissionAction.NOTIFIED,
-      note: '관리자에게 알림 전송 완료',
-      detectedAt: new Date(),
-    });
+    // 관리자에게 알림 (수동 처리 필요)
+    this.관리자에게_알림을_전송한다(announcement, invalidDepartments, []);
 
     return true;
   }
@@ -241,13 +171,13 @@ export class AnnouncementPermissionScheduler {
 
     if (invalidDepartments.length > 0) {
       messages.push(
-        `부서 정보 없음: ${invalidDepartments.map((d) => d.id).join(', ')}`,
+        `부서 정보 없음 또는 비활성화: ${invalidDepartments.map((d) => d.id).join(', ')}`,
       );
     }
 
     if (invalidEmployees.length > 0) {
       messages.push(
-        `직원 정보 없음: ${invalidEmployees.map((e) => e.id).join(', ')}`,
+        `직원 정보 없음 또는 비활성화: ${invalidEmployees.map((e) => e.id).join(', ')}`,
       );
     }
 
@@ -264,18 +194,13 @@ export class AnnouncementPermissionScheduler {
   ) {
     // TODO: 실제 알림 서비스 연동 필요 (이메일, 슬랙 등)
     this.logger.warn(
-      `[알림] 공지사항 "${announcement.title}" (ID: ${announcement.id})의 권한이 무효화되었습니다.`,
+      `[알림] 공지사항 "${announcement.title}" (ID: ${announcement.id})에서 비활성화된 권한이 발견되었습니다.`,
     );
+    this.logger.warn(`  → 관리자가 수동으로 부서 ID를 교체해야 합니다.`);
 
     if (invalidDepartments.length > 0) {
       this.logger.warn(
-        `  - 무효 부서: ${invalidDepartments.map((d) => `${d.id}${d.name ? ` (${d.name})` : ''}`).join(', ')}`,
-      );
-    }
-
-    if (invalidEmployees.length > 0) {
-      this.logger.warn(
-        `  - 무효 직원: ${invalidEmployees.map((e) => `${e.id}${e.name ? ` (${e.name})` : ''}`).join(', ')}`,
+        `  - 비활성 부서: ${invalidDepartments.map((d) => `${d.id}${d.name ? ` (${d.name})` : ''}`).join(', ')}`,
       );
     }
   }

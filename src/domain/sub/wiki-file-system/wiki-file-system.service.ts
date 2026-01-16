@@ -465,22 +465,4 @@ export class WikiFileSystemService {
     return results;
   }
 
-  /**
-   * 부서 변경 대상 위키 목록을 조회한다
-   * (permissionDepartmentIds가 null이거나 빈 배열인 위키)
-   */
-  async 부서_변경_대상_위키_목록을_조회한다(): Promise<WikiFileSystem[]> {
-    this.logger.debug('부서 변경 대상 위키 목록 조회');
-
-    const wikis = await this.wikiRepository.find({
-      where: { deletedAt: IsNull() },
-    });
-
-    // permissionDepartmentIds가 null이거나 빈 배열인 항목만 필터링
-    return wikis.filter(
-      (wiki) =>
-        !wiki.permissionDepartmentIds ||
-        wiki.permissionDepartmentIds.length === 0,
-    );
-  }
 }

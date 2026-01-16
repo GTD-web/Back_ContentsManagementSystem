@@ -1,8 +1,13 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { WikiContextService } from '@context/wiki-context/wiki-context.service';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
+import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-log.entity';
+import { WikiPermissionAction } from '@domain/sub/wiki-file-system/wiki-permission-action.types';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
+import { ReplaceWikiPermissionsDto } from '@interface/admin/wiki/dto/replace-wiki-permissions.dto';
 
 /**
  * Wiki 비즈니스 서비스
@@ -19,6 +24,8 @@ export class WikiBusinessService {
     private readonly wikiContextService: WikiContextService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
+    @InjectRepository(WikiPermissionLog)
+    private readonly permissionLogRepository: Repository<WikiPermissionLog>,
   ) {}
 
   /**
@@ -476,16 +483,76 @@ export class WikiBusinessService {
   }
 
   /**
-   * 부서 변경 대상 위키 목록을 조회한다
-   * (permissionDepartmentIds가 null이거나 빈 배열인 위키)
+   * 위키의 무효한 권한 ID를 새로운 ID로 교체한다
    */
-  async 부서_변경_대상_위키_목록을_조회한다(): Promise<WikiFileSystem[]> {
-    this.logger.log('부서 변경 대상 위키 목록 조회 시작');
+  async 위키_권한을_교체한다(
+    wikiId: string,
+    dto: ReplaceWikiPermissionsDto,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    replacedDepartments: number;
+  }> {
+    this.logger.log(`위키 권한 교체 시작 - ID: ${wikiId}`);
 
-    const wikis = await this.wikiContextService.부서_변경_대상_위키_목록을_조회한다();
+    // 위키 조회
+    const wiki = await this.wikiContextService.위키_상세를_조회한다(wikiId);
 
-    this.logger.log(`부서 변경 대상 위키 목록 조회 완료 - 총 ${wikis.length}개`);
+    if (!wiki) {
+      throw new NotFoundException('위키를 찾을 수 없습니다');
+    }
 
-    return wikis;
+    let replacedDepartments = 0;
+    const changes: string[] = [];
+
+    // 부서 ID 교체
+    if (dto.departments && dto.departments.length > 0) {
+      const currentDepartmentIds = wiki.permissionDepartmentIds || [];
+      const newDepartmentIds = [...currentDepartmentIds];
+
+      for (const mapping of dto.departments) {
+        const index = newDepartmentIds.indexOf(mapping.oldId);
+        if (index !== -1) {
+          newDepartmentIds[index] = mapping.newId;
+          replacedDepartments++;
+          changes.push(`부서 ${mapping.oldId} → ${mapping.newId}`);
+          this.logger.log(`부서 교체: ${mapping.oldId} → ${mapping.newId}`);
+        }
+      }
+
+      wiki.permissionDepartmentIds = newDepartmentIds;
+    }
+
+    // 위키 업데이트
+    await this.wikiContextService.위키를_수정한다(wikiId, {
+      permissionDepartmentIds: wiki.permissionDepartmentIds,
+    });
+
+    // RESOLVED 로그 생성
+    await this.permissionLogRepository.save({
+      wikiFileSystemId: wiki.id,
+      invalidDepartments: null,
+      invalidRankCodes: null,
+      invalidPositionCodes: null,
+      snapshotPermissions: {
+        permissionRankIds: wiki.permissionRankIds,
+        permissionPositionIds: wiki.permissionPositionIds,
+        permissionDepartments: [],
+      },
+      action: WikiPermissionAction.RESOLVED,
+      note: dto.note || `관리자가 권한 교체 완료: ${changes.join(', ')}`,
+      detectedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedBy: userId,
+    });
+
+    this.logger.log(`위키 권한 교체 완료 - 부서: ${replacedDepartments}개`);
+
+    return {
+      success: true,
+      message: '권한 ID가 성공적으로 교체되었습니다',
+      replacedDepartments,
+    };
   }
 }

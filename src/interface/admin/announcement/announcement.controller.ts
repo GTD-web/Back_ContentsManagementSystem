@@ -38,6 +38,11 @@ import {
   AnnouncementCategoryResponseDto,
   AnnouncementCategoryListResponseDto,
 } from '@interface/common/dto/announcement/announcement-response.dto';
+import { ReplaceAnnouncementPermissionsDto } from './dto/replace-announcement-permissions.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
+import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
+import { AnnouncementPermissionAction } from '@domain/core/announcement/announcement-permission-action.types';
 
 @ApiTags('A-9. 관리자 - 공지사항')
 @ApiBearerAuth('Bearer')
@@ -46,6 +51,8 @@ export class AnnouncementController {
   constructor(
     private readonly announcementBusinessService: AnnouncementBusinessService,
     private readonly announcementPermissionScheduler: AnnouncementPermissionScheduler,
+    @InjectRepository(AnnouncementPermissionLog)
+    private readonly permissionLogRepository: Repository<AnnouncementPermissionLog>,
   ) {}
 
   /**
@@ -178,26 +185,6 @@ export class AnnouncementController {
   })
   async 공지사항_전체_목록을_조회한다(): Promise<AnnouncementResponseDto[]> {
     return await this.announcementBusinessService.공지사항_전체_목록을_조회한다();
-  }
-
-  /**
-   * 부서 변경 대상 공지사항 목록을 조회한다
-   */
-  @Get('department-change-targets')
-  @ApiOperation({
-    summary: '부서 변경 대상 공지사항 목록 조회',
-    description:
-      'permissionDepartmentIds가 비어있는 공지사항 목록을 조회합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '부서 변경 대상 공지사항 목록 조회 성공',
-    type: [AnnouncementResponseDto],
-  })
-  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<
-    AnnouncementResponseDto[]
-  > {
-    return await this.announcementBusinessService.부서_변경_대상_공지사항_목록을_조회한다();
   }
 
   /**
@@ -336,6 +323,41 @@ export class AnnouncementController {
     const result =
       await this.announcementBusinessService.공지사항_카테고리를_삭제한다(id);
     return { success: result };
+  }
+
+  /**
+   * 모든 공지사항의 권한 로그 목록을 조회한다
+   */
+  @Get('permission-logs')
+  @ApiOperation({
+    summary: '공지사항 권한 로그 전체 조회',
+    description:
+      '모든 공지사항에서 감지된 비활성 부서 목록을 조회합니다. 관리자가 어떤 권한을 교체해야 하는지 확인할 수 있습니다.',
+  })
+  @ApiQuery({
+    name: 'resolved',
+    required: false,
+    description: '해결 여부 필터 (true: 해결됨, false: 미해결, 미지정: 전체)',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '권한 로그 목록 조회 성공',
+  })
+  async 공지사항_권한_로그를_조회한다(@Query('resolved') resolved?: boolean) {
+    const where: any = {};
+
+    if (resolved === true) {
+      where.resolvedAt = Not(IsNull());
+    } else if (resolved === false) {
+      where.resolvedAt = IsNull();
+    }
+
+    return await this.permissionLogRepository.find({
+      where,
+      order: { detectedAt: 'DESC' },
+      relations: ['announcement'],
+    });
   }
 
   /**
@@ -723,5 +745,79 @@ export class AnnouncementController {
     return await this.announcementBusinessService.공지사항에_포함된_미열람자들에게_알림을보낸다(
       id,
     );
+  }
+
+  /**
+   * 공지사항의 무효한 권한 ID를 새로운 ID로 교체한다
+   */
+  @Patch(':id/replace-permissions')
+  @ApiOperation({
+    summary: '공지사항 권한 ID 교체',
+    description:
+      '비활성화된 부서/직원 ID를 새로운 ID로 교체합니다. 예: 구 마케팅팀(DEPT_001) → 신 마케팅팀(DEPT_002)',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '권한 ID 교체 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항을 찾을 수 없음',
+  })
+  async 공지사항_권한을_교체한다(
+    @Param('id') id: string,
+    @Body() dto: ReplaceAnnouncementPermissionsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return await this.announcementBusinessService.공지사항_권한을_교체한다(
+      id,
+      dto,
+      user.id,
+    );
+  }
+
+  /**
+   * 권한 로그를 해결 상태로 변경한다
+   */
+  @Patch('permission-logs/:logId/resolve')
+  @ApiOperation({
+    summary: '권한 로그 해결 처리',
+    description:
+      '권한 로그를 해결 완료 상태로 변경합니다. 관리자가 수동으로 권한을 교체한 후 호출합니다.',
+  })
+  @ApiParam({
+    name: 'logId',
+    description: '권한 로그 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '권한 로그 해결 완료',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '권한 로그를 찾을 수 없음',
+  })
+  async 권한_로그를_해결한다(
+    @Param('logId') logId: string,
+    @Body() body: { note?: string },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.permissionLogRepository.update(logId, {
+      action: AnnouncementPermissionAction.RESOLVED,
+      resolvedAt: new Date(),
+      resolvedBy: user.id,
+      note: body.note || '관리자가 수동으로 해결함',
+    });
+
+    return {
+      success: true,
+      message: '권한 로그가 해결되었습니다.',
+    };
   }
 }

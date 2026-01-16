@@ -8,6 +8,7 @@ import { CompanyContextModule } from '@context/company-context/company-context.m
 import { CategoryModule } from '@domain/common/category/category.module';
 import { SsoModule } from '@domain/common/sso/sso.module';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
+import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
 import { Survey } from '@domain/sub/survey/survey.entity';
 import { SurveyQuestion } from '@domain/sub/survey/survey-question.entity';
 import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
@@ -21,6 +22,7 @@ import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
   imports: [
     TypeOrmModule.forFeature([
       AnnouncementRead,
+      AnnouncementPermissionLog,
       Survey,
       SurveyQuestion,
       SurveyCompletion,

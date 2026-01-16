@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import axios from 'axios';
@@ -10,6 +10,8 @@ import { CategoryService } from '@domain/common/category/category.service';
 import { SsoService } from '@domain/common/sso/sso.service';
 import { Announcement } from '@domain/core/announcement/announcement.entity';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
+import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
+import { AnnouncementPermissionAction } from '@domain/core/announcement/announcement-permission-action.types';
 import { Survey } from '@domain/sub/survey/survey.entity';
 import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
 import { Category } from '@domain/common/category/category.entity';
@@ -24,6 +26,7 @@ import {
   RankListResult,
   PositionListResult,
 } from '@context/company-context/interfaces/company-context.interface';
+import { ReplaceAnnouncementPermissionsDto } from '@interface/admin/announcement/dto/replace-announcement-permissions.dto';
 
 /**
  * 공지사항 비즈니스 서비스
@@ -49,6 +52,8 @@ export class AnnouncementBusinessService {
     private readonly configService: ConfigService,
     @InjectRepository(AnnouncementRead)
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
+    @InjectRepository(AnnouncementPermissionLog)
+    private readonly permissionLogRepository: Repository<AnnouncementPermissionLog>,
     @InjectRepository(Survey)
     private readonly surveyRepository: Repository<Survey>,
     @InjectRepository(SurveyCompletion)
@@ -101,20 +106,6 @@ export class AnnouncementBusinessService {
     this.logger.log(`공지사항 전체 목록 조회 완료 - 총 ${result.total}개`);
 
     return result.items;
-  }
-
-  /**
-   * 부서 변경 대상 공지사항 목록을 조회한다
-   * (permissionDepartmentIds가 null이거나 빈 배열인 공지사항)
-   */
-  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<Announcement[]> {
-    this.logger.log('부서 변경 대상 공지사항 목록 조회 시작');
-
-    const announcements = await this.announcementContextService.부서_변경_대상_공지사항_목록을_조회한다();
-
-    this.logger.log(`부서 변경 대상 공지사항 목록 조회 완료 - 총 ${announcements.length}개`);
-
-    return announcements;
   }
 
   /**
@@ -974,5 +965,113 @@ export class AnnouncementBusinessService {
         message: `알림 전송 실패: ${error.message}`,
       };
     }
+  }
+
+  /**
+   * 공지사항의 무효한 권한 ID를 새로운 ID로 교체한다
+   */
+  async 공지사항_권한을_교체한다(
+    announcementId: string,
+    dto: ReplaceAnnouncementPermissionsDto,
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    replacedDepartments: number;
+    replacedEmployees: number;
+  }> {
+    this.logger.log(`공지사항 권한 교체 시작 - ID: ${announcementId}`);
+
+    // 공지사항 조회
+    const announcement =
+      await this.announcementContextService.공지사항을_조회한다(
+        announcementId,
+      );
+
+    if (!announcement) {
+      throw new NotFoundException('공지사항을 찾을 수 없습니다');
+    }
+
+    let replacedDepartments = 0;
+    let replacedEmployees = 0;
+    const changes: string[] = [];
+
+    // 부서 ID 교체
+    if (dto.departments && dto.departments.length > 0) {
+      const currentDepartmentIds = announcement.permissionDepartmentIds || [];
+      const newDepartmentIds = [...currentDepartmentIds];
+
+      for (const mapping of dto.departments) {
+        const index = newDepartmentIds.indexOf(mapping.oldId);
+        if (index !== -1) {
+          newDepartmentIds[index] = mapping.newId;
+          replacedDepartments++;
+          changes.push(`부서 ${mapping.oldId} → ${mapping.newId}`);
+          this.logger.log(
+            `부서 교체: ${mapping.oldId} → ${mapping.newId}`,
+          );
+        }
+      }
+
+      announcement.permissionDepartmentIds = newDepartmentIds;
+    }
+
+    // 직원 ID 교체
+    if (dto.employees && dto.employees.length > 0) {
+      const currentEmployeeIds = announcement.permissionEmployeeIds || [];
+      const newEmployeeIds = [...currentEmployeeIds];
+
+      for (const mapping of dto.employees) {
+        const index = newEmployeeIds.indexOf(mapping.oldId);
+        if (index !== -1) {
+          newEmployeeIds[index] = mapping.newId;
+          replacedEmployees++;
+          changes.push(`직원 ${mapping.oldId} → ${mapping.newId}`);
+          this.logger.log(`직원 교체: ${mapping.oldId} → ${mapping.newId}`);
+        }
+      }
+
+      announcement.permissionEmployeeIds = newEmployeeIds;
+    }
+
+    // 공지사항 업데이트
+    await this.announcementContextService.공지사항을_수정한다(
+      announcementId,
+      {
+        permissionDepartmentIds: announcement.permissionDepartmentIds,
+        permissionEmployeeIds: announcement.permissionEmployeeIds,
+      },
+    );
+
+    // RESOLVED 로그 생성
+    await this.permissionLogRepository.save({
+      announcementId: announcement.id,
+      invalidDepartments: null,
+      invalidEmployees: null,
+      invalidRankCodes: null,
+      invalidPositionCodes: null,
+      snapshotPermissions: {
+        permissionRankIds: announcement.permissionRankIds,
+        permissionPositionIds: announcement.permissionPositionIds,
+        permissionDepartments: [],
+        permissionEmployees: [],
+      },
+      action: AnnouncementPermissionAction.RESOLVED,
+      note: dto.note || `관리자가 권한 교체 완료: ${changes.join(', ')}`,
+      detectedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedBy: userId,
+    });
+
+    this.logger.log(
+      `공지사항 권한 교체 완료 - 부서: ${replacedDepartments}개, 직원: ${replacedEmployees}개`,
+    );
+
+    return {
+      success: true,
+      message: '권한 ID가 성공적으로 교체되었습니다',
+      replacedDepartments,
+      replacedEmployees,
+    };
   }
 }

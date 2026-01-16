@@ -10,6 +10,7 @@ export interface SsoDepartmentInfo {
   name: string;
   parentId: string | null;
   depth: number;
+  isActive: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ export interface SsoEmployeeInfo {
   departmentId: string;
   rankCode: string;
   positionCode: string;
+  isActive: boolean;
 }
 
 /**
@@ -71,7 +73,7 @@ export interface PortalFcmTokenInfo {
 
 /**
  * SSO 서비스
- * 
+ *
  * SSO API를 통해 조직 정보와 FCM 토큰을 조회합니다.
  */
 @Injectable()
@@ -85,7 +87,7 @@ export class SsoService {
 
   /**
    * SSO에서 부서 정보를 조회한다
-   * 
+   *
    * @param departmentId 부서 ID
    * @returns 부서 정보 또는 null (존재하지 않는 경우)
    */
@@ -100,39 +102,48 @@ export class SsoService {
         },
       );
 
-      return response.data;
+      const departmentInfo = response.data;
+
+      // 부서 정보 반환 (비활성 상태도 포함, isActive 플래그로 구분)
+      if (!departmentInfo.isActive) {
+        this.logger.debug(
+          `부서가 비활성화됨 - ID: ${departmentId}, Name: ${departmentInfo.name}`,
+        );
+      }
+
+      return departmentInfo;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const errorData = error.response?.data;
         const url = `${this.ssoBaseUrl}/api/admin/organizations/departments/${departmentId}`;
-        
+
         if (status === 404) {
           // 부서가 존재하지 않음
           this.logger.debug(`부서 정보 없음 - ID: ${departmentId}`);
           return null;
         }
-        
+
         if (status === 500) {
           // SSO 서버 에러 - 상세 메시지 로그 출력
           this.logger.warn(
             `SSO 서버 에러 (부서 조회) - ` +
-            `ID: ${departmentId}, ` +
-            `Status: 500, ` +
-            `URL: ${url}, ` +
-            `응답: ${JSON.stringify(errorData)}`,
+              `ID: ${departmentId}, ` +
+              `Status: 500, ` +
+              `URL: ${url}, ` +
+              `응답: ${JSON.stringify(errorData)}`,
           );
           return null;
         }
-        
+
         if (status) {
           // 기타 HTTP 에러 (400, 403 등)
           this.logger.warn(
             `SSO 서버 에러 (부서 조회) - ` +
-            `ID: ${departmentId}, ` +
-            `Status: ${status}, ` +
-            `URL: ${url}, ` +
-            `응답: ${JSON.stringify(errorData)}`,
+              `ID: ${departmentId}, ` +
+              `Status: ${status}, ` +
+              `URL: ${url}, ` +
+              `응답: ${JSON.stringify(errorData)}`,
           );
           return null;
         }
@@ -149,7 +160,7 @@ export class SsoService {
 
   /**
    * SSO에서 직원 정보를 조회한다
-   * 
+   *
    * @param employeeId 직원 ID
    * @returns 직원 정보 또는 null (존재하지 않는 경우)
    */
@@ -164,39 +175,48 @@ export class SsoService {
         },
       );
 
-      return response.data;
+      const employeeInfo = response.data;
+
+      // 직원 정보 반환 (비활성 상태도 포함, isActive 플래그로 구분)
+      if (!employeeInfo.isActive) {
+        this.logger.debug(
+          `직원이 비활성화됨 - ID: ${employeeId}, Name: ${employeeInfo.name}`,
+        );
+      }
+
+      return employeeInfo;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const errorData = error.response?.data;
         const url = `${this.ssoBaseUrl}/api/admin/organizations/employees/${employeeId}`;
-        
+
         if (status === 404) {
           // 직원이 존재하지 않음
           this.logger.debug(`직원 정보 없음 - ID: ${employeeId}`);
           return null;
         }
-        
+
         if (status === 500) {
           // SSO 서버 에러 - 상세 메시지 로그 출력
           this.logger.warn(
             `SSO 서버 에러 (직원 조회) - ` +
-            `ID: ${employeeId}, ` +
-            `Status: 500, ` +
-            `URL: ${url}, ` +
-            `응답: ${JSON.stringify(errorData)}`,
+              `ID: ${employeeId}, ` +
+              `Status: 500, ` +
+              `URL: ${url}, ` +
+              `응답: ${JSON.stringify(errorData)}`,
           );
           return null;
         }
-        
+
         if (status) {
           // 기타 HTTP 에러 (400, 403 등)
           this.logger.warn(
             `SSO 서버 에러 (직원 조회) - ` +
-            `ID: ${employeeId}, ` +
-            `Status: ${status}, ` +
-            `URL: ${url}, ` +
-            `응답: ${JSON.stringify(errorData)}`,
+              `ID: ${employeeId}, ` +
+              `Status: ${status}, ` +
+              `URL: ${url}, ` +
+              `응답: ${JSON.stringify(errorData)}`,
           );
           return null;
         }
@@ -213,51 +233,139 @@ export class SsoService {
 
   /**
    * 여러 부서의 정보를 일괄 조회한다
-   * 
+   *
    * @param departmentIds 부서 ID 목록
-   * @returns 부서 ID와 정보의 맵 (존재하지 않는 경우 null)
+   * @returns 부서 ID와 정보의 맵 (존재하지 않는 경우 null, 비활성 상태는 isActive: false로 포함)
    */
   async 부서_정보_목록을_조회한다(
     departmentIds: string[],
   ): Promise<Map<string, SsoDepartmentInfo | null>> {
-    const result = new Map<string, SsoDepartmentInfo | null>();
+    if (!departmentIds || departmentIds.length === 0) {
+      return new Map();
+    }
 
-    // 병렬로 조회
-    await Promise.all(
-      departmentIds.map(async (id) => {
-        const info = await this.부서_정보를_조회한다(id);
-        result.set(id, info);
-      }),
-    );
+    try {
+      // SSO API를 통해 일괄 조회
+      const response = await axios.post<SsoDepartmentInfo[]>(
+        `${this.ssoBaseUrl}/api/admin/organizations/departments/list`,
+        { departmentIds },
+        {
+          timeout: 10000,
+        },
+      );
 
-    return result;
+      const result = new Map<string, SsoDepartmentInfo | null>();
+      const departmentList = response.data || [];
+
+      // 조회된 부서 정보를 Map으로 변환 (비활성 상태도 포함)
+      for (const department of departmentList) {
+        if (!department.isActive) {
+          this.logger.debug(
+            `부서가 비활성화됨 (일괄 조회) - ID: ${department.id}, Name: ${department.name}`,
+          );
+        }
+        result.set(department.id, department);
+      }
+
+      // 조회되지 않은 부서 ID는 null로 설정
+      for (const id of departmentIds) {
+        if (!result.has(id)) {
+          this.logger.debug(`부서 정보 없음 (일괄 조회) - ID: ${id}`);
+          result.set(id, null);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      // 일괄 조회 실패 시 개별 조회로 폴백
+      this.logger.warn(
+        `부서 일괄 조회 실패, 개별 조회로 폴백 - 부서 수: ${departmentIds.length}`,
+        error instanceof Error ? error.message : String(error),
+      );
+
+      const result = new Map<string, SsoDepartmentInfo | null>();
+
+      // 병렬로 개별 조회
+      await Promise.all(
+        departmentIds.map(async (id) => {
+          const info = await this.부서_정보를_조회한다(id);
+          result.set(id, info);
+        }),
+      );
+
+      return result;
+    }
   }
 
   /**
    * 여러 직원의 정보를 일괄 조회한다
-   * 
+   *
    * @param employeeIds 직원 ID 목록
-   * @returns 직원 ID와 정보의 맵 (존재하지 않는 경우 null)
+   * @returns 직원 ID와 정보의 맵 (존재하지 않는 경우 null, 비활성 상태는 isActive: false로 포함)
    */
   async 직원_정보_목록을_조회한다(
     employeeIds: string[],
   ): Promise<Map<string, SsoEmployeeInfo | null>> {
-    const result = new Map<string, SsoEmployeeInfo | null>();
+    if (!employeeIds || employeeIds.length === 0) {
+      return new Map();
+    }
 
-    // 병렬로 조회
-    await Promise.all(
-      employeeIds.map(async (id) => {
-        const info = await this.직원_정보를_조회한다(id);
-        result.set(id, info);
-      }),
-    );
+    try {
+      // SSO API를 통해 일괄 조회
+      const response = await axios.post<SsoEmployeeInfo[]>(
+        `${this.ssoBaseUrl}/api/admin/organizations/employees`,
+        { employeeIds },
+        {
+          timeout: 10000,
+        },
+      );
 
-    return result;
+      const result = new Map<string, SsoEmployeeInfo | null>();
+      const employeeList = response.data || [];
+
+      // 조회된 직원 정보를 Map으로 변환 (비활성 상태도 포함)
+      for (const employee of employeeList) {
+        if (!employee.isActive) {
+          this.logger.debug(
+            `직원이 비활성화됨 (일괄 조회) - ID: ${employee.id}, Name: ${employee.name}`,
+          );
+        }
+        result.set(employee.id, employee);
+      }
+
+      // 조회되지 않은 직원 ID는 null로 설정
+      for (const id of employeeIds) {
+        if (!result.has(id)) {
+          this.logger.debug(`직원 정보 없음 (일괄 조회) - ID: ${id}`);
+          result.set(id, null);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      // 일괄 조회 실패 시 개별 조회로 폴백
+      this.logger.warn(
+        `직원 일괄 조회 실패, 개별 조회로 폴백 - 직원 수: ${employeeIds.length}`,
+        error instanceof Error ? error.message : String(error),
+      );
+
+      const result = new Map<string, SsoEmployeeInfo | null>();
+
+      // 병렬로 개별 조회
+      await Promise.all(
+        employeeIds.map(async (id) => {
+          const info = await this.직원_정보를_조회한다(id);
+          result.set(id, info);
+        }),
+      );
+
+      return result;
+    }
   }
 
   /**
    * FCM 토큰을 조회한다
-   * 
+   *
    * @param params employeeNumbers 또는 employeeIds (쉼표로 구분된 문자열 또는 배열)
    * @returns Portal FCM 토큰이 있는 수신자 목록
    */
@@ -334,7 +442,10 @@ export class SsoService {
 
     if (typeof param === 'string') {
       // 쉼표로 구분된 문자열을 배열로 변환
-      return param.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+      return param
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
     }
 
     return param;

@@ -11,7 +11,7 @@ import { SsoService } from '@domain/common/sso/sso.service';
  * 위키 권한 검증 스케줄러
  *
  * 매일 새벽 2시에 모든 위키의 권한을 검증하고,
- * SSO 시스템에서 삭제된 부서 정보가 있으면 로그를 남깁니다.
+ * SSO 시스템에서 삭제되었거나 비활성화(isActive=false)된 부서 정보가 있으면 로그를 남깁니다.
  */
 @Injectable()
 export class WikiPermissionScheduler {
@@ -73,20 +73,30 @@ export class WikiPermissionScheduler {
     }
 
     // 부서 정보 조회 (부서 ID로)
+    // SSO에서 조회 후 isActive: false인 부서만 invalid로 처리
     const departmentInfoMap = await this.ssoService.부서_정보_목록을_조회한다(
       wiki.permissionDepartmentIds,
     );
 
     // 유효한 부서와 무효한 부서 분리
+    // SSO에서 조회 후 isActive: false인 부서만 invalid로 처리
     const validDepartments: Array<{ id: string; name: string | null }> = [];
     const invalidDepartments: Array<{ id: string; name: string | null }> = [];
 
     for (const departmentId of wiki.permissionDepartmentIds) {
       const info = departmentInfoMap.get(departmentId);
-      if (info) {
-        validDepartments.push({ id: departmentId, name: info.name });
+      if (!info) {
+        // SSO에서 조회 실패한 경우 (존재하지 않음) - 로그에 기록하지 않음
+        this.logger.debug(
+          `부서 정보 조회 실패 (로그 기록 안 함) - ID: ${departmentId}`,
+        );
+        validDepartments.push({ id: departmentId, name: null });
+      } else if (!info.isActive) {
+        // 비활성 부서 - 로그에 기록
+        invalidDepartments.push({ id: departmentId, name: info.name });
       } else {
-        invalidDepartments.push({ id: departmentId, name: null });
+        // 활성 부서
+        validDepartments.push({ id: departmentId, name: info.name });
       }
     }
 
@@ -127,7 +137,7 @@ export class WikiPermissionScheduler {
       ],
     };
 
-    // DETECTED 로그 생성
+    // DETECTED 로그 생성 (자동 제거하지 않고 로그만 남김)
     await this.permissionLogRepository.save({
       wikiFileSystemId: wiki.id,
       invalidDepartments,
@@ -135,40 +145,12 @@ export class WikiPermissionScheduler {
       invalidPositionCodes: null,
       snapshotPermissions: originalSnapshot,
       action: WikiPermissionAction.DETECTED,
-      note: `SSO에서 부서 정보 없음: ${invalidDepartments.map((d) => d.id).join(', ')}`,
+      note: `SSO에서 부서 정보 없음 또는 비활성화: ${invalidDepartments.map((d) => d.id).join(', ')}`,
       detectedAt: new Date(),
     });
 
-    // 위키에서 무효한 부서 제거
-    wiki.permissionDepartmentIds = validDepartments.map((d) => d.id);
-    await this.wikiRepository.save(wiki);
-
-    // REMOVED 로그 생성
-    await this.permissionLogRepository.save({
-      wikiFileSystemId: wiki.id,
-      invalidDepartments,
-      invalidRankCodes: null,
-      invalidPositionCodes: null,
-      snapshotPermissions: originalSnapshot,
-      action: WikiPermissionAction.REMOVED,
-      note: '무효한 부서 코드 자동 제거 완료',
-      detectedAt: new Date(),
-    });
-
-    // 관리자에게 알림
+    // 관리자에게 알림 (수동 처리 필요)
     this.관리자에게_알림을_전송한다(wiki, invalidDepartments);
-
-    // NOTIFIED 로그 생성
-    await this.permissionLogRepository.save({
-      wikiFileSystemId: wiki.id,
-      invalidDepartments,
-      invalidRankCodes: null,
-      invalidPositionCodes: null,
-      snapshotPermissions: originalSnapshot,
-      action: WikiPermissionAction.NOTIFIED,
-      note: '관리자에게 알림 전송 완료',
-      detectedAt: new Date(),
-    });
 
     return true;
   }
@@ -182,10 +164,13 @@ export class WikiPermissionScheduler {
   ) {
     // TODO: 실제 알림 서비스 연동 필요 (이메일, 슬랙 등)
     this.logger.warn(
-      `[알림] 위키 "${wiki.name}" (ID: ${wiki.id})의 부서 권한이 무효화되었습니다.`,
+      `[알림] 위키 "${wiki.name}" (ID: ${wiki.id})에서 비활성화된 부서가 발견되었습니다.`,
     );
     this.logger.warn(
-      `  - 무효 부서: ${invalidDepartments.map((d) => `${d.id}${d.name ? ` (${d.name})` : ''}`).join(', ')}`,
+      `  → 관리자가 수동으로 부서 ID를 교체해야 합니다.`,
+    );
+    this.logger.warn(
+      `  - 비활성 부서: ${invalidDepartments.map((d) => `${d.id}${d.name ? ` (${d.name})` : ''}`).join(', ')}`,
     );
   }
 }

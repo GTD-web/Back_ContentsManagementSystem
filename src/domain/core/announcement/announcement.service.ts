@@ -496,23 +496,4 @@ export class AnnouncementService {
       throw new ConflictException('제목은 최소 3자 이상이어야 합니다.');
     }
   }
-
-  /**
-   * 부서 변경 대상 공지사항 목록을 조회한다
-   * (permissionDepartmentIds가 null이거나 빈 배열인 공지사항)
-   */
-  async 부서_변경_대상_공지사항_목록을_조회한다(): Promise<Announcement[]> {
-    this.logger.debug('부서 변경 대상 공지사항 목록 조회');
-
-    const announcements = await this.announcementRepository.find({
-      where: { deletedAt: IsNull() },
-    });
-
-    // permissionDepartmentIds가 null이거나 빈 배열인 항목만 필터링
-    return announcements.filter(
-      (announcement) =>
-        !announcement.permissionDepartmentIds ||
-        announcement.permissionDepartmentIds.length === 0,
-    );
-  }
 }
