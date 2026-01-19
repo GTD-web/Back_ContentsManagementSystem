@@ -233,6 +233,7 @@ export class IRService {
     data: {
       title?: string;
       description?: string;
+      isSynced?: boolean;
       updatedBy?: string;
     },
   ): Promise<void> {

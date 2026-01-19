@@ -306,12 +306,13 @@ export class ShareholdersMeetingContextService {
     if (data.translations && data.translations.length > 0) {
       for (const translation of data.translations) {
         if (translation.id) {
-          // 기존 번역 업데이트
+          // 기존 번역 업데이트 (수정 시 isSynced=false로 변경)
           await this.shareholdersMeetingService.주주총회_번역을_업데이트한다(
             translation.id,
             {
               title: translation.title,
               description: translation.description ?? undefined,
+              isSynced: false, // 수정되었으므로 동기화 중단
               updatedBy: data.updatedBy,
             },
           );
@@ -324,12 +325,13 @@ export class ShareholdersMeetingContextService {
           );
 
           if (existingTranslation) {
-            // 이미 존재하면 업데이트
+            // 이미 존재하면 업데이트 (수정 시 isSynced=false로 변경)
             await this.shareholdersMeetingService.주주총회_번역을_업데이트한다(
               existingTranslation.id,
               {
                 title: translation.title,
                 description: translation.description ?? undefined,
+                isSynced: false, // 수정되었으므로 동기화 중단
                 updatedBy: data.updatedBy,
               },
             );
@@ -396,11 +398,12 @@ export class ShareholdersMeetingContextService {
           // 안건 번역 업데이트
           for (const translation of voteResultData.translations) {
             if (translation.id) {
-              // 기존 번역 업데이트
+              // 기존 번역 업데이트 (수정 시 isSynced=false로 변경)
               await this.shareholdersMeetingService.의결_결과_번역을_업데이트한다(
                 translation.id,
                 {
                   title: translation.title,
+                  isSynced: false, // 수정되었으므로 동기화 중단
                   updatedBy: data.updatedBy,
                 },
               );
@@ -415,11 +418,12 @@ export class ShareholdersMeetingContextService {
               );
 
               if (existingTranslation) {
-                // 이미 존재하면 업데이트
+                // 이미 존재하면 업데이트 (수정 시 isSynced=false로 변경)
                 await this.shareholdersMeetingService.의결_결과_번역을_업데이트한다(
                   existingTranslation.id,
                   {
                     title: translation.title,
+                    isSynced: false, // 수정되었으므로 동기화 중단
                     updatedBy: data.updatedBy,
                   },
                 );

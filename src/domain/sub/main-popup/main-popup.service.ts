@@ -238,6 +238,7 @@ export class MainPopupService {
     data: {
       title?: string;
       description?: string;
+      isSynced?: boolean;
       updatedBy?: string;
     },
   ): Promise<void> {
@@ -258,6 +259,9 @@ export class MainPopupService {
     }
     if (data.description !== undefined) {
       translation.description = data.description;
+    }
+    if (data.isSynced !== undefined) {
+      translation.isSynced = data.isSynced;
     }
     if (data.updatedBy !== undefined) {
       translation.updatedBy = data.updatedBy;

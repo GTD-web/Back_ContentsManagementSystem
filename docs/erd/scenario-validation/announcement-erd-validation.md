@@ -56,8 +56,8 @@
 | **6. 권한 기반 접근 제어** | `GET /admin/announcements` | • Announcement<br>• 외부 SSO 시스템 | • `isPublic` = true: 전사공개<br>• `isPublic` = false: 제한공개<br>• `permissionEmployeeIds` (JSONB)<br>• `permissionRankIds` (JSONB)<br>• `permissionPositionIds` (JSONB)<br>• `permissionDepartmentIds` (JSONB) | 1. isPublic 확인<br>2. true: 모든 직원 접근 가능<br>3. false: 권한 ID 배열로 접근 제어<br>4. 부서/직급/직책/직원별 세밀한 제어 |
 | **7. 읽음 표시 추적<br>(Lazy Creation)** | 직원이 공지사항 조회 시 | • AnnouncementRead | • UK: (announcementId, employeeId)<br>• `readAt` (timestamp)<br>• Lazy Creation 패턴 | 1. 직원이 공지사항을 읽을 때만 레코드 생성<br>2. 미열람자 = 레코드 없음<br>3. 효율적인 스토리지 사용 |
 | **8. 권한 무효화 추적<br>(Permission Log)** | `@Cron('0 0 * * *')`<br>(매일 자동 실행) | • AnnouncementPermissionLog<br>• Announcement | • `invalidDepartments` (JSONB)<br>• `invalidRankIds` (JSONB)<br>• `invalidPositionIds` (JSONB)<br>• `invalidEmployees` (JSONB)<br>• `action` (detected\|resolved)<br>• `snapshotPermissions` (JSONB) | 1. SSO에서 비활성화된 권한 감지<br>2. 로그 생성 (DETECTED)<br>3. 관리자가 권한 교체<br>4. 로그 해결 (RESOLVED)<br>5. 영구 보관 (Soft Delete 없음) |
-| **9. 설문조사 연동** | `POST /admin/announcements` | • Survey<br>• SurveyQuestion<br>• SurveyCompletion | • `Survey.announcementId` (FK, UK)<br>• 공지사항당 설문 1개<br>• CASCADE 삭제 | 1. Announcement 생성 시 Survey 생성 (선택)<br>2. 공지사항 삭제 시 Survey도 삭제<br>3. 설문 상태/권한은 Announcement를 따름 |
-| **10. 푸시 알림 전송** | `POST /admin/announcements/:id/notifications/all`<br>`POST /admin/announcements/:id/notifications/unread`<br>`POST /admin/announcements/:id/notifications/unanswered` | • Announcement<br>• AnnouncementRead<br>• Survey | • 전체 직원 알림<br>• 미열람자 알림<br>• 미답변자 알림 (설문 있는 경우) | 1. 권한 기반 대상 직원 조회<br>2. 푸시 알림 전송<br>3. 전송 결과 반환 (성공/실패 건수) |
+| **9. 설문조사 연동** | `POST /admin/announcements`<br>`POST /admin/surveys`<br>`GET /admin/surveys/announcement/:id` | • Survey<br>• SurveyQuestion<br>• SurveyCompletion<br>• SurveyResponse* | • `Survey.announcementId` (FK, UK)<br>• 공지사항당 설문 1개<br>• CASCADE 삭제<br>• 9가지 질문 타입 지원<br>• 응답별 전용 테이블 | 1. Announcement 생성 시 Survey 생성 (선택)<br>2. 질문별 type 지정 (단답/객관식/척도 등)<br>3. 직원 응답 저장 (타입별 테이블)<br>4. 완료 추적 (SurveyCompletion)<br>5. 공지사항 삭제 시 Survey/응답 CASCADE 삭제 |
+| **10. 푸시 알림 전송** | `POST /admin/announcements/:id/notifications/all`<br>`POST /admin/announcements/:id/notifications/unread`<br>`POST /admin/announcements/:id/notifications/unanswered` | • Announcement<br>• AnnouncementRead<br>• SurveyCompletion | • 전체 직원 알림<br>• 미열람자 알림<br>• 미답변자 알림 (설문 있는 경우) | 1. 권한 기반 대상 직원 조회<br>2. AnnouncementRead로 미열람자 필터<br>3. SurveyCompletion으로 미답변자 필터<br>4. 푸시 알림 전송<br>5. 전송 결과 반환 (성공/실패 건수) |
 
 ### 1.3 상세 시나리오 (코드 예시)
 
@@ -172,6 +172,107 @@ PATCH /admin/announcements/:id/replace-permissions
 // - resolvedAt: NOW()
 // - resolvedBy: 관리자 ID
 // - action: RESOLVED
+```
+</details>
+
+<details>
+<summary>📝 시나리오 9: 설문조사 연동 - 코드 예시</summary>
+
+```typescript
+// 공지사항 생성 시 설문조사 함께 생성
+POST /admin/announcements
+{
+  "title": "2024년 직원 만족도 조사",
+  "content": "설문에 참여해 주세요...",
+  "isPublic": true,
+  "survey": {  // ← 설문조사 추가 (선택)
+    "title": "만족도 조사",
+    "description": "5분 내외 소요",
+    "startDate": "2024-01-01T00:00:00Z",
+    "endDate": "2024-12-31T23:59:59Z",
+    "questions": [
+      {
+        "title": "회사 만족도를 평가해주세요",
+        "type": "linear_scale",  // 선형 척도
+        "form": {
+          "minScale": 1,
+          "maxScale": 10
+        },
+        "isRequired": true,
+        "order": 0
+      },
+      {
+        "title": "개선이 필요한 부분을 작성해주세요",
+        "type": "paragraph",  // 장문형
+        "isRequired": false,
+        "order": 1
+      },
+      {
+        "title": "선호하는 복지 제도를 선택하세요",
+        "type": "checkboxes",  // 다중 선택
+        "form": {
+          "options": ["재택근무", "시차출퇴근", "휴가 확대", "간식 지원"]
+        },
+        "isRequired": true,
+        "order": 2
+      }
+    ]
+  }
+}
+
+// ⚠️ 중요 설계 포인트:
+// 1. Survey.announcementId는 Unique - 공지사항당 설문 1개
+// 2. Announcement 삭제 시 Survey도 CASCADE 삭제
+// 3. 설문 권한은 Announcement.isPublic/permission*Ids를 따름
+// 4. 질문 타입별 응답은 전용 테이블에 저장 (survey_response_*)
+
+// 설문 응답 제출:
+POST /admin/surveys/:surveyId/responses
+{
+  "responses": [
+    {
+      "questionId": "q1-uuid",
+      "type": "linear_scale",
+      "value": 8  // survey_response_scales 테이블에 저장
+    },
+    {
+      "questionId": "q2-uuid",
+      "type": "paragraph",
+      "value": "복지 제도 확대 필요"  // survey_response_texts 테이블에 저장
+    },
+    {
+      "questionId": "q3-uuid",
+      "type": "checkboxes",
+      "value": ["재택근무", "휴가 확대"]  // survey_response_checkboxes 테이블에 저장
+    }
+  ]
+}
+
+// 설문 완료 추적:
+// SurveyCompletion 테이블에 직원별 완료 상태 저장
+// - totalQuestions: 전체 질문 수
+// - answeredQuestions: 응답한 질문 수
+// - isCompleted: totalQuestions === answeredQuestions
+// - completedAt: 완료 일시
+
+// 미답변자 알림:
+POST /admin/announcements/:id/notifications/unanswered
+// → SurveyCompletion에서 isCompleted=false인 직원 조회 후 알림 발송
+```
+
+**지원하는 질문 타입 (9가지)**:
+```typescript
+enum InqueryType {
+  SHORT_ANSWER = 'short_answer',      // 단답형
+  PARAGRAPH = 'paragraph',            // 장문형
+  MULTIPLE_CHOICE = 'multiple_choice', // 객관식 (단일 선택)
+  DROPDOWN = 'dropdown',              // 드롭다운
+  CHECKBOXES = 'checkboxes',          // 체크박스 (다중 선택)
+  FILE_UPLOAD = 'file_upload',        // 파일 업로드
+  DATETIME = 'datetime',              // 날짜/시간
+  LINEAR_SCALE = 'linear_scale',      // 선형 척도 (1-10)
+  GRID_SCALE = 'grid_scale',          // 그리드 척도
+}
 ```
 </details>
 
@@ -355,14 +456,56 @@ snapshotPermissions: {
 **주요 특징**:
 - ✅ **Optional 1:1**: 공지사항당 설문 0개 또는 1개
 - ✅ **Unique FK**: `announcementId` (유니크 제약)
-- ✅ **CASCADE 삭제**: Announcement 삭제 시 Survey도 삭제
-- ✅ **독립적인 기간**: `startDate`, `endDate` (공지사항과 별도)
-- ✅ **Question Cascade**: Survey 삭제 시 SurveyQuestion도 삭제
+- ✅ **CASCADE 삭제**: Announcement 삭제 시 Survey/질문/응답 모두 삭제
+- ✅ **독립적인 기간**: `startDate`, `endDate` (공지사항과 별도 설정 가능)
+- ✅ **권한 상속**: 설문 권한은 Announcement의 `isPublic`/`permission*Ids`를 따름
+- ✅ **Question Cascade**: Survey 삭제 시 SurveyQuestion도 CASCADE 삭제
 
-**설문 구조**:
-- Survey (1) → SurveyQuestion (N)
-- Survey (1) → SurveyCompletion (N)
-- 다양한 질문 타입: text, choice, checkbox, scale, grid, file, datetime
+**설문 구조 (4개 핵심 엔티티)**:
+```
+Survey (설문조사)
+ ├─ SurveyQuestion (질문) - 1:N, CASCADE
+ │   ├─ type: InqueryType (9가지 타입)
+ │   └─ form: JSONB (타입별 옵션)
+ ├─ SurveyCompletion (완료 추적) - 1:N
+ │   ├─ UK: (surveyId, employeeId)
+ │   └─ isCompleted = totalQuestions === answeredQuestions
+ └─ SurveyResponse* (응답) - 타입별 전용 테이블
+     ├─ SurveyResponseText (단답/장문)
+     ├─ SurveyResponseChoice (객관식)
+     ├─ SurveyResponseCheckbox (다중선택)
+     ├─ SurveyResponseScale (척도)
+     ├─ SurveyResponseGrid (그리드)
+     ├─ SurveyResponseDatetime (날짜/시간)
+     └─ SurveyResponseFile (파일 업로드)
+```
+
+**질문 타입별 form JSONB 구조**:
+```typescript
+// multiple_choice, dropdown, checkboxes:
+form: { options: ["옵션1", "옵션2", "옵션3"] }
+
+// linear_scale:
+form: { minScale: 1, maxScale: 10 }
+
+// grid_scale:
+form: {
+  rows: ["항목1", "항목2"],
+  columns: ["매우 나쁨", "나쁨", "보통", "좋음", "매우 좋음"]
+}
+
+// file_upload:
+form: {
+  allowedFileTypes: ["pdf", "docx", "xlsx"],
+  maxFileSize: 10485760  // 10MB in bytes
+}
+```
+
+**응답 추적 메커니즘**:
+1. **질문별 응답**: 각 질문 타입에 맞는 `survey_response_*` 테이블에 저장
+2. **완료 추적**: `SurveyCompletion`에 직원별 진행 상황 기록
+3. **UK 제약**: `(questionId, employeeId)` - 직원당 질문별 1개 응답만
+4. **미답변자 조회**: `isCompleted=false`인 직원 목록 조회 가능
 
 #### 2.2.5 Category & CategoryMapping - 통합 카테고리
 
@@ -388,8 +531,8 @@ snapshotPermissions: {
 | **6. 권한 기반 접근 제어** | Announcement<br>외부 SSO | isPublic, permission*Ids (JSONB) | SELECT (조건부 필터링)<br>JSONB 쿼리 | ✅ **완벽** - JSONB로 유연한 권한 관리 |
 | **7. 읽음 표시 추적** | AnnouncementRead | announcementId, employeeId, readAt | INSERT (Lazy Creation)<br>SELECT (미열람자 조회) | ✅ **완벽** - Lazy Creation으로 효율적 |
 | **8. 권한 무효화 추적** | AnnouncementPermissionLog | invalidDepartments, snapshotPermissions, action | INSERT (DETECTED)<br>UPDATE (RESOLVED) | ✅ **완벽** - 영구 보관, 스냅샷 저장 |
-| **9. 설문조사 연동** | Survey<br>SurveyQuestion<br>SurveyCompletion | announcementId (FK, UK), title, questions | INSERT (Survey + Questions)<br>CASCADE DELETE | ✅ **완벽** - 1:1 관계, CASCADE 지원 |
-| **10. 푸시 알림 전송** | Announcement<br>AnnouncementRead<br>Survey | permission*Ids, reads, completions | SELECT (권한 기반 대상 조회)<br>SELECT (미열람/미답변 조회) | ✅ **완벽** - 복합 쿼리로 대상 필터링 |
+| **9. 설문조사 연동** | Survey<br>SurveyQuestion<br>SurveyCompletion<br>SurveyResponse* | announcementId (FK, UK)<br>type (InqueryType)<br>form (JSONB)<br>isCompleted | INSERT (Survey + Questions)<br>INSERT (Responses)<br>UPDATE (Completion)<br>CASCADE DELETE | ✅ **완벽** - 1:1 관계, 9가지 질문 타입, 타입별 응답 테이블, CASCADE 지원 |
+| **10. 푸시 알림 전송** | Announcement<br>AnnouncementRead<br>SurveyCompletion | permission*Ids<br>readAt<br>isCompleted | SELECT (권한 기반 대상 조회)<br>LEFT JOIN (미열람자 필터)<br>LEFT JOIN (미답변자 필터) | ✅ **완벽** - 권한/읽음/설문 완료 상태별 세밀한 타겟팅 |
 
 ### 3.2 상세 데이터 흐름 (접기/펴기)
 
@@ -596,7 +739,7 @@ WHERE announcement_id = 'announcement-uuid'
 | ✅ **권한 무효화 추적** | SSO 연동, 비활성화된 권한 자동 감지 및 로그 생성 | `AnnouncementPermissionLog` | 보안 강화, 감사 로그 |
 | ✅ **상단 고정 기능** | `isFixed` 필드로 중요 공지사항 상단 고정 | `isFixed` | UX 개선, 중요 정보 전달 |
 | ✅ **필독 표시** | `mustRead` 필드로 필독 여부 구분 | `mustRead` | 직원 인지도 향상 |
-| ✅ **설문조사 연동** | 공지사항당 설문 1개, CASCADE 삭제 | `Survey` (1:1) | 피드백 수집, 응답률 향상 |
+| ✅ **설문조사 통합** | 공지사항당 설문 1개, 9가지 질문 타입, 타입별 응답 테이블, 완료 추적, CASCADE 삭제 | `Survey` (1:1)<br>`SurveyQuestion` (1:N)<br>`SurveyCompletion` (1:N)<br>`SurveyResponse*` (타입별) | 피드백 수집, 응답률 향상, 체계적인 설문 관리 |
 | ✅ **유연한 파일 관리** | JSONB attachments로 메타데이터 저장 | `attachments` | 다양한 파일 타입 지원 |
 | ✅ **통합 카테고리** | 단일 테이블로 모든 도메인 카테고리 관리 | `Category`, `CategoryMapping` | 관리 단순화, 확장 용이 |
 | ✅ **공개 기간 제어** | releasedAt/expiredAt으로 자동 공개/종료 | `releasedAt`, `expiredAt` | 자동화, 관리 부담 감소 |
@@ -629,7 +772,7 @@ WHERE announcement_id = 'announcement-uuid'
 2. ✅ **Lazy Creation 패턴**: 직원이 읽을 때만 레코드 생성, 효율적인 스토리지 사용
 3. ✅ **권한 무효화 추적**: SSO 연동, 비활성화된 권한 자동 감지 및 로그 생성 (영구 보관)
 4. ✅ **상단 고정 + 필독**: isFixed, mustRead 필드로 중요 공지사항 강조
-5. ✅ **설문조사 연동**: 공지사항당 설문 1개, CASCADE 삭제, 독립적인 기간 설정
+5. ✅ **설문조사 통합**: 공지사항당 설문 1개 (UK: announcementId), 9가지 질문 타입, 타입별 응답 테이블, 완료 추적, CASCADE 삭제
 6. ✅ **유연한 파일 관리**: JSONB attachments로 메타데이터 저장 (S3 URL)
 7. ✅ **통합 카테고리**: 단일 테이블로 모든 도메인 카테고리 관리
 8. ✅ **데이터 무결성**: UK 제약조건, Cascade 옵션, Soft Delete, Optimistic Locking
@@ -645,7 +788,13 @@ WHERE announcement_id = 'announcement-uuid'
 - ⚠️ **필독 표시**: mustRead 필드로 필독 여부 구분
 - 📅 **공개 기간**: releasedAt/expiredAt으로 자동 공개/종료
 - 🔒 **비공개 수정**: 공개된 공지사항은 수정 불가 (비즈니스 로직)
-- 📊 **설문조사**: 공지사항당 설문 1개, CASCADE 삭제
+- 📊 **설문조사 통합**: 
+  - 공지사항당 설문 1개 (UK: announcementId)
+  - 9가지 질문 타입 (단답/장문/객관식/체크박스/드롭다운/척도/그리드/날짜/파일)
+  - 타입별 전용 응답 테이블 (survey_response_text, survey_response_choice, 등)
+  - 완료 추적 (SurveyCompletion: isCompleted = totalQuestions === answeredQuestions)
+  - CASCADE 삭제 (공지사항 삭제 시 설문/질문/응답 모두 삭제)
+  - 권한 상속 (설문 권한은 Announcement의 isPublic/permission*Ids를 따름)
 
 **개선 제안**:
 1. 💡 파일 이력 추적이 필요하다면 FileHistory 테이블 고려

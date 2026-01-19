@@ -44,13 +44,13 @@
 
 | 시나리오 | API 엔드포인트 | 관련 엔티티 | 주요 필드/기능 | 데이터 흐름 |
 |---------|---------------|------------|---------------|------------|
-| **1. 브로슈어 생성<br>(다국어)** | `POST /admin/brochures` | • Brochure<br>• BrochureTranslation<br>• Language | • `Brochure.attachments` (JSONB)<br>• `Brochure.isPublic` (기본값: true)<br>• `BrochureTranslation.title`<br>• `BrochureTranslation.description`<br>• `BrochureTranslation.isSynced` (기본값: true) | 1. Brochure 생성<br>2. Translation 생성 (ko, en, ...)<br>3. 파일 S3 업로드<br>4. attachments JSONB 저장<br>5. isSynced=true로 생성 (동기화 대상) |
-| **2. 브로슈어 수정<br>(번역 및 파일)** | `PUT /admin/brochures/:id` | • Brochure<br>• BrochureTranslation | • Translation 업데이트<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced=false 처리** | 1. 기존 Translation 업데이트<br>2. **isSynced=false 설정 (동기화 종료)**<br>3. 기존 파일 S3 삭제<br>4. 새 파일 S3 업로드<br>5. attachments 교체 |
+| **1. 브로슈어 생성<br>(다국어)** | `POST /admin/brochures` | • Brochure<br>• BrochureTranslation<br>• Language | • `Brochure.attachments` (JSONB)<br>• `Brochure.isPublic` (기본값: true)<br>• `BrochureTranslation.title`<br>• `BrochureTranslation.description`<br>• `BrochureTranslation.isSynced` (입력: false, 미입력: true) | 1. Brochure 생성<br>2. 입력 언어 Translation 생성 (isSynced=false)<br>3. 미입력 언어 Translation 생성 (isSynced=true)<br>4. 파일 S3 업로드<br>5. attachments JSONB 저장 |
+| **2. 브로슈어 수정<br>(번역 및 파일)** | `PUT /admin/brochures/:id` | • Brochure<br>• BrochureTranslation | • Translation 업데이트<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced=false 처리** | 1. 기존 Translation 업데이트<br>2. **isSynced=false 설정 (동기화 중단)**<br>3. 기존 파일 S3 삭제<br>4. 새 파일 S3 업로드<br>5. attachments 교체 |
 | **3. 공개 상태 관리** | `PATCH /admin/brochures/:id/public` | • Brochure | • `isPublic` (boolean)<br>• 즉시 공개/비공개 제어<br>• 복잡한 상태 관리 없음 | 1. `isPublic` 필드만 업데이트<br>2. 즉시 반영 (워크플로우 없음) |
 | **4. 카테고리 관리** | `POST /admin/brochures/categories`<br>`PATCH /admin/brochures/:id/categories` | • Category<br>• CategoryMapping<br>• Brochure | • `Category.entityType` = 'brochure'<br>• `CategoryMapping` (다대다)<br>• UK: (entityId, categoryId) | 1. Category 생성<br>2. CategoryMapping 추가/삭제<br>3. 브로슈어 ↔ 카테고리 연결 |
 | **5. 정렬 순서 관리** | `PUT /admin/brochures/batch-order` | • Brochure | • `order` (int)<br>• 배치 업데이트 지원 | 1. 여러 브로슈어의 order 값 일괄 변경<br>2. 트랜잭션으로 일관성 보장 |
 | **6. 다국어 조회<br>(Fallback)** | `GET /admin/brochures/:id?lang=en` | • Brochure<br>• BrochureTranslation<br>• Language | • Fallback 순서:<br>&nbsp;&nbsp;1. 요청 언어 (en)<br>&nbsp;&nbsp;2. 한국어 (ko)<br>&nbsp;&nbsp;3. 영어 (en)<br>&nbsp;&nbsp;4. 첫 번째 번역 | 1. Language.code로 요청 언어 조회<br>2. 없으면 ko 조회<br>3. 없으면 첫 번째 번역 조회 |
-| **7. 번역 자동 동기화<br>(Scheduler)** | `@Cron('* * * * *')`<br>(1분마다 자동 실행) | • BrochureTranslation<br>• Language | • `isSynced` 필드 기반 동기화<br>• 한국어 원본 → 타 언어 자동 복사<br>• **수정 시 isSynced=false로 동기화 종료** | 1. 한국어(ko) 조회<br>2. 모든 브로슈어 순회<br>3. 한국어 원본 번역 조회<br>4. isSynced=true인 타 언어 조회<br>5. title/description 자동 복사<br>6. **수정 시 isSynced=false 처리로 제외** |
+| **7. 번역 자동 동기화<br>(Scheduler)** | `@Cron('* * * * *')`<br>(1분마다 자동 실행) | • BrochureTranslation<br>• Language | • `isSynced` 필드 기반 동기화<br>• 한국어 원본 → 타 언어 자동 복사<br>• **생성 시: 입력 언어 false, 미입력 true** | 1. 한국어(ko) 조회<br>2. 모든 브로슈어 순회<br>3. 한국어 원본 번역 조회<br>4. isSynced=true인 타 언어 조회<br>5. title/description 자동 복사<br>6. **생성 시 입력 언어는 false, 미입력은 true** |
 
 ### 1.3 상세 시나리오 (코드 예시)
 
@@ -95,14 +95,15 @@ PUT /admin/brochures/:id
   "files": [File, ...]  // 새로운 파일로 완전 교체
 }
 
-// ⚠️ 중요: 브로슈어 수정 시 isSynced 처리
-// - 한국어(ko) 수정: 다른 언어들의 isSynced는 유지 (계속 동기화됨)
-// - 다른 언어 수정: 해당 언어의 isSynced=false (동기화 종료, 수동 관리)
+// ⚠️ 중요: 브로슈어 isSynced 전략
+// - 생성 시 입력 언어 (ko, en): isSynced=false (수동 관리, 품질 유지)
+// - 생성 시 미입력 언어 (ja, zh): isSynced=true (자동 동기화, 즉시 다국어 지원)
+// - 수정 시: isSynced=false로 변경 (동기화 중단, 수동 관리로 전환)
 //
 // 예시:
-// 1. 생성 시: ko, en, ja 모두 isSynced=true (스케줄러가 자동 동기화)
-// 2. en만 수정: en의 isSynced=false (en은 더 이상 ko 따라가지 않음)
-// 3. ko 수정: ja는 계속 isSynced=true (ja는 계속 ko 따라감)
+// 1. 생성 시 ko, en 입력: ko/en은 isSynced=false, ja/zh는 isSynced=true
+// 2. ko 수정: ko는 여전히 isSynced=false, ja/zh는 isSynced=true이므로 1분 후 자동 동기화
+// 3. ja 수정 (원래 true): ja를 직접 수정하면 isSynced=false로 변경 (더 이상 ko 따라가지 않음)
 ```
 </details>
 
@@ -256,7 +257,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title "제목 (최대 500자)"
         text description "nullable - 간단한 설명"
-        boolean isSynced "동기화 여부 (기본값: true)"
+        boolean isSynced "동기화 여부 (입력: false, 미입력: true)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -350,7 +351,7 @@ attachments: [
 - ✅ `languageId` (uuid) - Language FK
 - ✅ `title` (varchar 500) - 번역된 제목
 - ✅ `description` (text nullable) - 번역된 설명
-- ✅ `isSynced` (boolean) - 원본과 동기화 여부 (기본값: true)
+- ✅ `isSynced` (boolean) - 원본과 동기화 여부 (생성 시 입력: false, 미입력: true)
 
 **유니크 제약조건**:
 - ✅ `(brochureId, languageId)` - 하나의 브로슈어는 같은 언어로 중복 번역 불가
@@ -385,7 +386,7 @@ attachments: [
 
 | 시나리오 | 관련 테이블 | 사용 필드 | SQL 작업 | 검증 결과 | 비고 |
 |---------|-----------|---------|----------|-----------|------|
-| **1. 브로슈어 생성** | • Brochure<br>• BrochureTranslation<br>• Language | • `attachments` (JSONB)<br>• `isPublic` (기본값: true)<br>• `title`, `description`<br>• `isSynced` (기본값: true) | INSERT (3개 테이블) | ✅ **통과** | 파일명으로 언어 구분<br>(예: `brochure_ko.pdf`)<br>isSynced=true (동기화 대상) |
+| **1. 브로슈어 생성** | • Brochure<br>• BrochureTranslation<br>• Language | • `attachments` (JSONB)<br>• `isPublic` (기본값: true)<br>• `title`, `description`<br>• `isSynced` (입력: false, 미입력: true) | INSERT (3개 테이블) | ✅ **통과** | 파일명으로 언어 구분<br>(예: `brochure_ko.pdf`)<br>입력: 수동, 미입력: 자동 |
 | **2. 브로슈어 수정** | • Brochure<br>• BrochureTranslation | • `attachments` (교체)<br>• `title`, `description` (업데이트)<br>• **`isSynced` (false 처리)** | UPDATE (2개 테이블) | ✅ **통과** | CASCADE 옵션으로<br>안전한 번역 관리<br>**수정 시 isSynced=false** |
 | **3. 공개 상태 관리** | • Brochure | • `isPublic` (boolean) | UPDATE (1개 필드) | ✅ **통과** | 복잡한 상태 관리 없음<br>(ContentStatus 제거됨) |
 | **4. 카테고리 관리** | • Category<br>• CategoryMapping | • `entityType` = 'brochure'<br>• UK: (entityId, categoryId) | INSERT, DELETE (매핑) | ✅ **통과** | 다대다 관계 정규화<br>중복 방지 |
@@ -700,7 +701,7 @@ PUT /admin/brochures/:id {
 - ✅ 한국어(ko)를 원본으로 사용
 - ✅ 1분마다 자동 동기화 (CronExpression.EVERY_MINUTE)
 - ✅ 수정 시 `isSynced=false`로 설정하여 동기화 제외
-- ✅ 한국어 수정 시에는 타 언어의 `isSynced` 유지 (계속 동기화)
+- ✅ 번역 수정 시 `isSynced=false`로 변경 (동기화 중단, 수동 관리로 전환)
 - ✅ 특정 언어만 수정 시 해당 언어만 `isSynced=false` (다른 언어는 계속 동기화)
 
 **성능 고려사항**:

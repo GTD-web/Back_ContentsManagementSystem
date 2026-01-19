@@ -42,7 +42,7 @@
 | 시나리오 | API 엔드포인트 | 관련 엔티티 | 주요 필드/기능 | 데이터 흐름 |
 |---------|---------------|------------|---------------|------------|
 | **1. 주주총회 생성<br>(다국어, 의결 결과)** | `POST /admin/shareholders-meetings` | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation<br>• Language | • `ShareholdersMeeting.location`<br>• `ShareholdersMeeting.meetingDate`<br>• `ShareholdersMeeting.attachments` (JSONB)<br>• `ShareholdersMeetingTranslation.title`<br>• `ShareholdersMeetingTranslation.isSynced` (입력 언어: false, 미입력 언어: true)<br>• `VoteResult.agendaNumber`<br>• `VoteResult.totalVote`, `yesVote`, `noVote`<br>• `VoteResultTranslation.title`<br>• `VoteResultTranslation.isSynced` (입력 언어: false, 미입력 언어: true) | 1. ShareholdersMeeting 생성<br>2. 입력 언어 Translation 생성 (isSynced=false)<br>3. 미입력 언어 Translation 생성 (isSynced=true)<br>4. VoteResult 생성 (안건)<br>5. 입력 언어 VoteResultTranslation 생성 (isSynced=false)<br>6. 미입력 언어 VoteResultTranslation 생성 (isSynced=true)<br>7. 파일 S3 업로드<br>8. attachments JSONB 저장 |
-| **2. 주주총회 수정<br>(번역, 의결 결과 및 파일)** | `PUT /admin/shareholders-meetings/:id` | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation | • Translation 업데이트<br>• VoteResult 업데이트/생성/삭제<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced 유지 (변경 없음)** | 1. 기존 Translation 업데이트<br>2. **isSynced 유지 (변경하지 않음)**<br>3. VoteResult 관리 (id 있으면 업데이트, 없으면 생성)<br>4. 기존 파일 S3 삭제<br>5. 새 파일 S3 업로드<br>6. attachments 교체 |
+| **2. 주주총회 수정<br>(번역, 의결 결과 및 파일)** | `PUT /admin/shareholders-meetings/:id` | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation | • Translation 업데이트<br>• VoteResult 업데이트/생성/삭제<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced=false 처리** | 1. 기존 Translation 업데이트<br>2. **isSynced=false 설정 (동기화 중단)**<br>3. VoteResult 관리 (id 있으면 업데이트, 없으면 생성)<br>4. 기존 파일 S3 삭제<br>5. 새 파일 S3 업로드<br>6. attachments 교체 |
 | **3. 공개 상태 관리** | `PATCH /admin/shareholders-meetings/:id/public` | • ShareholdersMeeting | • `isPublic` (boolean)<br>• 즉시 공개/비공개 제어<br>• 복잡한 상태 관리 없음 | 1. `isPublic` 필드만 업데이트<br>2. 즉시 반영 (워크플로우 없음) |
 | **4. 카테고리 관리** | `POST /admin/shareholders-meetings/categories`<br>`PATCH /admin/shareholders-meetings/:id/categories` | • Category<br>• CategoryMapping<br>• ShareholdersMeeting | • `Category.entityType` = 'shareholders_meeting'<br>• `CategoryMapping` (다대다)<br>• UK: (entityId, categoryId) | 1. Category 생성<br>2. CategoryMapping 추가/삭제<br>3. 주주총회 ↔ 카테고리 연결 |
 | **5. 정렬 순서 관리** | `PUT /admin/shareholders-meetings/batch-order` | • ShareholdersMeeting | • `order` (int)<br>• 배치 업데이트 지원 | 1. 여러 주주총회의 order 값 일괄 변경<br>2. 트랜잭션으로 일관성 보장 |
@@ -145,9 +145,9 @@ PUT /admin/shareholders-meetings/:id
 }
 
 // ⚠️ 중요: 주주총회 수정 시 isSynced 처리
-// - isSynced는 수정 시에도 유지됨 (변경하지 않음)
-// - 자동 동기화 대상(isSynced=true)은 계속 동기화됨
-// - 수동 관리 대상(isSynced=false)은 계속 수동 관리됨
+// - 수정 시: isSynced=false로 변경 (동기화 중단, 수동 관리로 전환)
+// - isSynced=true였던 번역을 수정 → false로 변경 (더 이상 자동 동기화 안됨)
+// - isSynced=false였던 번역을 수정 → 여전히 false 유지
 //
 // ⚠️ 의결 결과(안건) 관리 방식:
 // - id가 있는 안건: 기존 안건 업데이트
@@ -576,7 +576,7 @@ attachments: [
 | 시나리오 | 관련 테이블 | 사용 필드 | SQL 작업 | 검증 결과 | 비고 |
 |---------|-----------|---------|----------|-----------|------|
 | **1. 주주총회 생성** | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation<br>• Language | • `location`, `meetingDate`<br>• `attachments` (JSONB)<br>• `isPublic` (기본값: true)<br>• `title`, `description`, `content`<br>• `isSynced` (입력 언어: false, 미입력: true)<br>• VoteResult 필드들 | INSERT (4개 테이블) | ✅ **통과** | 다국어 지원<br>의결 결과 포함<br>6가지 파일 타입<br>입력 언어: 수동, 미입력: 자동 동기화 |
-| **2. 주주총회 수정** | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation | • Translation 업데이트<br>• VoteResult 관리<br>• `attachments` (교체)<br>• **`isSynced` (유지)** | UPDATE (4개 테이블) | ✅ **통과** | CASCADE 옵션<br>안전한 번역 관리<br>**수정 시 isSynced 유지**<br>의결 결과 동적 관리 |
+| **2. 주주총회 수정** | • ShareholdersMeeting<br>• ShareholdersMeetingTranslation<br>• VoteResult<br>• VoteResultTranslation | • Translation 업데이트<br>• VoteResult 관리<br>• `attachments` (교체)<br>• **`isSynced` (false 처리)** | UPDATE (4개 테이블) | ✅ **통과** | CASCADE 옵션<br>안전한 번역 관리<br>**수정 시 isSynced=false**<br>의결 결과 동적 관리 |
 | **3. 공개 상태 관리** | • ShareholdersMeeting | • `isPublic` (boolean) | UPDATE (1개 필드) | ✅ **통과** | 복잡한 상태 관리 없음<br>(ContentStatus 제거됨) |
 | **4. 카테고리 관리** | • Category<br>• CategoryMapping | • `entityType` = 'shareholders_meeting'<br>• UK: (entityId, categoryId) | INSERT, DELETE (매핑) | ✅ **통과** | 다대다 관계 정규화<br>중복 방지 |
 | **5. 정렬 순서 관리** | • ShareholdersMeeting | • `order` (int) | UPDATE (배치) | ✅ **통과** | 트랜잭션으로<br>일괄 처리 가능 |
@@ -709,7 +709,7 @@ VALUES (
 UPDATE shareholders_meeting_translations
 SET title = '2024년 정기 주주총회 (수정)', 
     description = '최신 정보로 업데이트되었습니다.',
-    -- ⚠️ 주의: is_synced는 수정하지 않음 (기존 값 유지)
+    is_synced = false,  -- ⚠️ 수정 시 동기화 중단
     updated_at = NOW()
 WHERE shareholders_meeting_id = 'meeting-uuid' AND language_id = 'ko-uuid';
 
@@ -749,7 +749,7 @@ WHERE shareholders_meeting_id = 'meeting-uuid'
 - ✅ VoteResult 동적 관리 (생성/수정/삭제)
 - ✅ attachments JSONB 필드로 파일 완전 교체 지원
 - ✅ Cascade 옵션으로 안전한 번역 관리
-- ✅ **isSynced는 수정 시에도 유지됨 (변경하지 않음)**
+- ✅ **수정 시 isSynced=false로 변경 (동기화 중단)**
 </details>
 
 <details>
@@ -897,7 +897,7 @@ POST /admin/shareholders-meetings {
 // - 필요 시 관리자가 isSynced=true로 변경하여 동기화 활성화 가능
 
 
-// [시나리오 B: 한국어 수정 - isSynced=true 언어들 자동 동기화]
+// [시나리오 B: 한국어 수정 - isSynced=false로 변경, true 언어들은 자동 동기화]
 PUT /admin/shareholders-meetings/:id { 
   translations: [
     { id: "ko-trans-uuid", languageId: "ko-uuid", title: "2024년 제28기 정기 주주총회" }
@@ -905,40 +905,46 @@ PUT /admin/shareholders-meetings/:id {
 }
 
 // 수정 직후:
-// - ko: "2024년 제28기 정기 주주총회", isSynced=false (수정됨, 유지)
+// - ko: "2024년 제28기 정기 주주총회", isSynced=false (수정 시 false로 변경 ✅)
 // - en: "2024 Annual Meeting", isSynced=false (기존 유지)
 // - ja: "2024년 정기 주주총회", isSynced=true (아직 구 버전)
 // - zh: "2024년 정기 주주총회", isSynced=true (아직 구 버전)
 
 // 1분 후 스케줄러 실행:
-// - ko: "2024년 제28기 정기 주주총회", isSynced=false (원본, 유지)
+// - ko: "2024년 제28기 정기 주주총회", isSynced=false (원본이지만 false이므로 기준으로 사용됨)
 // - en: "2024 Annual Meeting", isSynced=false (수동 관리, 동기화 안됨)
 // - ja: "2024년 제28기 정기 주주총회", isSynced=true (자동 동기화됨 ✅)
 // - zh: "2024년 제28기 정기 주주총회", isSynced=true (자동 동기화됨 ✅)
 
+// ⚠️ 핵심: 한국어 원본을 수정해도 isSynced=false로 변경됨
+// → 하지만 스케줄러는 한국어를 기준으로 isSynced=true 언어들을 동기화함
 
-// [시나리오 C: 영어 수정 - isSynced는 유지됨]
+
+// [시나리오 C: 일본어 수정 (원래 isSynced=true) - false로 변경됨]
 PUT /admin/shareholders-meetings/:id { 
   translations: [
-    { id: "en-trans-uuid", languageId: "en-uuid", title: "2024 28th Annual Meeting" }
+    { id: "ja-trans-uuid", languageId: "ja-uuid", title: "2024年第28期定期株主総会" }
   ]
 }
 
 // 수정 결과:
 // - ko: "2024년 제28기 정기 주주총회", isSynced=false (기존 유지)
-// - en: "2024 28th Annual Meeting", isSynced=false (수정됨, 유지)
-// - ja: "2024년 제28기 정기 주주총회", isSynced=true (기존 유지, 계속 동기화)
+// - en: "2024 Annual Meeting", isSynced=false (기존 유지)
+// - ja: "2024年第28期定期株主総会", isSynced=false (수정 시 false로 변경 ✅, 더 이상 자동 동기화 안됨)
 // - zh: "2024년 제28기 정기 주주총회", isSynced=true (기존 유지, 계속 동기화)
+
+// ⚠️ 핵심: ja를 직접 수정했으므로 isSynced=false로 변경
+// → 앞으로 ko를 수정해도 ja는 더 이상 자동 동기화되지 않음 (수동 관리)
 ```
 
 **검증 포인트**:
 - ✅ `isSynced` 필드로 동기화 대상 구분
 - ✅ **생성 시: 입력 언어는 false (수동 관리), 미입력 언어는 true (자동 동기화)**
+- ✅ **수정 시: isSynced=false로 변경 (동기화 중단, 수동 관리로 전환)**
 - ✅ 한국어(ko)를 원본으로 사용
 - ✅ 1분마다 자동 동기화 (CronExpression.EVERY_MINUTE)
 - ✅ 주주총회 번역 + 의결 결과 번역 모두 동기화
 - ✅ `isSynced=true`인 번역만 한국어 원본과 자동 동기화
-- ✅ 수정 시 isSynced는 유지됨 (변경하지 않음)
 
 **성능 고려사항**:
 - 1분마다 실행되므로 주주총회 수가 많아도 부하 분산
@@ -955,7 +961,7 @@ PUT /admin/shareholders-meetings/:id {
 | 시나리오 | 검증 결과 | 관련 엔티티 | 핵심 기능 | 비고 |
 |---------|----------|------------|----------|------|
 | 주주총회 생성 (다국어, 의결 결과) | ✅ **통과** | ShareholdersMeeting<br>ShareholdersMeetingTranslation<br>VoteResult<br>VoteResultTranslation<br>Language | • 다국어 번역 저장<br>• 의결 결과 관리<br>• JSONB 첨부파일<br>• S3 업로드<br>• **입력 언어: false, 미입력: true** | 6가지 파일 타입 지원<br>안건별 의결 결과<br>**입력 언어: 수동, 미입력: 자동** |
-| 주주총회 수정 (번역, 의결 결과 및 파일) | ✅ **통과** | ShareholdersMeeting<br>ShareholdersMeetingTranslation<br>VoteResult<br>VoteResultTranslation | • 번역 업데이트<br>• VoteResult 동적 관리<br>• attachments 교체<br>• CASCADE 관계<br>• **isSynced 유지** | 의결 결과 생성/수정/삭제<br>기존 파일 삭제 → 새 파일 업로드<br>**수정 시 isSynced 유지** |
+| 주주총회 수정 (번역, 의결 결과 및 파일) | ✅ **통과** | ShareholdersMeeting<br>ShareholdersMeetingTranslation<br>VoteResult<br>VoteResultTranslation | • 번역 업데이트<br>• VoteResult 동적 관리<br>• attachments 교체<br>• CASCADE 관계<br>• **isSynced=false 처리** | 의결 결과 생성/수정/삭제<br>기존 파일 삭제 → 새 파일 업로드<br>**수정 시 isSynced=false** |
 | 공개 상태 관리 | ✅ **통과** | ShareholdersMeeting | • isPublic 토글<br>• 즉시 반영<br>• 워크플로우 없음 | ContentStatus 제거됨 |
 | 카테고리 관리 | ✅ **통과** | Category<br>CategoryMapping | • 통합 카테고리<br>• 다대다 관계<br>• 중복 방지 (UK) | entityType = 'shareholders_meeting' |
 | 정렬 순서 관리 | ✅ **통과** | ShareholdersMeeting | • order 필드<br>• 배치 업데이트<br>• 트랜잭션 처리 | CASE 문으로 효율적 처리 |
@@ -1012,10 +1018,10 @@ PUT /admin/shareholders-meetings/:id {
 **핵심 동기화 메커니즘**:
 - 🔄 **isSynced 필드**: 번역 동기화 대상 구분 (true=자동 동기화, false=수동 관리)
 - 📋 **생성 시 전략**: 입력 언어는 false (수동 관리, 품질 유지), 미입력 언어는 true (자동 동기화, 기본 번역 제공)
+- 🔒 **수정 시 전략**: 번역 수정 시 isSynced=false로 변경 (동기화 중단, 수동 관리로 전환)
 - ⏱️ **1분마다 자동 실행**: CronExpression.EVERY_MINUTE으로 한국어 원본 변경 사항 자동 전파
 - 🎯 **스마트 동기화**: isSynced=true인 번역만 한국어 원본과 자동 동기화
-- 📊 **최적의 균형**: 입력 번역은 품질 유지, 미입력 번역은 자동 제공으로 관리 효율성 극대화
-- 🔒 **수정 시 유지**: isSynced는 수정 시에도 유지됨 (변경하지 않음)
+- 📊 **최적의 균형**: 입력/수정 번역은 품질 유지, 미입력 번역은 자동 제공으로 관리 효율성 극대화
 
 **의결 결과 관리 특징**:
 - 📊 **VoteResult 엔티티**: 안건별 의결 결과 체계적 관리

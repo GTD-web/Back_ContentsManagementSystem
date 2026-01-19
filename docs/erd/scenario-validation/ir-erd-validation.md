@@ -41,13 +41,13 @@
 
 | 시나리오 | API 엔드포인트 | 관련 엔티티 | 주요 필드/기능 | 데이터 흐름 |
 |---------|---------------|------------|---------------|------------|
-| **1. IR 생성<br>(다국어)** | `POST /admin/irs` | • IR<br>• IRTranslation<br>• Language | • `IR.attachments` (JSONB)<br>• `IR.isPublic` (기본값: true)<br>• `IRTranslation.title`<br>• `IRTranslation.description`<br>• `IRTranslation.isSynced` (기본값: true) | 1. IR 생성<br>2. Translation 생성 (ko, en, ...)<br>3. 파일 S3 업로드<br>4. attachments JSONB 저장<br>5. isSynced=true로 생성 (동기화 대상) |
-| **2. IR 수정<br>(번역 및 파일)** | `PUT /admin/irs/:id` | • IR<br>• IRTranslation | • Translation 업데이트<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced=false 처리** | 1. 기존 Translation 업데이트<br>2. **isSynced=false 설정 (동기화 종료)**<br>3. 기존 파일 S3 삭제<br>4. 새 파일 S3 업로드<br>5. attachments 교체 |
+| **1. IR 생성<br>(다국어)** | `POST /admin/irs` | • IR<br>• IRTranslation<br>• Language | • `IR.attachments` (JSONB)<br>• `IR.isPublic` (기본값: true)<br>• `IRTranslation.title`<br>• `IRTranslation.description`<br>• `IRTranslation.isSynced` (입력 언어: false, 미입력: true) | 1. IR 생성<br>2. 입력 언어 Translation 생성 (isSynced=false)<br>3. 미입력 언어 Translation 생성 (isSynced=true)<br>4. 파일 S3 업로드<br>5. attachments JSONB 저장 |
+| **2. IR 수정<br>(번역 및 파일)** | `PUT /admin/irs/:id` | • IR<br>• IRTranslation | • Translation 업데이트<br>• attachments 완전 교체<br>• AWS S3 연동<br>• **isSynced=false 처리** | 1. 기존 Translation 업데이트<br>2. **isSynced=false 설정 (동기화 중단)**<br>3. 기존 파일 S3 삭제<br>4. 새 파일 S3 업로드<br>5. attachments 교체 |
 | **3. 공개 상태 관리** | `PATCH /admin/irs/:id/public` | • IR | • `isPublic` (boolean)<br>• 즉시 공개/비공개 제어<br>• 복잡한 상태 관리 없음 | 1. `isPublic` 필드만 업데이트<br>2. 즉시 반영 (워크플로우 없음) |
 | **4. 카테고리 관리** | `POST /admin/irs/categories`<br>`PATCH /admin/irs/:id/categories` | • Category<br>• CategoryMapping<br>• IR | • `Category.entityType` = 'ir'<br>• `CategoryMapping` (다대다)<br>• UK: (entityId, categoryId) | 1. Category 생성<br>2. CategoryMapping 추가/삭제<br>3. IR ↔ 카테고리 연결 |
 | **5. 정렬 순서 관리** | `PUT /admin/irs/batch-order` | • IR | • `order` (int)<br>• 배치 업데이트 지원 | 1. 여러 IR의 order 값 일괄 변경<br>2. 트랜잭션으로 일관성 보장 |
 | **6. 다국어 조회<br>(Fallback)** | `GET /admin/irs/:id?lang=en` | • IR<br>• IRTranslation<br>• Language | • Fallback 순서:<br>&nbsp;&nbsp;1. 요청 언어 (en)<br>&nbsp;&nbsp;2. 한국어 (ko)<br>&nbsp;&nbsp;3. 영어 (en)<br>&nbsp;&nbsp;4. 첫 번째 번역 | 1. Language.code로 요청 언어 조회<br>2. 없으면 ko 조회<br>3. 없으면 첫 번째 번역 조회 |
-| **7. 번역 자동 동기화<br>(Scheduler)** | `@Cron('* * * * *')`<br>(1분마다 자동 실행) | • IRTranslation<br>• Language | • `isSynced` 필드 기반 동기화<br>• 한국어 원본 → 타 언어 자동 복사<br>• **수정 시 isSynced=false로 동기화 종료** | 1. 한국어(ko) 조회<br>2. 모든 IR 순회<br>3. 한국어 원본 번역 조회<br>4. isSynced=true인 타 언어 조회<br>5. title/description 자동 복사<br>6. **수정 시 isSynced=false 처리로 제외** |
+| **7. 번역 자동 동기화<br>(Scheduler)** | `@Cron('* * * * *')`<br>(1분마다 자동 실행) | • IRTranslation<br>• Language | • `isSynced` 필드 기반 동기화<br>• 한국어 원본 → 타 언어 자동 복사<br>• **생성 시: 입력 언어 false, 미입력 true** | 1. 한국어(ko) 조회<br>2. 모든 IR 순회<br>3. 한국어 원본 번역 조회<br>4. isSynced=true인 타 언어 조회<br>5. title/description 자동 복사<br>6. **생성 시 입력 언어는 false, 미입력은 true** |
 | **8. 파일 관리** | `POST/PUT /admin/irs` | • IR | • `attachments` (JSONB)<br>• 파일 메타데이터 저장<br>• S3 URL 참조<br>• PDF/JPG/PNG/WEBP/XLSX/DOCX | 1. 파일 S3 업로드<br>2. attachments JSONB 저장<br>3. 수정 시 기존 파일 삭제 후 교체 |
 
 ### 1.3 상세 시나리오 (코드 예시)
@@ -93,14 +93,15 @@ PUT /admin/irs/:id
   "files": [File, ...]  // 새로운 파일로 완전 교체
 }
 
-// ⚠️ 중요: IR 수정 시 isSynced 처리
-// - 한국어(ko) 수정: 다른 언어들의 isSynced는 유지 (계속 동기화됨)
-// - 다른 언어 수정: 해당 언어의 isSynced=false (동기화 종료, 수동 관리)
+// ⚠️ 중요: IR isSynced 전략
+// - 생성 시 입력 언어 (ko, en): isSynced=false (수동 관리, 품질 유지)
+// - 생성 시 미입력 언어 (ja, zh): isSynced=true (자동 동기화, 즉시 다국어 지원)
+// - 수정 시: isSynced=false로 변경 (동기화 중단, 수동 관리로 전환)
 //
 // 예시:
-// 1. 생성 시: ko, en, ja 모두 isSynced=true (스케줄러가 자동 동기화)
-// 2. en만 수정: en의 isSynced=false (en은 더 이상 ko 따라가지 않음)
-// 3. ko 수정: ja는 계속 isSynced=true (ja는 계속 ko 따라감)
+// 1. 생성 시 ko, en 입력: ko/en은 isSynced=false, ja/zh는 isSynced=true
+// 2. ko 수정: ko는 여전히 isSynced=false, ja/zh는 isSynced=true이므로 1분 후 자동 동기화
+// 3. ja 수정 (원래 true): ja를 직접 수정하면 isSynced=false로 변경 (더 이상 ko 따라가지 않음)
 ```
 </details>
 
@@ -254,7 +255,7 @@ erDiagram
         uuid languageId UK "FK"
         varchar title "제목 (최대 500자)"
         text description "nullable - 간단한 설명"
-        boolean isSynced "동기화 여부 (기본값: true)"
+        boolean isSynced "동기화 여부 (입력 언어: false, 미입력: true)"
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -362,7 +363,7 @@ attachments: [
 - ✅ `languageId` (uuid) - Language FK
 - ✅ `title` (varchar 500) - 번역된 제목
 - ✅ `description` (text nullable) - 번역된 설명
-- ✅ `isSynced` (boolean) - 원본과 동기화 여부 (기본값: true)
+- ✅ `isSynced` (boolean) - 원본과 동기화 여부 (생성 시 입력 언어: false, 미입력: true)
 
 **유니크 제약조건**:
 - ✅ `(irId, languageId)` - 하나의 IR은 같은 언어로 중복 번역 불가
@@ -397,14 +398,14 @@ attachments: [
 
 | 시나리오 | 관련 테이블 | 사용 필드 | SQL 작업 | 검증 결과 | 비고 |
 |---------|-----------|---------|----------|-----------|------|
-| **1. IR 생성** | • IR<br>• IRTranslation<br>• Language | • `attachments` (JSONB)<br>• `isPublic` (기본값: true)<br>• `title`, `description`<br>• `isSynced` (기본값: true) | INSERT (3개 테이블) | ✅ **통과** | 파일명으로 언어 구분<br>(예: `report_ko.pdf`)<br>isSynced=true (동기화 대상) |
+| **1. IR 생성** | • IR<br>• IRTranslation<br>• Language | • `attachments` (JSONB)<br>• `isPublic` (기본값: true)<br>• `title`, `description`<br>• `isSynced` (입력: false, 미입력: true) | INSERT (3개 테이블) | ✅ **통과** | 파일명으로 언어 구분<br>(예: `report_ko.pdf`)<br>입력 언어: 수동, 미입력: 자동 |
 | **2. IR 수정** | • IR<br>• IRTranslation | • `attachments` (교체)<br>• `title`, `description` (업데이트)<br>• **`isSynced` (false 처리)** | UPDATE (2개 테이블) | ✅ **통과** | CASCADE 옵션으로<br>안전한 번역 관리<br>**수정 시 isSynced=false** |
 | **3. 공개 상태 관리** | • IR | • `isPublic` (boolean) | UPDATE (1개 필드) | ✅ **통과** | 복잡한 상태 관리 없음<br>(ContentStatus 제거됨) |
 | **4. 카테고리 관리** | • Category<br>• CategoryMapping | • `entityType` = 'ir'<br>• UK: (entityId, categoryId) | INSERT, DELETE (매핑) | ✅ **통과** | 다대다 관계 정규화<br>중복 방지 |
 | **5. 정렬 순서 관리** | • IR | • `order` (int) | UPDATE (배치) | ✅ **통과** | 트랜잭션으로<br>일괄 처리 가능 |
 | **6. 다국어 조회** | • IRTranslation<br>• Language | • `languageId`<br>• `code` (ko, en, ja, zh) | SELECT (Fallback) | ✅ **통과** | Fallback 순서:<br>요청어 → ko → en → 첫번째 |
 | **7. 첨부파일 관리** | • IR | • `attachments` (JSONB)<br>&nbsp;&nbsp;- fileName<br>&nbsp;&nbsp;- fileUrl (S3)<br>&nbsp;&nbsp;- fileSize<br>&nbsp;&nbsp;- mimeType | UPDATE (JSONB) | ✅ **통과** | 파일명에 언어 코드 포함<br>AWS S3 URL 참조<br>6가지 파일 타입 지원 |
-| **8. 번역 자동 동기화<br>(Scheduler)** | • IRTranslation<br>• Language | • `isSynced` (동기화 플래그)<br>• `title`, `description`<br>• 한국어(ko) 원본 기준 | SELECT + UPDATE<br>(1분마다 자동) | ✅ **통과** | isSynced=true인 번역만<br>한국어 원본과 자동 동기화<br>**수정 시 false로 제외** |
+| **8. 번역 자동 동기화<br>(Scheduler)** | • IRTranslation<br>• Language | • `isSynced` (동기화 플래그)<br>• `title`, `description`<br>• 한국어(ko) 원본 기준 | SELECT + UPDATE<br>(1분마다 자동) | ✅ **통과** | isSynced=true인 번역만<br>한국어 원본과 자동 동기화<br>**입력 언어: false, 미입력: true** |
 
 ### 3.2 상세 데이터 흐름 (접기/펴기)
 
@@ -724,7 +725,7 @@ PUT /admin/irs/:id {
 - ✅ 한국어(ko)를 원본으로 사용
 - ✅ 1분마다 자동 동기화 (CronExpression.EVERY_MINUTE)
 - ✅ 수정 시 `isSynced=false`로 설정하여 동기화 제외
-- ✅ 한국어 수정 시에는 타 언어의 `isSynced` 유지 (계속 동기화)
+- ✅ 번역 수정 시 `isSynced=false`로 변경 (동기화 중단, 수동 관리로 전환)
 - ✅ 특정 언어만 수정 시 해당 언어만 `isSynced=false` (다른 언어는 계속 동기화)
 
 **성능 고려사항**:
@@ -741,14 +742,14 @@ PUT /admin/irs/:id {
 
 | 시나리오 | 검증 결과 | 관련 엔티티 | 핵심 기능 | 비고 |
 |---------|----------|------------|----------|------|
-| IR 생성 (다국어) | ✅ **통과** | IR<br>IRTranslation<br>Language | • 다국어 번역 저장<br>• JSONB 첨부파일<br>• S3 업로드<br>• isSynced=true (동기화 대상) | 파일명으로 언어 구분 가능<br>6가지 파일 타입 지원<br>생성 시 자동 동기화 대상 |
-| IR 수정 (번역 및 파일) | ✅ **통과** | IR<br>IRTranslation | • 번역 업데이트<br>• attachments 교체<br>• CASCADE 관계<br>• **isSynced=false 처리** | 기존 파일 삭제 → 새 파일 업로드<br>**수정 시 동기화 종료** |
+| IR 생성 (다국어) | ✅ **통과** | IR<br>IRTranslation<br>Language | • 다국어 번역 저장<br>• JSONB 첨부파일<br>• S3 업로드<br>• **입력: false, 미입력: true** | 파일명으로 언어 구분 가능<br>6가지 파일 타입 지원<br>**입력: 수동, 미입력: 자동** |
+| IR 수정 (번역 및 파일) | ✅ **통과** | IR<br>IRTranslation | • 번역 업데이트<br>• attachments 교체<br>• CASCADE 관계<br>• **isSynced=false 처리** | 기존 파일 삭제 → 새 파일 업로드<br>**수정 시 isSynced=false** |
 | 공개 상태 관리 | ✅ **통과** | IR | • isPublic 토글<br>• 즉시 반영<br>• 워크플로우 없음 | ContentStatus 제거됨 |
 | 카테고리 관리 | ✅ **통과** | Category<br>CategoryMapping | • 통합 카테고리<br>• 다대다 관계<br>• 중복 방지 (UK) | entityType = 'ir' 구분 |
 | 정렬 순서 관리 | ✅ **통과** | IR | • order 필드<br>• 배치 업데이트<br>• 트랜잭션 처리 | CASE 문으로 효율적 처리 |
 | 다국어 조회 (Fallback) | ✅ **통과** | IRTranslation<br>Language | • Fallback 순서<br>• 애플리케이션 레벨 처리 | 요청어 → ko → en → 첫번째 |
 | 첨부파일 관리 (언어 구분) | ✅ **통과** | IR | • JSONB 구조<br>• 파일명 언어 코드<br>• S3 URL 참조<br>• 6가지 파일 타입 | 파일 메타데이터 유연 저장<br>PDF/JPG/PNG/WEBP/XLSX/DOCX |
-| **번역 자동 동기화 (Scheduler)** | ✅ **통과** | IRTranslation<br>Language | • isSynced 기반 동기화<br>• 한국어 원본 기준<br>• 1분마다 자동 실행<br>• **수정 시 isSynced=false** | 한국어 수정 → 타 언어 자동 복사<br>특정 언어 수정 → 동기화 종료<br>CronExpression.EVERY_MINUTE |
+| **번역 스마트 동기화 (Scheduler)** | ✅ **통과** | IRTranslation<br>Language | • isSynced 기반 동기화<br>• 한국어 원본 기준<br>• 1분마다 자동 실행<br>• **입력: false, 미입력: true**<br>• **수정 시: false로 변경** | 한국어 수정 → isSynced=true 언어 자동 복사<br>번역 수정 시 isSynced=false로 변경<br>CronExpression.EVERY_MINUTE |
 
 ### 4.2 ERD 강점 분석 (테이블)
 
@@ -766,7 +767,6 @@ PUT /admin/irs/:id {
 
 | 우선순위 | 항목 | 현재 상태 | 제안 내용 | 필요성 | 구현 복잡도 |
 |---------|------|----------|----------|-------|-----------|
-| ~~🔴 **높음**~~ | ~~isSynced 필드<br>활용도 검증~~ | ✅ **활용 중**<br>IRTranslation.<br>isSynced 존재 | ✅ **검증 완료**<br>• 스케줄러가 1분마다 실행<br>• isSynced=true인 번역만 한국어 원본과 동기화<br>• 수정 시 isSynced=false로 동기화 제외<br>• **제거 불가 (핵심 기능)** | ✅ 핵심 동기화 기능<br>관리 부담 감소 | N/A<br>(활용 중) |
 | 🟡 **중간** | 첨부파일<br>버전 관리 | attachments JSONB에<br>메타데이터만 저장 | • FileHistory 테이블 추가<br>• 업로드 이력 추적<br>• 감사 로그 기능 | 파일 변경 이력<br>감사가 필요하다면 | ⭐⭐⭐ 중간<br>(테이블 추가) |
 | 🟢 **낮음** | 카테고리<br>계층 구조 | Category는<br>평면(flat) 구조 | • parentId 필드 추가<br>• depth 필드 추가<br>• 계층 쿼리 지원 | 계층적 카테고리<br>필요 시에만 | ⭐⭐⭐⭐ 높음<br>(Closure Table) |
 

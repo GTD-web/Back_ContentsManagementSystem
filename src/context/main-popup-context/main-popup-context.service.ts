@@ -210,7 +210,7 @@ export class MainPopupContextService {
         );
 
         if (existingTranslation) {
-          // 이미 존재하면 업데이트
+          // 이미 존재하면 업데이트 (수정 시 isSynced=false로 변경)
           await this.mainPopupService.메인_팝업_번역을_업데이트한다(
             existingTranslation.id,
             {
@@ -218,6 +218,7 @@ export class MainPopupContextService {
               description: translation.description !== undefined 
                 ? translation.description 
                 : undefined,
+              isSynced: false, // 수정되었으므로 동기화 중단
               updatedBy: data.updatedBy,
             },
           );

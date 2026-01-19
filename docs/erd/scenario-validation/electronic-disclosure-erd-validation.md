@@ -817,7 +817,7 @@ PUT /admin/electronic-disclosures/:id {
 - ✅ 한국어(ko)를 원본으로 사용 (isSynced=false, 스케줄러에서 제외)
 - ✅ 1분마다 자동 동기화 (CronExpression.EVERY_MINUTE)
 - ✅ 수정 시 `isSynced=false`로 설정하여 동기화 제외
-- ✅ 한국어 수정 시에는 타 언어의 `isSynced` 유지 (계속 동기화)
+- ✅ 번역 수정 시 `isSynced=false`로 변경 (동기화 중단, 수동 관리로 전환)
 - ✅ 특정 언어만 수정 시 해당 언어만 `isSynced=false` (다른 언어는 계속 동기화)
 
 **성능 고려사항**:

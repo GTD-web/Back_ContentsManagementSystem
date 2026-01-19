@@ -201,10 +201,11 @@ export class IRContextService {
     if (data.translations && data.translations.length > 0) {
       for (const translation of data.translations) {
         if (translation.id) {
-          // 기존 번역 업데이트
+          // 기존 번역 업데이트 (수정 시 isSynced=false로 변경)
           await this.irService.IR_번역을_업데이트한다(translation.id, {
             title: translation.title,
             description: translation.description ?? undefined,
+            isSynced: false, // 수정되었으므로 동기화 중단
             updatedBy: data.updatedBy,
           });
         } else {
@@ -216,12 +217,13 @@ export class IRContextService {
           );
 
           if (existingTranslation) {
-            // 이미 존재하면 업데이트
+            // 이미 존재하면 업데이트 (수정 시 isSynced=false로 변경)
             await this.irService.IR_번역을_업데이트한다(
               existingTranslation.id,
               {
                 title: translation.title,
                 description: translation.description ?? undefined,
+                isSynced: false, // 수정되었으므로 동기화 중단
                 updatedBy: data.updatedBy,
               },
             );

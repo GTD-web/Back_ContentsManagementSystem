@@ -296,6 +296,7 @@ export class ElectronicDisclosureService {
     data: {
       title?: string;
       description?: string;
+      isSynced?: boolean;
       updatedBy?: string;
     },
   ): Promise<void> {
