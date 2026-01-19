@@ -1109,4 +1109,24 @@ export class AnnouncementBusinessService {
       replacedEmployees,
     };
   }
+
+  /**
+   * 공지사항의 설문조사 통계를 조회한다
+   */
+  async 공지사항의_설문조사_통계를_조회한다(announcementId: string) {
+    this.logger.log(`공지사항의 설문조사 통계 조회 시작 - 공지사항 ID: ${announcementId}`);
+
+    // 공지사항 존재 여부 확인
+    await this.announcementContextService.공지사항을_조회한다(announcementId);
+
+    // 설문조사 통계 조회
+    const statistics =
+      await this.surveyContextService.공지사항의_설문조사_통계를_조회한다(
+        announcementId,
+      );
+
+    this.logger.log(`공지사항의 설문조사 통계 조회 완료 - 공지사항 ID: ${announcementId}`);
+
+    return statistics;
+  }
 }

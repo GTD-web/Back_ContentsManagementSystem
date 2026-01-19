@@ -26,6 +26,10 @@ import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.en
 import { Survey } from '@domain/sub/survey/survey.entity';
 import { SurveyQuestion } from '@domain/sub/survey/survey-question.entity';
 import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
+import { SurveyResponseChoice } from '@domain/sub/survey/responses/survey-response-choice.entity';
+import { SurveyResponseCheckbox } from '@domain/sub/survey/responses/survey-response-checkbox.entity';
+import { SurveyResponseScale } from '@domain/sub/survey/responses/survey-response-scale.entity';
+import { SurveyResponseText } from '@domain/sub/survey/responses/survey-response-text.entity';
 
 // Domain Modules
 import { LanguageModule } from '@domain/common/language/language.module';
@@ -80,6 +84,10 @@ import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
       Survey,
       SurveyQuestion,
       SurveyCompletion,
+      SurveyResponseChoice,
+      SurveyResponseCheckbox,
+      SurveyResponseScale,
+      SurveyResponseText,
     ]),
     // Domain Modules
     LanguageModule,

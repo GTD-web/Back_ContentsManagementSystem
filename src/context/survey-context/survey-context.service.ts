@@ -8,6 +8,10 @@ import { GetSurveyDetailQuery } from './handlers/queries/get-survey-detail.handl
 import { GetSurveyByAnnouncementQuery } from './handlers/queries/get-survey-by-announcement.handler';
 import { GetSurveyListQuery } from './handlers/queries/get-survey-list.handler';
 import {
+  GetSurveyStatisticsQuery,
+  SurveyStatisticsResult,
+} from './handlers/queries/get-survey-statistics.handler';
+import {
   CreateSurveyDto,
   CreateSurveyResult,
   UpdateSurveyDto,
@@ -98,6 +102,16 @@ export class SurveyContextService {
     announcementId: string,
   ): Promise<Survey | null> {
     const query = new GetSurveyByAnnouncementQuery(announcementId);
+    return await this.queryBus.execute(query);
+  }
+
+  /**
+   * 공지사항의 설문조사 통계를 조회한다
+   */
+  async 공지사항의_설문조사_통계를_조회한다(
+    announcementId: string,
+  ): Promise<SurveyStatisticsResult> {
+    const query = new GetSurveyStatisticsQuery(announcementId);
     return await this.queryBus.execute(query);
   }
 }

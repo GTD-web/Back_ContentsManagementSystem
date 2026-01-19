@@ -17,6 +17,12 @@ import { LumirStory } from '@domain/sub/lumir-story/lumir-story.entity';
 import { VideoGallery } from '@domain/sub/video-gallery/video-gallery.entity';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import { Survey } from '@domain/sub/survey/survey.entity';
+import { SurveyQuestion } from '@domain/sub/survey/survey-question.entity';
+import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
+import { SurveyResponseChoice } from '@domain/sub/survey/responses/survey-response-choice.entity';
+import { SurveyResponseCheckbox } from '@domain/sub/survey/responses/survey-response-checkbox.entity';
+import { SurveyResponseScale } from '@domain/sub/survey/responses/survey-response-scale.entity';
+import { SurveyResponseText } from '@domain/sub/survey/responses/survey-response-text.entity';
 
 // Domain Services
 import { LanguageService } from '@domain/common/language/language.service';
@@ -79,6 +85,18 @@ export class SeedDataContextService {
     private readonly wikiFileSystemRepository: Repository<WikiFileSystem>,
     @InjectRepository(Survey)
     private readonly surveyRepository: Repository<Survey>,
+    @InjectRepository(SurveyQuestion)
+    private readonly surveyQuestionRepository: Repository<SurveyQuestion>,
+    @InjectRepository(SurveyCompletion)
+    private readonly surveyCompletionRepository: Repository<SurveyCompletion>,
+    @InjectRepository(SurveyResponseChoice)
+    private readonly surveyResponseChoiceRepository: Repository<SurveyResponseChoice>,
+    @InjectRepository(SurveyResponseCheckbox)
+    private readonly surveyResponseCheckboxRepository: Repository<SurveyResponseCheckbox>,
+    @InjectRepository(SurveyResponseScale)
+    private readonly surveyResponseScaleRepository: Repository<SurveyResponseScale>,
+    @InjectRepository(SurveyResponseText)
+    private readonly surveyResponseTextRepository: Repository<SurveyResponseText>,
 
     // Services
     private readonly languageService: LanguageService,
@@ -564,7 +582,280 @@ export class SeedDataContextService {
       `설문조사 추가 완료 - 생성된 설문조사: ${surveyCreated}개`,
     );
 
+    // 설문 응답 데이터 생성
+    if (surveyCreated > 0 && employeeIds.length > 0) {
+      this.logger.log('설문 응답 데이터 생성 시작...');
+      await this.설문_응답_데이터를_생성한다(employeeIds);
+      this.logger.log('설문 응답 데이터 생성 완료');
+    }
+
     return created;
+  }
+
+  /**
+   * 설문 응답 데이터를 생성한다
+   */
+  private async 설문_응답_데이터를_생성한다(
+    employeeIds: string[],
+  ): Promise<void> {
+    // 모든 설문조사 조회
+    const surveys = await this.surveyRepository.find({
+      relations: ['questions'],
+    });
+
+    if (surveys.length === 0) {
+      this.logger.debug('생성된 설문조사가 없습니다.');
+      return;
+    }
+
+    for (const survey of surveys) {
+      // 각 설문조사에 대해 30~50%의 직원이 응답하도록 설정
+      const responseRate = 0.3 + Math.random() * 0.2; // 30~50%
+      const responseCount = Math.max(
+        Math.floor(employeeIds.length * responseRate),
+        Math.min(10, employeeIds.length), // 최소 10명 또는 전체 직원 수
+      );
+
+      // 랜덤으로 응답할 직원 선택
+      const respondents = employeeIds
+        .sort(() => 0.5 - Math.random())
+        .slice(0, responseCount);
+
+      this.logger.debug(
+        `설문 "${survey.title}" - ${respondents.length}명 응답 생성 중...`,
+      );
+
+      for (const employeeId of respondents) {
+        await this.직원의_설문_응답을_생성한다(survey, employeeId);
+      }
+
+      this.logger.debug(
+        `설문 "${survey.title}" - ${respondents.length}명 응답 생성 완료`,
+      );
+    }
+  }
+
+  /**
+   * 특정 직원의 설문 응답을 생성한다
+   */
+  private async 직원의_설문_응답을_생성한다(
+    survey: Survey,
+    employeeId: string,
+  ): Promise<void> {
+    const submittedAt = new Date(
+      Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000, // 최근 7일 이내
+    );
+
+    let answeredQuestions = 0;
+
+    for (const question of survey.questions) {
+      // 필수 질문은 100% 응답, 선택 질문은 80% 응답
+      const shouldAnswer = question.isRequired || Math.random() > 0.2;
+
+      if (!shouldAnswer) {
+        continue;
+      }
+
+      try {
+        switch (question.type) {
+          case InqueryType.MULTIPLE_CHOICE:
+          case InqueryType.DROPDOWN:
+            await this.선택형_응답을_생성한다(
+              question.id,
+              employeeId,
+              question.form?.options || [],
+              submittedAt,
+            );
+            answeredQuestions++;
+            break;
+
+          case InqueryType.CHECKBOXES:
+            await this.체크박스_응답을_생성한다(
+              question.id,
+              employeeId,
+              question.form?.options || [],
+              submittedAt,
+            );
+            answeredQuestions++;
+            break;
+
+          case InqueryType.LINEAR_SCALE:
+            await this.척도_응답을_생성한다(
+              question.id,
+              employeeId,
+              question.form?.minScale || 1,
+              question.form?.maxScale || 10,
+              submittedAt,
+            );
+            answeredQuestions++;
+            break;
+
+          case InqueryType.SHORT_ANSWER:
+          case InqueryType.PARAGRAPH:
+            await this.텍스트_응답을_생성한다(
+              question.id,
+              employeeId,
+              question.type === InqueryType.PARAGRAPH,
+              submittedAt,
+            );
+            answeredQuestions++;
+            break;
+
+          default:
+            // 기타 타입은 무시
+            break;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `응답 생성 실패 (질문: ${question.id}, 직원: ${employeeId}): ${error.message}`,
+        );
+      }
+    }
+
+    // 완료 여부 확인 (모든 필수 질문에 답변했는지)
+    const requiredQuestions = survey.questions.filter((q) => q.isRequired);
+    const isCompleted = answeredQuestions >= requiredQuestions.length;
+
+    // SurveyCompletion 생성
+    const completion = this.surveyCompletionRepository.create({
+      surveyId: survey.id,
+      employeeId,
+      totalQuestions: survey.questions.length,
+      answeredQuestions,
+      isCompleted,
+      completedAt: isCompleted ? submittedAt : null,
+      createdBy: 'seed',
+    });
+
+    await this.surveyCompletionRepository.save(completion);
+  }
+
+  /**
+   * 선택형 응답을 생성한다 (MULTIPLE_CHOICE, DROPDOWN)
+   */
+  private async 선택형_응답을_생성한다(
+    questionId: string,
+    employeeId: string,
+    options: string[],
+    submittedAt: Date,
+  ): Promise<void> {
+    if (options.length === 0) {
+      return;
+    }
+
+    // 랜덤하게 하나의 옵션 선택
+    const selectedOption = options[Math.floor(Math.random() * options.length)];
+
+    const response = this.surveyResponseChoiceRepository.create({
+      questionId,
+      employeeId,
+      selectedOption,
+      submittedAt,
+      createdBy: 'seed',
+    });
+
+    await this.surveyResponseChoiceRepository.save(response);
+  }
+
+  /**
+   * 체크박스 응답을 생성한다 (CHECKBOXES)
+   */
+  private async 체크박스_응답을_생성한다(
+    questionId: string,
+    employeeId: string,
+    options: string[],
+    submittedAt: Date,
+  ): Promise<void> {
+    if (options.length === 0) {
+      return;
+    }
+
+    // 1~3개의 옵션을 랜덤하게 선택
+    const selectCount = Math.min(
+      Math.floor(Math.random() * 3) + 1,
+      options.length,
+    );
+    const selectedOptions = options
+      .sort(() => 0.5 - Math.random())
+      .slice(0, selectCount);
+
+    // 각 선택된 옵션에 대해 별도의 레코드 생성
+    for (const option of selectedOptions) {
+      const response = this.surveyResponseCheckboxRepository.create({
+        questionId,
+        employeeId,
+        selectedOption: option,
+        submittedAt,
+        createdBy: 'seed',
+      });
+
+      await this.surveyResponseCheckboxRepository.save(response);
+    }
+  }
+
+  /**
+   * 척도 응답을 생성한다 (LINEAR_SCALE)
+   */
+  private async 척도_응답을_생성한다(
+    questionId: string,
+    employeeId: string,
+    minScale: number,
+    maxScale: number,
+    submittedAt: Date,
+  ): Promise<void> {
+    // 정규분포를 따르는 랜덤값 생성 (중간~높은 값으로 치우치게)
+    const range = maxScale - minScale;
+    const mean = minScale + range * 0.7; // 평균을 70% 지점에
+    const stdDev = range * 0.2; // 표준편차
+
+    // Box-Muller 변환을 사용한 정규분포 랜덤값
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const randStdNormal =
+      Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    let scaleValue = Math.round(mean + stdDev * randStdNormal);
+
+    // 범위 내로 제한
+    scaleValue = Math.max(minScale, Math.min(maxScale, scaleValue));
+
+    const response = this.surveyResponseScaleRepository.create({
+      questionId,
+      employeeId,
+      scaleValue,
+      submittedAt,
+      createdBy: 'seed',
+    });
+
+    await this.surveyResponseScaleRepository.save(response);
+  }
+
+  /**
+   * 텍스트 응답을 생성한다 (SHORT_ANSWER, PARAGRAPH)
+   */
+  private async 텍스트_응답을_생성한다(
+    questionId: string,
+    employeeId: string,
+    isParagraph: boolean,
+    submittedAt: Date,
+  ): Promise<void> {
+    // 텍스트 응답은 70% 확률로만 작성 (빈 응답 가능)
+    if (Math.random() > 0.7) {
+      return;
+    }
+
+    const textValue = isParagraph
+      ? faker.lorem.paragraphs(2) // 장문형
+      : faker.lorem.sentence(); // 단답형
+
+    const response = this.surveyResponseTextRepository.create({
+      questionId,
+      employeeId,
+      textValue,
+      submittedAt,
+      createdBy: 'seed',
+    });
+
+    await this.surveyResponseTextRepository.save(response);
   }
 
   /**
@@ -1167,6 +1458,13 @@ export class SeedDataContextService {
       this.logger.log('하드 삭제 실행 - 데이터베이스에서 완전히 제거됩니다.');
       
       // QueryBuilder를 사용하여 모든 데이터 삭제 (빈 criteria 에러 방지)
+      // 설문 응답 데이터 먼저 삭제 (FK 제약 조건)
+      await this.surveyResponseChoiceRepository.createQueryBuilder().delete().execute();
+      await this.surveyResponseCheckboxRepository.createQueryBuilder().delete().execute();
+      await this.surveyResponseScaleRepository.createQueryBuilder().delete().execute();
+      await this.surveyResponseTextRepository.createQueryBuilder().delete().execute();
+      await this.surveyCompletionRepository.createQueryBuilder().delete().execute();
+      
       // Survey는 Announcement CASCADE로 자동 삭제되므로 명시적 삭제 불필요
       await this.announcementRepository.createQueryBuilder().delete().execute();
       await this.newsRepository.createQueryBuilder().delete().execute();

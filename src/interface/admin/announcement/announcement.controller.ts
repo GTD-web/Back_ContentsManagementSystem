@@ -38,6 +38,7 @@ import {
   AnnouncementCategoryResponseDto,
   AnnouncementCategoryListResponseDto,
 } from '@interface/common/dto/announcement/announcement-response.dto';
+import { AnnouncementSurveyStatisticsResponseDto } from '@interface/common/dto/announcement/announcement-statistics-response.dto';
 import { ReplaceAnnouncementPermissionsDto } from './dto/replace-announcement-permissions.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, IsNull } from 'typeorm';
@@ -884,6 +885,43 @@ export class AnnouncementController {
       id,
       dto,
       user.id,
+    );
+  }
+
+  /**
+   * 공지사항의 설문조사 통계를 조회한다
+   */
+  @Get(':id/survey-statistics')
+  @ApiOperation({
+    summary: '공지사항의 설문조사 통계 조회',
+    description:
+      '공지사항에 연결된 설문조사의 통계 정보를 조회합니다.\n\n' +
+      '- 총 응답 완료자 수\n' +
+      '- 각 질문별 응답 통계\n' +
+      '  - 선택형: 옵션별 선택 수 및 비율\n' +
+      '  - 체크박스: 옵션별 선택 수 및 비율 (다중 선택)\n' +
+      '  - 척도: 평균, 최소/최대값, 척도별 분포\n' +
+      '  - 텍스트: 응답 수',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '설문조사 통계 조회 성공',
+    type: AnnouncementSurveyStatisticsResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항 또는 설문조사를 찾을 수 없음',
+  })
+  async 공지사항의_설문조사_통계를_조회한다(
+    @Param('id') id: string,
+  ): Promise<AnnouncementSurveyStatisticsResponseDto> {
+    return await this.announcementBusinessService.공지사항의_설문조사_통계를_조회한다(
+      id,
     );
   }
 }

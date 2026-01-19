@@ -178,6 +178,7 @@ alwaysApply: true
 - 공지사항에_포함된_전체직원에게_알림을보낸다 (POST /admin/announcements/:id/notifications/all)
 - 공지사항에_포함된_직원중_미답변자들에게_알림을보낸다 (POST /admin/announcements/:id/notifications/unanswered)
 - 공지사항에_포함된_미열람자들에게_알림을보낸다 (POST /admin/announcements/:id/notifications/unread)
+- 공지사항의_설문조사_통계를_조회한다 (GET /admin/announcements/:id/survey-statistics)
 ```
 
 ## Company (SSO 모듈 연결)

@@ -8,6 +8,7 @@ export * from './commands/complete-survey.handler';
 export * from './queries/get-survey-detail.handler';
 export * from './queries/get-survey-by-announcement.handler';
 export * from './queries/get-survey-list.handler';
+export * from './queries/get-survey-statistics.handler';
 
 // Command Handlers
 import { CreateSurveyHandler } from './commands/create-survey.handler';
@@ -19,6 +20,7 @@ import { CompleteSurveyHandler } from './commands/complete-survey.handler';
 import { GetSurveyDetailHandler } from './queries/get-survey-detail.handler';
 import { GetSurveyByAnnouncementHandler } from './queries/get-survey-by-announcement.handler';
 import { GetSurveyListHandler } from './queries/get-survey-list.handler';
+import { GetSurveyStatisticsHandler } from './queries/get-survey-statistics.handler';
 
 export const SurveyCommandHandlers = [
   CreateSurveyHandler,
@@ -31,6 +33,7 @@ export const SurveyQueryHandlers = [
   GetSurveyDetailHandler,
   GetSurveyByAnnouncementHandler,
   GetSurveyListHandler,
+  GetSurveyStatisticsHandler,
 ];
 
 export const SurveyHandlers = [
