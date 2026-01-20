@@ -17,11 +17,11 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
 
   describe('성공 케이스', () => {
     it('공지사항의 제목을 수정해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '원본 제목', content: '원본 내용' });
+        .send({ title: '원본 제목', content: '원본 내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -41,11 +41,11 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
     });
 
     it('공지사항의 내용을 수정해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '원본 제목', content: '원본 내용' });
+        .send({ title: '원본 제목', content: '원본 내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -64,7 +64,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
     });
 
     it('공지사항의 여러 필드를 동시에 수정해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
@@ -72,21 +72,19 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
           title: '원본 제목',
           content: '원본 내용',
           isFixed: false,
-          isPublic: true,
+          isPublic: false, // 비공개 상태
           mustRead: false,
         });
 
       const announcementId = createResponse.body.id;
 
-      // When
+      // When - title, content, mustRead 수정 (isFixed, isPublic은 PATCH로만 수정 가능)
       const response = await testSuite
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
         .send({
           title: '수정된 제목',
           content: '수정된 내용',
-          isFixed: true,
-          isPublic: false,
           mustRead: true,
         })
         .expect(200);
@@ -94,20 +92,21 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       // Then
       expect(response.body).toMatchObject({
         id: announcementId,
-        isFixed: true,
-        isPublic: false,
+        title: '수정된 제목',
+        content: '수정된 내용',
         mustRead: true,
       });
     });
 
     it('공지사항의 날짜를 수정해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
         .send({
           title: '테스트',
           content: '내용',
+          isPublic: false, // 비공개 상태
           releasedAt: '2024-01-01T00:00:00Z',
           expiredAt: '2024-06-30T23:59:59Z',
         });
@@ -131,13 +130,14 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
     });
 
     it('공지사항의 권한 정보를 수정해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
         .send({
           title: '테스트',
           content: '내용',
+          isPublic: false, // 비공개 상태
           permissionEmployeeIds: ['uuid-1'],
           permissionRankCodes: ['매니저'],
         });
@@ -399,11 +399,11 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
 
   describe('성공 케이스', () => {
     it('공지사항을 삭제해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '삭제할 공지', content: '내용' });
+        .send({ title: '삭제할 공지', content: '내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -426,13 +426,13 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
     });
 
     it('여러 공지사항을 삭제해야 한다', async () => {
-      // Given
+      // Given - 비공개 상태로 생성
       const ids: string[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()
           .post('/api/admin/announcements')
-          .send({ title: `공지${i}`, content: `내용${i}` });
+          .send({ title: `공지${i}`, content: `내용${i}`, isPublic: false });
         ids.push(response.body.id);
       }
 

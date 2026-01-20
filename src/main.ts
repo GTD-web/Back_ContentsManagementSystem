@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { setupSwagger } from '@libs/config/swagger.config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { QueryFailedExceptionFilter } from '@interface/common/filters/query-failed-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -35,6 +36,9 @@ async function bootstrap() {
       forbidNonWhitelisted: false, // 정의되지 않은 속성이 있어도 에러 발생 안 함
     }),
   );
+
+  // 전역 Exception Filter 설정 (TypeORM QueryFailedError 처리)
+  app.useGlobalFilters(new QueryFailedExceptionFilter());
 
   // Global Prefix 설정
   app.setGlobalPrefix('api');
@@ -73,6 +77,7 @@ async function bootstrap() {
       },
       { name: 'A-8. 관리자 - 뉴스', description: '뉴스 관리 API' },
       { name: 'A-9. 관리자 - 공지사항', description: '공지사항 관리 API' },
+      { name: 'A-10. 관리자 - 설문조사', description: '설문조사 관리 API' },
       {
         name: '공통. 관리자 - 권한 검증',
         description: '권한 검증 배치 작업 수동 실행 API',

@@ -4,7 +4,9 @@ import { AppModule } from '../src/app.module';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { AuthContextService } from '../src/context/auth-context/auth-context.service';
+import { SsoService } from '../src/domain/common/sso/sso.service';
 import { SchedulerRegistry } from '@nestjs/schedule';
+import { QueryFailedExceptionFilter } from '../src/interface/common/filters/query-failed-exception.filter';
 
 /**
  * 테스트용 Mock Auth Context Service
@@ -37,6 +39,54 @@ class MockAuthContextService {
       },
       accessToken: 'test-access-token',
       refreshToken: 'test-refresh-token',
+    };
+  }
+}
+
+/**
+ * 테스트용 Mock SSO Service
+ * 외부 SSO API 호출을 모킹하여 실제 호출 없이 테스트합니다
+ */
+class MockSsoService {
+  /**
+   * FCM 토큰 조회 모킹
+   * 실제 SSO 서버 호출 대신 빈 배열 반환
+   */
+  async FCM_토큰을_조회한다(params: {
+    employeeNumbers?: string | string[];
+    employeeIds?: string | string[];
+  }) {
+    // 테스트 환경에서는 빈 토큰 목록 반환
+    // 실제 알림은 전송되지 않지만 API는 정상 작동
+    return [];
+  }
+
+  /**
+   * 부서 목록 조회 모킹
+   */
+  async 부서_목록을_조회한다() {
+    return [];
+  }
+
+  /**
+   * 직원 목록 조회 모킹
+   */
+  async 직원_목록을_조회한다() {
+    return [];
+  }
+
+  /**
+   * 특정 직원 정보 조회 모킹
+   */
+  async 직원_정보를_조회한다(employeeId: string) {
+    return {
+      id: employeeId,
+      name: 'Mock User',
+      email: 'mock@example.com',
+      departmentId: 'mock-dept-id',
+      rankCode: 'STAFF',
+      positionCode: 'EMPLOYEE',
+      isActive: true,
     };
   }
 }
@@ -96,6 +146,8 @@ export class BaseE2ETest {
     })
       .overrideProvider(AuthContextService)
       .useClass(MockAuthContextService)
+      .overrideProvider(SsoService)
+      .useClass(MockSsoService)
       .compile();
 
     this.app = moduleFixture.createNestApplication();
@@ -111,6 +163,9 @@ export class BaseE2ETest {
         forbidNonWhitelisted: false,
       }),
     );
+
+    // Exception Filter 설정 (실제 애플리케이션과 동일하게)
+    this.app.useGlobalFilters(new QueryFailedExceptionFilter());
 
     // CORS 설정
     this.app.enableCors({
