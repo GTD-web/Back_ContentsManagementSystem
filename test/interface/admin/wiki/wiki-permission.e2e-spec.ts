@@ -465,14 +465,17 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
       // When - 무시 처리
       const dismissResponse = await testSuite
         .request()
-        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then
       expect(dismissResponse.body).toMatchObject({
         success: true,
         message: expect.any(String),
-        dismissedAt: expect.any(String),
+        dismissed: 1,
+        alreadyDismissed: 0,
+        notFound: 0,
       });
     });
 
@@ -524,8 +527,9 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
       // When - 무시 처리
       await testSuite
         .request()
-        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then
       const unreadAfter = await testSuite
@@ -578,8 +582,9 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
       // When
       await testSuite
         .request()
-        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then
       const allLogsAfter = await testSuite
@@ -588,6 +593,305 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
         .expect(200);
 
       expect(allLogsAfter.body.length).toBe(totalBefore);
+    });
+
+    it('이미 무시 처리된 로그를 다시 무시하면 중복 생성하지 않아야 한다', async () => {
+      // Given
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '중복 테스트 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folderId}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['dup-wiki-dept'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folderId}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'dup-wiki-dept', newId: 'new-dup-wiki-dept' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      // 첫 번째 무시 처리
+      const firstDismiss = await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
+
+      // When - 두 번째 무시 처리
+      const secondDismiss = await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
+
+      // Then
+      expect(secondDismiss.body).toMatchObject({
+        success: true,
+        dismissed: 0,
+        alreadyDismissed: 1,
+        notFound: 0,
+      });
+
+      expect(firstDismiss.body.dismissed).toBe(1);
+    });
+
+    it('여러 권한 로그를 한 번에 무시 처리할 수 있어야 한다', async () => {
+      // Given - 여러 폴더 생성
+      const folder1 = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '배치 테스트 폴더1' })
+        .expect(201);
+
+      const folder2 = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '배치 테스트 폴더2' })
+        .expect(201);
+
+      const folder3 = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '배치 테스트 폴더3' })
+        .expect(201);
+
+      // 권한 설정
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder1.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['batch-wiki-1'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder2.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['batch-wiki-2'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder3.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['batch-wiki-3'],
+        })
+        .expect(200);
+
+      // 권한 교체로 로그들 생성
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder1.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-wiki-1', newId: 'new-batch-wiki-1' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder2.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-wiki-2', newId: 'new-batch-wiki-2' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder3.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-wiki-3', newId: 'new-batch-wiki-3' }],
+        })
+        .expect(200);
+
+      // 로그 조회
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length < 3) {
+        return;
+      }
+
+      const logIds = logsResponse.body.slice(0, 3).map((log: any) => log.id);
+
+      // When - 여러 로그를 한 번에 무시 처리
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds })
+        .expect(200);
+
+      // Then
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 3,
+        alreadyDismissed: 0,
+        notFound: 0,
+      });
+
+      // 미열람 조회에서 무시된 로그들이 제외되는지 확인
+      const unreadResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs/unread')
+        .expect(200);
+
+      const unreadIds = unreadResponse.body.map((log: any) => log.id);
+      logIds.forEach((logId: string) => {
+        expect(unreadIds).not.toContain(logId);
+      });
+    });
+
+    it('배치 무시 처리 시 일부는 성공하고 일부는 이미 무시된 경우를 처리해야 한다', async () => {
+      // Given
+      const folder1 = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '혼합 테스트 1' })
+        .expect(201);
+
+      const folder2 = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '혼합 테스트 2' })
+        .expect(201);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder1.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['mixed-wiki-1'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder2.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['mixed-wiki-2'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder1.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'mixed-wiki-1', newId: 'new-mixed-wiki-1' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder2.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'mixed-wiki-2', newId: 'new-mixed-wiki-2' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length < 2) {
+        return;
+      }
+
+      const logIds = logsResponse.body.slice(0, 2).map((log: any) => log.id);
+
+      // 첫 번째 로그만 먼저 무시 처리
+      await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [logIds[0]] })
+        .expect(200);
+
+      // When - 두 로그 모두 무시 처리 시도
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds })
+        .expect(200);
+
+      // Then
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 1,
+        alreadyDismissed: 1,
+        notFound: 0,
+      });
+    });
+
+    it('존재하지 않는 로그 ID가 포함된 경우 스킵해야 한다', async () => {
+      // Given - 가짜 UUID v4 (존재하지 않는 ID들)
+      const fakeIds = [
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000003',
+      ];
+
+      // When - 존재하지 않는 ID들만 보냄
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: fakeIds })
+        .expect(200);
+
+      // Then - 모두 notFound로 처리됨
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 0,
+        alreadyDismissed: 0,
+        notFound: 3,
+      });
+    });
+
+    it('빈 배열로 요청하면 400 에러가 발생해야 한다', async () => {
+      // When & Then
+      await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: [] })
+        .expect(400);
+    });
+
+    it('잘못된 UUID 형식이 포함된 경우 400 에러가 발생해야 한다', async () => {
+      // When & Then
+      await testSuite
+        .request()
+        .patch('/api/admin/wiki/permission-logs/dismiss')
+        .send({ logIds: ['invalid-uuid', 'not-a-uuid'] })
+        .expect(400);
     });
   });
 

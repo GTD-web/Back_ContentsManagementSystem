@@ -595,14 +595,17 @@ describe('공지사항 권한 로그 조회 API', () => {
       // When - 무시 처리
       const dismissResponse = await testSuite
         .request()
-        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then
       expect(dismissResponse.body).toMatchObject({
         success: true,
         message: expect.any(String),
-        dismissedAt: expect.any(String),
+        dismissed: 1,
+        alreadyDismissed: 0,
+        notFound: 0,
       });
     });
 
@@ -651,8 +654,9 @@ describe('공지사항 권한 로그 조회 API', () => {
       // When - 무시 처리
       await testSuite
         .request()
-        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then - 무시 처리 후 미열람 조회
       const unreadAfter = await testSuite
@@ -700,8 +704,9 @@ describe('공지사항 권한 로그 조회 API', () => {
       // When - 무시 처리
       await testSuite
         .request()
-        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then - 전체 조회는 동일한 개수
       const allLogsAfter = await testSuite
@@ -747,23 +752,244 @@ describe('공지사항 권한 로그 조회 API', () => {
       // 첫 번째 무시 처리
       const firstDismiss = await testSuite
         .request()
-        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // When - 두 번째 무시 처리
       const secondDismiss = await testSuite
         .request()
-        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
-        .expect(201);
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logId] })
+        .expect(200);
 
       // Then
       expect(secondDismiss.body).toMatchObject({
         success: true,
-        message: expect.stringContaining('이미'),
+        dismissed: 0,
+        alreadyDismissed: 1,
+        notFound: 0,
       });
 
-      // dismissedAt이 동일해야 함 (중복 생성 안 됨)
-      expect(secondDismiss.body.dismissedAt).toBe(firstDismiss.body.dismissedAt);
+      // 첫 번째 요청에서는 무시 처리됨
+      expect(firstDismiss.body.dismissed).toBe(1);
+    });
+
+    it('여러 권한 로그를 한 번에 무시 처리할 수 있어야 한다', async () => {
+      // Given - 여러 공지사항 생성
+      const announcement1 = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '배치 테스트 공지1',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['batch-dept-1'],
+        })
+        .expect(201);
+
+      const announcement2 = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '배치 테스트 공지2',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['batch-dept-2'],
+        })
+        .expect(201);
+
+      const announcement3 = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '배치 테스트 공지3',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['batch-dept-3'],
+        })
+        .expect(201);
+
+      // 권한 교체로 로그들 생성
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement1.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-dept-1', newId: 'new-batch-1' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement2.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-dept-2', newId: 'new-batch-2' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement3.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'batch-dept-3', newId: 'new-batch-3' }],
+        })
+        .expect(200);
+
+      // 로그 조회
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length < 3) {
+        return;
+      }
+
+      // 최신 3개 로그 선택
+      const logIds = logsResponse.body.slice(0, 3).map((log: any) => log.id);
+
+      // When - 여러 로그를 한 번에 무시 처리
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds })
+        .expect(200);
+
+      // Then
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 3,
+        alreadyDismissed: 0,
+        notFound: 0,
+      });
+
+      // 미열람 조회에서 무시된 로그들이 제외되는지 확인
+      const unreadResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs/unread')
+        .expect(200);
+
+      const unreadIds = unreadResponse.body.map((log: any) => log.id);
+      logIds.forEach((logId: string) => {
+        expect(unreadIds).not.toContain(logId);
+      });
+    });
+
+    it('배치 무시 처리 시 일부는 성공하고 일부는 이미 무시된 경우를 처리해야 한다', async () => {
+      // Given - 공지사항들 생성
+      const announcement1 = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '혼합 테스트 1',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['mixed-dept-1'],
+        })
+        .expect(201);
+
+      const announcement2 = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '혼합 테스트 2',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['mixed-dept-2'],
+        })
+        .expect(201);
+
+      // 권한 교체
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement1.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'mixed-dept-1', newId: 'new-mixed-1' }],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement2.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'mixed-dept-2', newId: 'new-mixed-2' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length < 2) {
+        return;
+      }
+
+      const logIds = logsResponse.body.slice(0, 2).map((log: any) => log.id);
+
+      // 첫 번째 로그만 먼저 무시 처리
+      await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [logIds[0]] })
+        .expect(200);
+
+      // When - 두 로그 모두 무시 처리 시도
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds })
+        .expect(200);
+
+      // Then - 1개는 새로 무시, 1개는 이미 무시됨
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 1,
+        alreadyDismissed: 1,
+        notFound: 0,
+      });
+    });
+
+    it('존재하지 않는 로그 ID가 포함된 경우 스킵해야 한다', async () => {
+      // Given - 가짜 UUID v4 (존재하지 않는 ID들)
+      const fakeIds = [
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000003',
+      ];
+
+      // When - 존재하지 않는 ID들만 보냄
+      const dismissResponse = await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: fakeIds })
+        .expect(200);
+
+      // Then - 모두 notFound로 처리됨
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        dismissed: 0,
+        alreadyDismissed: 0,
+        notFound: 3,
+      });
+    });
+
+    it('빈 배열로 요청하면 400 에러가 발생해야 한다', async () => {
+      // When & Then
+      await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: [] })
+        .expect(400);
+    });
+
+    it('잘못된 UUID 형식이 포함된 경우 400 에러가 발생해야 한다', async () => {
+      // When & Then
+      await testSuite
+        .request()
+        .patch('/api/admin/announcements/permission-logs/dismiss')
+        .send({ logIds: ['invalid-uuid', 'not-a-uuid'] })
+        .expect(400);
     });
   });
 

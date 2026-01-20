@@ -40,6 +40,7 @@ import {
 } from '@interface/common/dto/announcement/announcement-response.dto';
 import { AnnouncementSurveyStatisticsResponseDto } from '@interface/common/dto/announcement/announcement-statistics-response.dto';
 import { ReplaceAnnouncementPermissionsDto } from './dto/replace-announcement-permissions.dto';
+import { DismissPermissionLogsDto } from './dto/dismiss-permission-logs.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, IsNull } from 'typeorm';
 import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
@@ -541,73 +542,81 @@ export class AnnouncementController {
   }
 
   /**
-   * 권한 로그를 "다시 보지 않기" 처리한다
+   * 권한 로그를 "다시 보지 않기" 처리한다 (배치)
    */
-  @Post('permission-logs/:logId/dismiss')
+  @Patch('permission-logs/dismiss')
   @ApiOperation({
-    summary: '공지사항 권한 로그 무시 (다시 보지 않기)',
+    summary: '공지사항 권한 로그 일괄 무시 (다시 보지 않기)',
     description:
-      '특정 권한 로그에 대한 모달을 더 이상 표시하지 않도록 설정합니다. ' +
+      '여러 권한 로그에 대한 모달을 더 이상 표시하지 않도록 설정합니다. ' +
       '권한 로그 관리 페이지에서는 여전히 조회 가능합니다.',
   })
-  @ApiParam({
-    name: 'logId',
-    description: '권한 로그 ID',
-    type: String,
-  })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: '권한 로그 무시 처리 성공',
+    schema: {
+      example: {
+        success: true,
+        message: '3개의 권한 로그를 무시 처리했습니다.',
+        dismissed: 3,
+        alreadyDismissed: 1,
+        notFound: 0,
+      },
+    },
   })
   @ApiResponse({
-    status: 404,
-    description: '권한 로그를 찾을 수 없음',
-  })
-  @ApiResponse({
-    status: 409,
-    description: '이미 무시 처리된 로그',
+    status: 400,
+    description: '잘못된 요청 (빈 배열 또는 잘못된 UUID)',
   })
   async 공지사항_권한_로그를_무시한다(
-    @Param('logId') logId: string,
+    @Body() dto: DismissPermissionLogsDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    // 권한 로그 존재 확인
-    const permissionLog = await this.permissionLogRepository.findOne({
-      where: { id: logId },
-    });
+    let dismissedCount = 0;
+    let alreadyDismissedCount = 0;
+    let notFoundCount = 0;
 
-    if (!permissionLog) {
-      throw new Error('권한 로그를 찾을 수 없습니다.');
-    }
+    for (const logId of dto.logIds) {
+      // 권한 로그 존재 확인
+      const permissionLog = await this.permissionLogRepository.findOne({
+        where: { id: logId },
+      });
 
-    // 이미 dismissed 되었는지 확인
-    const existing = await this.dismissedLogRepository.findOne({
-      where: {
+      if (!permissionLog) {
+        notFoundCount++;
+        continue;
+      }
+
+      // 이미 dismissed 되었는지 확인
+      const existing = await this.dismissedLogRepository.findOne({
+        where: {
+          logType: DismissedPermissionLogType.ANNOUNCEMENT,
+          permissionLogId: logId,
+          dismissedBy: user.id,
+        },
+      });
+
+      if (existing) {
+        alreadyDismissedCount++;
+        continue;
+      }
+
+      // Dismissed 로그 생성
+      await this.dismissedLogRepository.save({
         logType: DismissedPermissionLogType.ANNOUNCEMENT,
         permissionLogId: logId,
         dismissedBy: user.id,
-      },
-    });
+      });
 
-    if (existing) {
-      return {
-        success: true,
-        message: '이미 무시 처리된 로그입니다.',
-        dismissedAt: existing.dismissedAt,
-      };
+      dismissedCount++;
     }
-
-    // Dismissed 로그 생성
-    const dismissedLog = await this.dismissedLogRepository.save({
-      logType: DismissedPermissionLogType.ANNOUNCEMENT,
-      permissionLogId: logId,
-      dismissedBy: user.id,
-    });
 
     return {
       success: true,
-      message: '권한 로그를 무시 처리했습니다.',
-      dismissedAt: dismissedLog.dismissedAt,
+      message: `${dismissedCount}개의 권한 로그를 무시 처리했습니다.`,
+      dismissed: dismissedCount,
+      alreadyDismissed: alreadyDismissedCount,
+      notFound: notFoundCount,
     };
   }
 
