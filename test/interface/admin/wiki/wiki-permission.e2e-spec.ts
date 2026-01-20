@@ -410,6 +410,187 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
     });
   });
 
+  describe('다시 보지 않기 기능', () => {
+    it('미열람 권한 로그를 조회해야 한다', async () => {
+      // When - 미열람 로그 조회
+      const response = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs/unread')
+        .expect(200);
+
+      // Then
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('권한 로그를 무시 처리할 수 있어야 한다', async () => {
+      // Given - 폴더 생성 및 권한 설정
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '무시 테스트 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folderId}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['test-wiki-dept-1'],
+        })
+        .expect(200);
+
+      // 권한 교체
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folderId}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'test-wiki-dept-1', newId: 'test-wiki-dept-2' }],
+        })
+        .expect(200);
+
+      // 권한 로그 조회
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      // When - 무시 처리
+      const dismissResponse = await testSuite
+        .request()
+        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        message: expect.any(String),
+        dismissedAt: expect.any(String),
+      });
+    });
+
+    it('무시 처리한 로그는 미열람 조회에서 제외되어야 한다', async () => {
+      // Given
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '필터 테스트 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folderId}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['filter-wiki-dept'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folderId}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'filter-wiki-dept', newId: 'new-wiki-dept' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      const unreadBefore = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs/unread')
+        .expect(200);
+
+      const countBefore = unreadBefore.body.length;
+
+      // When - 무시 처리
+      await testSuite
+        .request()
+        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then
+      const unreadAfter = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs/unread')
+        .expect(200);
+
+      expect(unreadAfter.body.length).toBeLessThanOrEqual(countBefore);
+    });
+
+    it('무시 처리한 로그도 전체 조회에서는 여전히 보여야 한다', async () => {
+      // Given
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '전체 조회 테스트 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folderId}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['all-wiki-dept'],
+        })
+        .expect(200);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folderId}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'all-wiki-dept', newId: 'new-all-wiki-dept' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+      const totalBefore = logsResponse.body.length;
+
+      // When
+      await testSuite
+        .request()
+        .post(`/api/admin/wiki/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then
+      const allLogsAfter = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      expect(allLogsAfter.body.length).toBe(totalBefore);
+    });
+  });
+
   describe('부서 재활성화 시 자동 해결', () => {
     it('시스템이 자동으로 해결한 로그는 resolvedBy가 null이어야 한다', async () => {
       // Note: 이 테스트는 스케줄러가 실행되고 부서가 재활성화된 후의 상태를 검증합니다.

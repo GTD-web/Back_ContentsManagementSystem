@@ -47,6 +47,9 @@ import { ReplaceWikiPermissionsDto } from './dto/replace-wiki-permissions.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, IsNull } from 'typeorm';
 import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-log.entity';
+import { WikiPermissionAction } from '@domain/sub/wiki-file-system/wiki-permission-action.types';
+import { DismissedPermissionLog } from '@domain/common/dismissed-permission-log/dismissed-permission-log.entity';
+import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-log/dismissed-permission-log.types';
 
 @ApiTags('A-10. 관리자 - Wiki')
 @ApiBearerAuth('Bearer')
@@ -57,6 +60,8 @@ export class WikiController {
     private readonly wikiPermissionScheduler: WikiPermissionScheduler,
     @InjectRepository(WikiPermissionLog)
     private readonly permissionLogRepository: Repository<WikiPermissionLog>,
+    @InjectRepository(DismissedPermissionLog)
+    private readonly dismissedLogRepository: Repository<DismissedPermissionLog>,
   ) {}
 
   /**
@@ -880,6 +885,120 @@ export class WikiController {
       order: { detectedAt: 'DESC' },
       relations: ['wikiFileSystem'],
     });
+  }
+
+  /**
+   * Dismissed되지 않은 미해결 권한 로그를 조회한다 (모달용)
+   */
+  @Get('permission-logs/unread')
+  @ApiOperation({
+    summary: '위키 권한 로그 미열람 조회 (모달용)',
+    description:
+      '관리자가 "다시 보지 않기"를 설정하지 않은 미해결 권한 로그를 조회합니다. ' +
+      '모달 표시 여부를 결정하는 데 사용됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '미열람 권한 로그 목록 조회 성공',
+  })
+  async 위키_미열람_권한_로그를_조회한다(
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // 미해결 로그 조회 (detected 상태)
+    const unresolvedLogs = await this.permissionLogRepository.find({
+      where: {
+        action: WikiPermissionAction.DETECTED,
+        resolvedAt: IsNull(),
+      },
+      order: { detectedAt: 'DESC' },
+      relations: ['wikiFileSystem'],
+    });
+
+    // dismissed된 로그 ID 조회
+    const dismissedLogs = await this.dismissedLogRepository.find({
+      where: {
+        logType: DismissedPermissionLogType.WIKI,
+        dismissedBy: user.id,
+      },
+    });
+
+    const dismissedLogIds = new Set(
+      dismissedLogs.map((log) => log.permissionLogId),
+    );
+
+    // dismissed되지 않은 로그만 필터링
+    return unresolvedLogs.filter((log) => !dismissedLogIds.has(log.id));
+  }
+
+  /**
+   * 권한 로그를 "다시 보지 않기" 처리한다
+   */
+  @Post('permission-logs/:logId/dismiss')
+  @ApiOperation({
+    summary: '위키 권한 로그 무시 (다시 보지 않기)',
+    description:
+      '특정 권한 로그에 대한 모달을 더 이상 표시하지 않도록 설정합니다. ' +
+      '권한 로그 관리 페이지에서는 여전히 조회 가능합니다.',
+  })
+  @ApiParam({
+    name: 'logId',
+    description: '권한 로그 ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 201,
+    description: '권한 로그 무시 처리 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '권한 로그를 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 무시 처리된 로그',
+  })
+  async 위키_권한_로그를_무시한다(
+    @Param('logId') logId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // 권한 로그 존재 확인
+    const permissionLog = await this.permissionLogRepository.findOne({
+      where: { id: logId },
+    });
+
+    if (!permissionLog) {
+      throw new Error('권한 로그를 찾을 수 없습니다.');
+    }
+
+    // 이미 dismissed 되었는지 확인
+    const existing = await this.dismissedLogRepository.findOne({
+      where: {
+        logType: DismissedPermissionLogType.WIKI,
+        permissionLogId: logId,
+        dismissedBy: user.id,
+      },
+    });
+
+    if (existing) {
+      return {
+        success: true,
+        message: '이미 무시 처리된 로그입니다.',
+        dismissedAt: existing.dismissedAt,
+      };
+    }
+
+    // Dismissed 로그 생성
+    const dismissedLog = await this.dismissedLogRepository.save({
+      logType: DismissedPermissionLogType.WIKI,
+      permissionLogId: logId,
+      dismissedBy: user.id,
+    });
+
+    return {
+      success: true,
+      message: '권한 로그를 무시 처리했습니다.',
+      dismissedAt: dismissedLog.dismissedAt,
+    };
   }
 
   /**

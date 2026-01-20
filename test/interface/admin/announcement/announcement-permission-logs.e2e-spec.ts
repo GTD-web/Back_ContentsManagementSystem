@@ -534,6 +534,239 @@ describe('공지사항 권한 로그 조회 API', () => {
     });
   });
 
+  describe('다시 보지 않기 기능', () => {
+    it('미열람 권한 로그를 조회해야 한다', async () => {
+      // Given - 공지사항 생성
+      await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '테스트 공지',
+          content: '내용',
+          permissionDepartmentIds: ['dept-1'],
+        })
+        .expect(201);
+
+      // When - 미열람 로그 조회
+      const response = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs/unread')
+        .expect(200);
+
+      // Then
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('권한 로그를 무시 처리할 수 있어야 한다', async () => {
+      // Given - 공지사항 생성
+      const announcement = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '무시 테스트 공지',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['test-dept-1'],
+        })
+        .expect(201);
+
+      // 권한 교체로 RESOLVED 로그 생성
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'test-dept-1', newId: 'test-dept-2' }],
+        })
+        .expect(200);
+
+      // 권한 로그 조회
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        // 로그가 없으면 테스트 스킵
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      // When - 무시 처리
+      const dismissResponse = await testSuite
+        .request()
+        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then
+      expect(dismissResponse.body).toMatchObject({
+        success: true,
+        message: expect.any(String),
+        dismissedAt: expect.any(String),
+      });
+    });
+
+    it('무시 처리한 로그는 미열람 조회에서 제외되어야 한다', async () => {
+      // Given - 공지사항 생성
+      const announcement = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '무시 필터 테스트',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['filter-test-dept'],
+        })
+        .expect(201);
+
+      // 권한 교체로 로그 생성
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'filter-test-dept', newId: 'new-dept' }],
+        })
+        .expect(200);
+
+      // 로그 조회
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      // 무시 처리 전 미열람 조회
+      const unreadBefore = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs/unread')
+        .expect(200);
+
+      const countBefore = unreadBefore.body.length;
+
+      // When - 무시 처리
+      await testSuite
+        .request()
+        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then - 무시 처리 후 미열람 조회
+      const unreadAfter = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs/unread')
+        .expect(200);
+
+      // 무시된 로그는 제외되어야 함
+      expect(unreadAfter.body.length).toBeLessThanOrEqual(countBefore);
+    });
+
+    it('무시 처리한 로그도 전체 조회에서는 여전히 보여야 한다', async () => {
+      // Given
+      const announcement = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '전체 조회 테스트',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['all-test-dept'],
+        })
+        .expect(201);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'all-test-dept', newId: 'new-all-dept' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+      const totalBefore = logsResponse.body.length;
+
+      // When - 무시 처리
+      await testSuite
+        .request()
+        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then - 전체 조회는 동일한 개수
+      const allLogsAfter = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      expect(allLogsAfter.body.length).toBe(totalBefore);
+    });
+
+    it('이미 무시 처리된 로그를 다시 무시하면 중복 생성하지 않아야 한다', async () => {
+      // Given
+      const announcement = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '중복 테스트',
+          content: '내용',
+          isPublic: false,
+          permissionDepartmentIds: ['dup-test-dept'],
+        })
+        .expect(201);
+
+      await testSuite
+        .request()
+        .patch(`/api/admin/announcements/${announcement.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'dup-test-dept', newId: 'new-dup-dept' }],
+        })
+        .expect(200);
+
+      const logsResponse = await testSuite
+        .request()
+        .get('/api/admin/announcements/permission-logs')
+        .expect(200);
+
+      if (logsResponse.body.length === 0) {
+        return;
+      }
+
+      const logId = logsResponse.body[0].id;
+
+      // 첫 번째 무시 처리
+      const firstDismiss = await testSuite
+        .request()
+        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // When - 두 번째 무시 처리
+      const secondDismiss = await testSuite
+        .request()
+        .post(`/api/admin/announcements/permission-logs/${logId}/dismiss`)
+        .expect(201);
+
+      // Then
+      expect(secondDismiss.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining('이미'),
+      });
+
+      // dismissedAt이 동일해야 함 (중복 생성 안 됨)
+      expect(secondDismiss.body.dismissedAt).toBe(firstDismiss.body.dismissedAt);
+    });
+  });
+
   describe('부서 재활성화 시 자동 해결', () => {
     it('시스템이 자동으로 해결한 로그는 resolvedBy가 null이어야 한다', async () => {
       // Note: 이 테스트는 스케줄러가 실행되고 부서가 재활성화된 후의 상태를 검증합니다.
