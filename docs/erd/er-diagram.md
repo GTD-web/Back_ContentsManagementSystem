@@ -64,6 +64,14 @@ erDiagram
         int version
     }
 
+    DismissedPermissionLog {
+        uuid id PK "description"
+        varchar logType "announcement|wiki"
+        uuid permissionLogId "AnnouncementPermissionLog.id 또는 WikiPermissionLog.id"
+        uuid dismissedBy "무시한 관리자 ID (SSO)"
+        timestamp dismissedAt "무시한 일시"
+    }
+
     %% ==========================================
     %% Core Domain (핵심 비즈니스 로직)
     %% - ShareholdersMeeting, ElectronicDisclosure, IR
@@ -653,6 +661,7 @@ erDiagram
 | **Language** | 다국어 지원을 위한 언어 관리 |
 | **Category** | 통합 카테고리 관리 (모든 도메인 공유) |
 | **CategoryMapping** | 엔티티-카테고리 간 다대다 관계 |
+| **DismissedPermissionLog** | 권한 로그 "다시 보지 않기" 관리 (공지사항/위키) |
 
 ### Core Domain (핵심 비즈니스)
 회사의 핵심 비즈니스 기능
@@ -776,6 +785,14 @@ enum AnnouncementPermissionAction {
 }
 ```
 
+### DismissedPermissionLogType (권한 로그 타입)
+```typescript
+enum DismissedPermissionLogType {
+  ANNOUNCEMENT = 'announcement',  // 공지사항 권한 로그
+  WIKI = 'wiki'                  // 위키 권한 로그
+}
+```
+
 ---
 
 ## 외부 시스템 참조
@@ -861,6 +878,23 @@ enum AnnouncementPermissionAction {
 ---
 
 ## 변경 이력
+
+### v5.21 (2026-01-20)
+- ✅ **권한 로그 "다시 보지 않기" 기능 추가**
+  - `DismissedPermissionLog` 엔티티 추가 (Common Domain)
+  - 관리자별로 권한 로그 모달 표시 설정 관리
+  - 공지사항/위키 권한 로그 배치 무시 처리 API 구현
+  - `DismissedPermissionLogType` enum 추가 (announcement|wiki)
+  - **API 개선**:
+    - `PATCH /admin/announcements/permission-logs/dismiss` - 공지사항 권한 로그 일괄 무시
+    - `PATCH /admin/wiki/permission-logs/dismiss` - 위키 권한 로그 일괄 무시
+    - `GET /admin/announcements/permission-logs/unread` - 미열람 로그 조회 (모달용)
+    - `GET /admin/wiki/permission-logs/unread` - 미열람 로그 조회 (모달용)
+  - **권한 로그 조회 필터링 버그 수정**:
+    - `resolved` 쿼리 파라미터가 문자열로 전달되는 문제 해결
+    - `resolved=true/false` 필터링 정상 작동 확인
+  - 다중 관리자 지원 (각 관리자가 독립적으로 무시 설정 가능)
+  - 관리 페이지에서는 모든 로그 조회 가능 (무시 설정과 무관)
 
 ### v5.20 (2026-01-15)
 - ✅ **Announcement 권한 무효화 추적 추가**

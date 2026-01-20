@@ -472,6 +472,22 @@ ON announcement_permission_logs(resolved_at)
 WHERE resolved_at IS NULL;
 ```
 
+### DismissedPermissionLog
+
+```sql
+-- 로그 타입 및 권한 로그 ID 조합 조회
+CREATE INDEX idx_dismissed_permission_log_type_id
+ON dismissed_permission_logs(log_type, permission_log_id);
+
+-- 무시한 관리자별 조회
+CREATE INDEX idx_dismissed_permission_log_dismissed_by
+ON dismissed_permission_logs(dismissed_by);
+
+-- 특정 관리자가 무시한 특정 로그 확인 (중복 방지)
+CREATE UNIQUE INDEX idx_dismissed_permission_log_unique
+ON dismissed_permission_logs(log_type, permission_log_id, dismissed_by);
+```
+
 ### Survey
 
 ```sql
@@ -778,6 +794,17 @@ ALTER TABLE attendee ADD CONSTRAINT chk_attendee_completed
 ---
 
 ## 변경 이력
+
+### v5.21 (2026-01-20)
+- ✅ **권한 로그 "다시 보지 않기" 기능 추가**
+  - `dismissed_permission_logs` 테이블 추가
+  - 컬럼: id, log_type, permission_log_id, dismissed_by, dismissed_at
+  - 인덱스: 
+    - `idx_dismissed_permission_log_type_id` - (log_type, permission_log_id)
+    - `idx_dismissed_permission_log_dismissed_by` - (dismissed_by)
+    - `idx_dismissed_permission_log_unique` - UNIQUE (log_type, permission_log_id, dismissed_by)
+  - 로그 타입 enum: `announcement` | `wiki`
+  - 영구 보관 (Soft Delete, updatedAt, version 없음)
 
 ### v5.19 (2026-01-15)
 - ✅ **권한 필드를 모두 ID 기반으로 변경**

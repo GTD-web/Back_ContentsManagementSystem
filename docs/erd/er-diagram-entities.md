@@ -12,6 +12,7 @@
   - [Language (언어)](#1-언어-language)
   - [Category (카테고리)](#2-카테고리-category)
   - [CategoryMapping (카테고리 매핑)](#3-카테고리-매핑-categorymapping)
+  - [DismissedPermissionLog (권한 로그 무시)](#4-권한-로그-무시-dismissedpermissionlog)
 - [Core Domain 상세](#core-domain-상세)
   - [ShareholdersMeeting (주주총회)](#1-주주총회-shareholdersmeeting)
   - [ElectronicDisclosure (전자공시)](#2-전자공시-electronicdisclosure)
@@ -154,6 +155,63 @@ WHERE cm.entity_id = 'announcement-uuid-123';
 SELECT cm.entity_id FROM category_mapping cm
 JOIN category c ON cm.category_id = c.id
 WHERE c.id = 'category-uuid-456' AND c.entity_type = 'announcement';
+```
+
+---
+
+### 4. 권한 로그 무시 (DismissedPermissionLog)
+
+```mermaid
+erDiagram
+    DismissedPermissionLog {
+        uuid id PK
+        varchar logType "announcement|wiki"
+        uuid permissionLogId "권한 로그 ID"
+        uuid dismissedBy "무시한 관리자 ID (SSO)"
+        timestamp dismissedAt
+    }
+```
+
+**설명**:
+- 관리자가 권한 로그 모달에서 "다시 보지 않기"를 설정한 기록
+- 각 관리자가 독립적으로 무시 설정 가능
+- 무시 설정해도 관리 페이지에서는 모든 로그 조회 가능
+- **영구 보관**: Soft Delete, updatedAt, version 필드 없음
+
+**주요 필드**:
+- `logType`: 로그 타입 구분 (announcement | wiki)
+- `permissionLogId`: AnnouncementPermissionLog.id 또는 WikiPermissionLog.id
+- `dismissedBy`: 무시한 관리자의 SSO ID (외부 시스템 직원 ID)
+- `dismissedAt`: 무시한 일시 (자동 생성)
+
+**인덱스**:
+- `idx_dismissed_permission_log_type_id` - (logType, permissionLogId)
+- `idx_dismissed_permission_log_dismissed_by` - (dismissedBy)
+
+**사용 시나리오**:
+1. 관리자 A가 모달에서 로그 #1을 "다시 보지 않기" 클릭
+2. DismissedPermissionLog에 레코드 생성 (logId=#1, dismissedBy=A)
+3. 관리자 A 로그인 시 로그 #1이 모달에 표시되지 않음
+4. 관리자 B 로그인 시 로그 #1이 여전히 모달에 표시됨
+5. 모든 관리자가 관리 페이지에서 로그 #1 조회 및 처리 가능
+
+**예시 쿼리**:
+```sql
+-- 특정 관리자가 무시한 로그 조회
+SELECT * FROM dismissed_permission_logs
+WHERE dismissed_by = 'admin-uuid-123'
+  AND log_type = 'announcement';
+
+-- 미열람 권한 로그 조회 (모달용)
+SELECT apl.* FROM announcement_permission_logs apl
+WHERE apl.action = 'detected'
+  AND apl.resolved_at IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM dismissed_permission_logs dpl
+    WHERE dpl.permission_log_id = apl.id
+      AND dpl.log_type = 'announcement'
+      AND dpl.dismissed_by = 'current-admin-id'
+  );
 ```
 
 ---

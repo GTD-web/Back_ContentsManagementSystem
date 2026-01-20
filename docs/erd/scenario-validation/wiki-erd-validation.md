@@ -58,6 +58,7 @@
 | **7. 폴더 구조 조회<br>(트리 구조)** | `GET /admin/wiki/folders/structure` | • WikiFileSystem<br>• WikiFileSystemClosure | • Closure Table 활용<br>• 재귀 쿼리 불필요<br>• 성능 최적화 | 1. Closure Table 조회<br>2. 조상-자손 관계 파악<br>3. 트리 구조로 변환<br>4. 중첩 JSON 반환 |
 | **8. 파일 검색** | `GET /admin/wiki/files/search` | • WikiFileSystem | • `name`, `title`, `content` 검색<br>• 경로 정보 포함<br>• 풀텍스트 검색 | 1. LIKE 또는 full-text 검색<br>2. 경로 정보 조회 (Closure Table)<br>3. 검색 결과 반환 |
 | **9. 권한 무효화 추적<br>(Permission Log)** | `@Cron('0 0 * * *')`<br>(매일 자동 실행) | • WikiPermissionLog<br>• WikiFileSystem | • `invalidDepartments` (JSONB)<br>• `invalidRankCodes`<br>• `invalidPositionCodes`<br>• `action` (detected\|resolved)<br>• `snapshotPermissions` (JSONB) | 1. SSO에서 비활성화된 권한 감지<br>2. 로그 생성 (DETECTED)<br>3. 관리자가 권한 교체<br>4. 로그 해결 (RESOLVED)<br>5. 영구 보관 (Soft Delete 없음) |
+| **9-1. 권한 로그 모달 제어<br>(다시 보지 않기)** | `GET /admin/wiki/permission-logs/unread`<br>`PATCH /admin/wiki/permission-logs/dismiss` | • DismissedPermissionLog<br>• WikiPermissionLog | • `logType` = 'wiki'<br>• `permissionLogId` (FK)<br>• `dismissedBy` (관리자 ID)<br>• `dismissedAt` (timestamp)<br>• UK: (logType, permissionLogId, dismissedBy) | 1. 미열람 로그 조회 (모달용)<br>2. 관리자가 "다시 보지 않기" 클릭<br>3. DismissedPermissionLog 생성<br>4. 해당 관리자는 모달에서 제외<br>5. 다른 관리자는 계속 표시<br>6. 관리 페이지에서는 모든 로그 조회 가능 |
 | **10. 권한 교체** | `PATCH /admin/wiki/:id/replace-permissions` | • WikiFileSystem<br>• WikiPermissionLog | • 무효 ID → 새 ID 교체<br>• 로그 자동 해결 (RESOLVED) | 1. 권한 ID 교체<br>2. 기존 DETECTED 로그 조회<br>3. RESOLVED 로그 생성<br>4. 스냅샷 저장 |
 
 ### 1.3 상세 시나리오 (코드 예시)
