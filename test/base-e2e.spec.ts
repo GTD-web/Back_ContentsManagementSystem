@@ -116,6 +116,7 @@ export class BaseE2ETest {
   public app: INestApplication;
   protected dataSource: DataSource;
   private testAccessToken = 'test-access-token';
+  protected skipDefaultLanguageInit = false; // 기본 언어 초기화 건너뛰기 옵션
 
   /**
    * supertest request 반환
@@ -216,7 +217,9 @@ export class BaseE2ETest {
     }
 
     // 기본 언어 초기화 (스케줄러에서 언어를 찾는 에러 방지)
-    await this.initializeDefaultLanguages();
+    if (!this.skipDefaultLanguageInit) {
+      await this.initializeDefaultLanguages();
+    }
   }
 
   /**
@@ -306,7 +309,9 @@ export class BaseE2ETest {
   async cleanupBeforeTest(): Promise<void> {
     await this.cleanDatabase();
     // 기본 언어 다시 초기화
-    await this.initializeDefaultLanguages();
+    if (!this.skipDefaultLanguageInit) {
+      await this.initializeDefaultLanguages();
+    }
   }
 
   /**

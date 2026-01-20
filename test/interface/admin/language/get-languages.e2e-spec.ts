@@ -4,6 +4,7 @@ describe('GET /api/admin/languages (언어 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
 
   beforeAll(async () => {
+    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
     await testSuite.beforeAll();
   });
 
@@ -83,6 +84,7 @@ describe('GET /api/admin/languages/:id (언어 상세 조회)', () => {
   const testSuite = new BaseE2ETest();
 
   beforeAll(async () => {
+    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
     await testSuite.beforeAll();
   });
 

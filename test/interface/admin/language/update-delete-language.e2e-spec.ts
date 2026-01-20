@@ -4,6 +4,7 @@ describe('PATCH /api/admin/languages/:id (언어 수정)', () => {
   const testSuite = new BaseE2ETest();
 
   beforeAll(async () => {
+    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
     await testSuite.beforeAll();
   });
 
@@ -108,6 +109,7 @@ describe('DELETE /api/admin/languages/:id (언어 삭제)', () => {
   const testSuite = new BaseE2ETest();
 
   beforeAll(async () => {
+    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
     await testSuite.beforeAll();
   });
 
