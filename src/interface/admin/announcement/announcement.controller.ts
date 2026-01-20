@@ -482,8 +482,13 @@ export class AnnouncementController {
     status: 200,
     description: '권한 로그 목록 조회 성공',
   })
-  async 공지사항_권한_로그를_조회한다(@Query('resolved') resolved?: boolean) {
+  async 공지사항_권한_로그를_조회한다(
+    @Query('resolved') resolvedParam?: string,
+  ) {
     const where: any = {};
+
+    // 쿼리 파라미터를 boolean으로 변환
+    const resolved = resolvedParam === 'true' ? true : resolvedParam === 'false' ? false : undefined;
 
     if (resolved === true) {
       where.resolvedAt = Not(IsNull());

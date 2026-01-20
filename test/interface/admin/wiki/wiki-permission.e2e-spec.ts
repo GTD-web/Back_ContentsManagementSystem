@@ -349,6 +349,68 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
       // Then
       expect(Array.isArray(response.body)).toBe(true);
     });
+
+    it('resolved 필터링이 정확히 작동해야 한다', async () => {
+      // Given - 폴더 생성 및 권한 교체로 resolved 로그 생성
+      const folder = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: 'Resolved 필터링 테스트 폴더' })
+        .expect(201);
+
+      // 권한 설정
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folder.body.id}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: ['wiki-filter-dept-1'],
+        })
+        .expect(200);
+
+      // 권한 교체로 RESOLVED 로그 생성
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/${folder.body.id}/replace-permissions`)
+        .send({
+          departments: [{ oldId: 'wiki-filter-dept-1', newId: 'wiki-filter-dept-2' }],
+        })
+        .expect(200);
+
+      // When - 전체 로그 조회
+      const allLogsResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs')
+        .expect(200);
+
+      // Then - resolved=true는 resolvedAt이 있는 로그만
+      const resolvedResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs?resolved=true')
+        .expect(200);
+
+      expect(Array.isArray(resolvedResponse.body)).toBe(true);
+      resolvedResponse.body.forEach((log: any) => {
+        expect(log.resolvedAt).not.toBeNull();
+        expect(log.resolvedAt).toBeDefined();
+      });
+
+      // resolved=false는 resolvedAt이 null인 로그만
+      const unresolvedResponse = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs?resolved=false')
+        .expect(200);
+
+      expect(Array.isArray(unresolvedResponse.body)).toBe(true);
+      unresolvedResponse.body.forEach((log: any) => {
+        expect(log.resolvedAt).toBeNull();
+      });
+
+      // 전체 로그 수 = resolved + unresolved
+      expect(allLogsResponse.body.length).toBe(
+        resolvedResponse.body.length + unresolvedResponse.body.length,
+      );
+    });
   });
 
   describe('PATCH /api/admin/wiki/:id/replace-permissions (권한 ID 교체)', () => {
