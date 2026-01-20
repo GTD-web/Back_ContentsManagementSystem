@@ -225,12 +225,17 @@ export class BaseE2ETest {
   private async initializeDefaultLanguages(): Promise<void> {
     try {
       // 기본 언어 초기화 API 호출
-      await request(this.app.getHttpServer())
+      const response = await request(this.app.getHttpServer())
         .post('/api/admin/languages/initialize-default')
         .set('Authorization', `Bearer ${this.testAccessToken}`)
-        .send();
+        .expect(201);
+      
+      // 언어가 제대로 생성되었는지 확인
+      if (response.body && response.body.items && response.body.items.length > 0) {
+        console.log(`✅ 기본 언어 ${response.body.items.length}개 초기화 완료`);
+      }
     } catch (error) {
-      console.warn('기본 언어 초기화 중 오류 발생:', error);
+      console.warn('⚠️ 기본 언어 초기화 중 오류 발생:', error.message || error);
     }
   }
 

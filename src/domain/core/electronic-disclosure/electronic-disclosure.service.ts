@@ -70,6 +70,10 @@ export class ElectronicDisclosureService {
       'disclosure',
     );
 
+    // translations와 language 관계 로드
+    queryBuilder.leftJoinAndSelect('disclosure.translations', 'translations');
+    queryBuilder.leftJoinAndSelect('translations.language', 'language');
+
     let hasWhere = false;
 
     if (options?.isPublic !== undefined) {

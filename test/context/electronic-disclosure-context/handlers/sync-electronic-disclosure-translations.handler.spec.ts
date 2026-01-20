@@ -163,7 +163,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
       electronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue([
         disclosure1,
       ]);
-      translationRepository.findOne.mockResolvedValue(null); // 한국어 번역 없음
+      translationRepository.findOne.mockResolvedValue(null as any); // 한국어 번역 없음
 
       // When
       await handler.execute();
@@ -233,7 +233,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null);
+      languageService.코드로_언어를_조회한다.mockResolvedValue(null as any);
 
       // When
       await handler.execute();

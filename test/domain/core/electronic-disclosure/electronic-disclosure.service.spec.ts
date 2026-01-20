@@ -139,6 +139,7 @@ describe('ElectronicDisclosureService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -154,6 +155,8 @@ describe('ElectronicDisclosureService', () => {
 
       // Then
       expect(electronicDisclosureRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('disclosure.translations', 'translations');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('translations.language', 'language');
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('disclosure.order', 'ASC');
       expect(result).toEqual(mockDisclosures);
     });
@@ -169,6 +172,7 @@ describe('ElectronicDisclosureService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -183,6 +187,8 @@ describe('ElectronicDisclosureService', () => {
       const result = await service.모든_전자공시를_조회한다({ isPublic: true });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('disclosure.translations', 'translations');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('translations.language', 'language');
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('disclosure.isPublic = :isPublic', {
         isPublic: true,
       });
@@ -193,6 +199,7 @@ describe('ElectronicDisclosureService', () => {
       // Given
       const mockDisclosures = [];
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -207,6 +214,8 @@ describe('ElectronicDisclosureService', () => {
       await service.모든_전자공시를_조회한다({ orderBy: 'createdAt' });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('disclosure.translations', 'translations');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('translations.language', 'language');
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('disclosure.createdAt', 'DESC');
     });
 
@@ -217,6 +226,7 @@ describe('ElectronicDisclosureService', () => {
       const mockDisclosures = [];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -234,6 +244,8 @@ describe('ElectronicDisclosureService', () => {
       });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('disclosure.translations', 'translations');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('translations.language', 'language');
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         'disclosure.createdAt >= :startDate',
         { startDate },

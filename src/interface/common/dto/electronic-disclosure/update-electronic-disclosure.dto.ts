@@ -121,6 +121,16 @@ export class CreateElectronicDisclosureCategoryDto {
   description?: string;
 
   @ApiProperty({
+    description: '활성화 여부',
+    example: true,
+    required: false,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiProperty({
     description: '정렬 순서',
     example: 0,
     required: false,

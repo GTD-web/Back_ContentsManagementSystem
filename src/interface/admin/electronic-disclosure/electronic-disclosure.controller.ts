@@ -330,6 +330,48 @@ export class ElectronicDisclosureController {
   }
 
   /**
+   * 전자공시 오더를 일괄 수정한다
+   * 
+   * 주의: 이 라우트는 :id 라우트보다 먼저 와야 합니다.
+   * NestJS는 라우트를 위에서부터 순차적으로 매칭하므로,
+   * 'batch-order'가 ':id'로 잘못 인식되는 것을 방지합니다.
+   */
+  @Put('batch-order')
+  @ApiOperation({
+    summary: '전자공시 오더 일괄 수정',
+    description:
+      '여러 전자공시의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 전자공시 목록을 전달하면 됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '전자공시 오더 일괄 수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        updatedCount: { type: 'number', example: 5 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (수정할 전자공시가 없음)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '일부 전자공시를 찾을 수 없음',
+  })
+  async 전자공시_오더를_일괄_수정한다(
+    @Body() updateDto: UpdateElectronicDisclosureBatchOrderDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    return await this.electronicDisclosureBusinessService.전자공시_오더를_일괄_수정한다(
+      updateDto.electronicDisclosures,
+      user.id,
+    );
+  }
+
+  /**
    * 전자공시를 수정한다 (번역 및 파일 포함)
    */
   @Put(':id')
@@ -458,44 +500,6 @@ export class ElectronicDisclosureController {
       translations,
       user.id,
       files,
-    );
-  }
-
-  /**
-   * 전자공시 오더를 일괄 수정한다
-   */
-  @Put('batch-order')
-  @ApiOperation({
-    summary: '전자공시 오더 일괄 수정',
-    description:
-      '여러 전자공시의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 전자공시 목록을 전달하면 됩니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '전자공시 오더 일괄 수정 성공',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-        updatedCount: { type: 'number', example: 5 },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청 (수정할 전자공시가 없음)',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '일부 전자공시를 찾을 수 없음',
-  })
-  async 전자공시_오더를_일괄_수정한다(
-    @Body() updateDto: UpdateElectronicDisclosureBatchOrderDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<{ success: boolean; updatedCount: number }> {
-    return await this.electronicDisclosureBusinessService.전자공시_오더를_일괄_수정한다(
-      updateDto.electronicDisclosures,
-      user.id,
     );
   }
 
