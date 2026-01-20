@@ -267,6 +267,23 @@ export class AnnouncementController {
   }
 
   /**
+   * 부서 변경 대상 목록을 조회한다
+   */
+  @Get('department-change-targets')
+  @ApiOperation({
+    summary: '부서 변경 대상 목록 조회',
+    description: 'permissionDepartmentIds가 null이거나 빈 배열인 공지사항 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '부서 변경 대상 목록 조회 성공',
+    type: [AnnouncementResponseDto],
+  })
+  async 부서_변경_대상_목록을_조회한다(): Promise<AnnouncementResponseDto[]> {
+    return await this.announcementBusinessService.부서_변경_대상_목록을_조회한다();
+  }
+
+  /**
    * 공지사항 카테고리 목록을 조회한다
    */
   @Get('categories')

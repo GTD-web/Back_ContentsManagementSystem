@@ -140,4 +140,12 @@ export class AnnouncementContextService {
     return await this.queryBus.execute(query);
   }
 
+  /**
+   * 부서 변경 대상 목록을 조회한다
+   * permissionDepartmentIds가 null이거나 빈 배열인 공지사항 목록 반환
+   */
+  async 부서_변경_대상_목록을_조회한다(): Promise<Announcement[]> {
+    return await this.announcementService.부서_변경_대상_목록을_조회한다();
+  }
+
 }

@@ -16,7 +16,7 @@ class MockAuthContextService {
   async 토큰을_검증한다(accessToken: string) {
     return {
       user: {
-        id: 'test-user-id',
+        id: '00000000-0000-0000-0000-000000000099',
         email: 'test@example.com',
         name: 'Test User',
         employeeNumber: 'TEST001',
@@ -30,7 +30,7 @@ class MockAuthContextService {
   async 로그인한다(email: string, password: string) {
     return {
       user: {
-        id: 'test-user-id',
+        id: '00000000-0000-0000-0000-000000000099',
         email,
         name: 'Test User',
         employeeNumber: 'TEST001',
@@ -88,6 +88,23 @@ class MockSsoService {
       positionCode: 'EMPLOYEE',
       isActive: true,
     };
+  }
+
+  /**
+   * 부서 정보 목록 조회 모킹
+   * 권한 검증 스케줄러에서 사용
+   */
+  async 부서_정보_목록을_조회한다(departmentIds: string[]) {
+    // 테스트 환경에서는 모든 부서가 유효한 것으로 처리
+    const result = new Map();
+    departmentIds.forEach((id) => {
+      result.set(id, {
+        id,
+        name: `Mock Department ${id}`,
+        isActive: true,
+      });
+    });
+    return result;
   }
 }
 

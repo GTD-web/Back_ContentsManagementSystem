@@ -252,6 +252,28 @@ export class AnnouncementService {
   }
 
   /**
+   * 부서 변경 대상 목록을 조회한다
+   * permissionDepartmentIds가 null이거나 빈 배열인 공지사항 목록 반환
+   */
+  async 부서_변경_대상_목록을_조회한다(): Promise<Announcement[]> {
+    this.logger.debug(`부서 변경 대상 목록 조회`);
+
+    const announcements = await this.announcementRepository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+      relations: ['survey', 'survey.questions'],
+    });
+
+    // permissionDepartmentIds가 null이거나 빈 배열인 것만 필터링
+    return announcements.filter(
+      (announcement) =>
+        !announcement.permissionDepartmentIds ||
+        announcement.permissionDepartmentIds.length === 0,
+    );
+  }
+
+  /**
    * 공지사항 공개 상태를 변경한다
    * @throws ConflictException 공개 전환 시 필수 필드 누락
    */
@@ -410,9 +432,17 @@ export class AnnouncementService {
       // 에러 발생 시 롤백
       await queryRunner.rollbackTransaction();
 
-      this.logger.error(
-        `공지사항 오더 일괄 업데이트 실패 - 롤백됨: ${error.message}`,
-      );
+      // NotFoundException은 클라이언트 오류이므로 warn 레벨로 기록
+      // 그 외 예상치 못한 에러는 error 레벨로 기록
+      if (error instanceof NotFoundException) {
+        this.logger.warn(
+          `공지사항 오더 일괄 업데이트 실패 - 롤백됨: ${error.message}`,
+        );
+      } else {
+        this.logger.error(
+          `공지사항 오더 일괄 업데이트 실패 - 롤백됨: ${error.message}`,
+        );
+      }
 
       throw error;
     } finally {

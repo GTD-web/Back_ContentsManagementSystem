@@ -165,7 +165,359 @@ describe('공지사항 알림 API', () => {
         .expect(404);
     });
 
-    // Note: 설문이 있는 경우의 성공 케이스는 설문 기능이 구현된 후 테스트 가능
+    it('설문이 있는 공지사항의 미답변자에게 알림을 전송해야 한다', async () => {
+      // Given - 설문이 포함된 공지사항 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '2024년 직원 만족도 조사',
+          content: '설문에 참여해주세요',
+          isPublic: true,
+          survey: {
+            title: '만족도 조사',
+            description: '5분 정도 소요됩니다',
+            questions: [
+              {
+                title: '회사 만족도를 평가해주세요',
+                type: 'linear_scale',
+                form: {
+                  minScale: 1,
+                  maxScale: 10,
+                },
+                isRequired: true,
+                order: 0,
+              },
+              {
+                title: '개선이 필요한 부분을 작성해주세요',
+                type: 'paragraph',
+                form: null,
+                isRequired: false,
+                order: 1,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+
+      // When - 미답변자에게 알림 전송
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('다양한 질문 타입의 설문이 있는 공지사항의 미답변자에게 알림을 전송해야 한다', async () => {
+      // Given - 여러 질문 타입의 설문 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '종합 설문조사',
+          content: '다양한 질문에 답해주세요',
+          isPublic: true,
+          survey: {
+            title: '종합 설문',
+            questions: [
+              {
+                title: '이름',
+                type: 'short_answer',
+                form: null,
+                isRequired: true,
+                order: 0,
+              },
+              {
+                title: '선호하는 업무 방식',
+                type: 'multiple_choice',
+                form: {
+                  options: ['사무실', '재택', '하이브리드'],
+                },
+                isRequired: true,
+                order: 1,
+              },
+              {
+                title: '관심 분야 (복수 선택)',
+                type: 'checkboxes',
+                form: {
+                  options: ['개발', '디자인', '마케팅'],
+                },
+                isRequired: false,
+                order: 2,
+              },
+              {
+                title: '만족도 (1-10)',
+                type: 'linear_scale',
+                form: {
+                  minScale: 1,
+                  maxScale: 10,
+                },
+                isRequired: true,
+                order: 3,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+
+      // When
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('설문이 있는 공지사항에 path 파라미터를 포함하여 알림을 전송해야 한다', async () => {
+      // Given
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '긴급 설문조사',
+          content: '긴급 설문입니다',
+          isPublic: true,
+          survey: {
+            title: '긴급 설문',
+            questions: [
+              {
+                title: '참석 여부',
+                type: 'multiple_choice',
+                form: {
+                  options: ['참석', '불참'],
+                },
+                isRequired: true,
+                order: 0,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+      const customPath = 'https://mobile.example.com/survey/urgent';
+
+      // When
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered?path=${encodeURIComponent(customPath)}`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('제한공개 설문의 미답변자에게 알림을 전송해야 한다', async () => {
+      // Given - 제한공개 + 설문
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '부서 설문조사',
+          content: '부서 설문입니다',
+          isPublic: false,
+          permissionDepartmentCodes: ['경영지원-경지'],
+          survey: {
+            title: '부서 설문',
+            questions: [
+              {
+                title: '부서 만족도',
+                type: 'linear_scale',
+                form: {
+                  minScale: 1,
+                  maxScale: 5,
+                },
+                isRequired: true,
+                order: 0,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+
+      // When
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('필수 질문만 있는 설문의 미답변자에게 알림을 전송해야 한다', async () => {
+      // Given
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '필수 질문 설문',
+          content: '모든 질문이 필수입니다',
+          isPublic: true,
+          survey: {
+            title: '필수 설문',
+            questions: [
+              {
+                title: '필수 질문 1',
+                type: 'short_answer',
+                form: null,
+                isRequired: true,
+                order: 0,
+              },
+              {
+                title: '필수 질문 2',
+                type: 'multiple_choice',
+                form: {
+                  options: ['예', '아니오'],
+                },
+                isRequired: true,
+                order: 1,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+
+      // When
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('필수/선택 질문이 섞인 설문의 미답변자에게 알림을 전송해야 한다', async () => {
+      // Given
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          title: '혼합 질문 설문',
+          content: '필수와 선택 질문이 있습니다',
+          isPublic: true,
+          survey: {
+            title: '혼합 설문',
+            questions: [
+              {
+                title: '필수 질문',
+                type: 'short_answer',
+                form: null,
+                isRequired: true,
+                order: 0,
+              },
+              {
+                title: '선택 질문',
+                type: 'paragraph',
+                form: null,
+                isRequired: false,
+                order: 1,
+              },
+            ],
+          },
+        })
+        .expect(201);
+
+      const announcementId = createResponse.body.id;
+
+      // When
+      const response = await testSuite
+        .request()
+        .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+      // Then - 200 또는 201
+      expect([200, 201]).toContain(response.status);
+      expect(response.body).toMatchObject({
+        success: expect.any(Boolean),
+        sentCount: expect.any(Number),
+        failedCount: expect.any(Number),
+        message: expect.any(String),
+      });
+    });
+
+    it('여러 설문의 미답변자에게 각각 알림을 전송할 수 있어야 한다', async () => {
+      // Given - 여러 설문 생성
+      const announcementIds: string[] = [];
+
+      for (let i = 1; i <= 3; i++) {
+        const response = await testSuite
+          .request()
+          .post('/api/admin/announcements')
+          .send({
+            title: `설문조사 ${i}`,
+            content: `설문 ${i}`,
+            isPublic: true,
+            survey: {
+              title: `설문 ${i}`,
+              questions: [
+                {
+                  title: `질문 ${i}`,
+                  type: 'short_answer',
+                  form: null,
+                  isRequired: true,
+                  order: 0,
+                },
+              ],
+            },
+          })
+          .expect(201);
+
+        announcementIds.push(response.body.id);
+      }
+
+      // When & Then - 각 설문의 미답변자에게 알림 전송
+      for (const announcementId of announcementIds) {
+        const response = await testSuite
+          .request()
+          .post(`/api/admin/announcements/${announcementId}/notifications/unanswered`);
+
+        expect([200, 201]).toContain(response.status);
+        expect(response.body).toMatchObject({
+          success: expect.any(Boolean),
+          sentCount: expect.any(Number),
+          failedCount: expect.any(Number),
+          message: expect.any(String),
+        });
+      }
+    });
   });
 
   describe('POST /api/admin/announcements/:id/notifications/unread (미열람자에게 알림 전송)', () => {
