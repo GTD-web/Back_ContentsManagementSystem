@@ -507,6 +507,23 @@ export class WikiController {
       query.trim(),
     );
 
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = results.some(
+      (result) =>
+        !result.wiki.permissionDepartmentIds ||
+        result.wiki.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.wikiPermissionScheduler
+        .모든_위키_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
     return {
       items: results.map((result) =>
         WikiSearchResultDto.from(result.wiki, result.path),
@@ -539,6 +556,24 @@ export class WikiController {
     const items = await this.wikiBusinessService.파일들을_조회한다(
       parentId || null,
     );
+
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = items.some(
+      (item) =>
+        !item.permissionDepartmentIds ||
+        item.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.wikiPermissionScheduler
+        .모든_위키_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
     return {
       items: items.map((item) => WikiResponseDto.from(item)),
       total: items.length,

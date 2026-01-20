@@ -202,8 +202,8 @@ export class WikiPermissionScheduler {
         await this.permissionLogRepository.update(log.id, {
           action: WikiPermissionAction.RESOLVED,
           resolvedAt: new Date(),
-          resolvedBy: 'system',
-          note: '부서가 다시 활성화되어 자동으로 해결됨',
+          resolvedBy: null,
+          note: '부서가 다시 활성화되어 시스템에서 자동으로 해결됨',
         });
 
         this.logger.log(

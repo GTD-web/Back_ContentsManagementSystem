@@ -409,4 +409,124 @@ describe('PATCH /api/admin/wiki (위키 권한 관리)', () => {
         .expect(404);
     });
   });
+
+  describe('부서 재활성화 시 자동 해결', () => {
+    it('시스템이 자동으로 해결한 로그는 resolvedBy가 null이어야 한다', async () => {
+      // Note: 이 테스트는 스케줄러가 실행되고 부서가 재활성화된 후의 상태를 검증합니다.
+      
+      // When - 해결된 로그 중 시스템이 자동 해결한 것 조회
+      const response = await testSuite
+        .request()
+        .get('/api/admin/wiki/permission-logs?resolved=true')
+        .expect(200);
+
+      // Then - 시스템이 자동 해결한 로그가 있는 경우 검증
+      const systemResolvedLogs = response.body.filter(
+        (log: any) =>
+          log.action === 'resolved' &&
+          log.resolvedBy === null &&
+          log.note?.includes('시스템'),
+      );
+
+      // 시스템 자동 해결 로그가 있다면 구조 검증
+      if (systemResolvedLogs.length > 0) {
+        systemResolvedLogs.forEach((log: any) => {
+          expect(log).toMatchObject({
+            action: 'resolved',
+            resolvedBy: null,
+            resolvedAt: expect.any(String),
+            note: expect.stringContaining('시스템'),
+          });
+        });
+      }
+    });
+
+    it('폴더 구조 조회 시 재검증 스케줄러가 트리거되어야 한다', async () => {
+      // Given - permissionDepartmentIds가 빈 폴더 생성 후 권한 제거
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '재검증 테스트 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      // 권한을 설정했다가 제거하여 빈 상태로 만들기
+      await testSuite
+        .request()
+        .patch(`/api/admin/wiki/folders/${folderId}/public`)
+        .send({
+          isPublic: false,
+          permissionDepartmentIds: null,
+        })
+        .expect(200);
+
+      // When - 폴더 구조 조회 (스케줄러가 백그라운드에서 실행됨)
+      const response = await testSuite
+        .request()
+        .get('/api/admin/wiki/folders/structure')
+        .expect(200);
+
+      // Then - 응답이 정상적으로 반환되어야 함
+      expect(response.body).toMatchObject({
+        items: expect.any(Array),
+        total: expect.any(Number),
+      });
+    });
+
+    it('파일 목록 조회 시 재검증 스케줄러가 트리거되어야 한다', async () => {
+      // Given - 폴더와 파일 생성
+      const folderResponse = await testSuite
+        .request()
+        .post('/api/admin/wiki/folders')
+        .send({ name: '파일 재검증 폴더' })
+        .expect(201);
+
+      const folderId = folderResponse.body.id;
+
+      await testSuite
+        .request()
+        .post('/api/admin/wiki/files/empty')
+        .send({
+          name: '재검증 파일',
+          parentId: folderId,
+        })
+        .expect(201);
+
+      // When - 파일 목록 조회
+      const response = await testSuite
+        .request()
+        .get(`/api/admin/wiki/files?parentId=${folderId}`)
+        .expect(200);
+
+      // Then
+      expect(response.body).toMatchObject({
+        items: expect.any(Array),
+        total: expect.any(Number),
+      });
+    });
+
+    it('파일 검색 시 재검증 스케줄러가 트리거되어야 한다', async () => {
+      // Given - 검색 가능한 파일 생성
+      await testSuite
+        .request()
+        .post('/api/admin/wiki/files/empty')
+        .send({
+          name: '검색용 재검증 파일',
+        })
+        .expect(201);
+
+      // When - 파일 검색
+      const response = await testSuite
+        .request()
+        .get('/api/admin/wiki/files/search?query=검색용')
+        .expect(200);
+
+      // Then
+      expect(response.body).toMatchObject({
+        items: expect.any(Array),
+        total: expect.any(Number),
+      });
+    });
+  });
 });

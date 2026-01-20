@@ -237,6 +237,23 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
       });
 
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = result.items.some(
+      (item) =>
+        !item.permissionDepartmentIds ||
+        item.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.announcementPermissionScheduler
+        .모든_공지사항_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
     return {
       items: result.items.map((item) => ({
         ...item,
@@ -263,7 +280,26 @@ export class AnnouncementController {
     type: [AnnouncementResponseDto],
   })
   async 공지사항_전체_목록을_조회한다(): Promise<AnnouncementResponseDto[]> {
-    return await this.announcementBusinessService.공지사항_전체_목록을_조회한다();
+    const items = await this.announcementBusinessService.공지사항_전체_목록을_조회한다();
+
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = items.some(
+      (item) =>
+        !item.permissionDepartmentIds ||
+        item.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      // 비동기로 권한 검증 배치 실행 (응답을 기다리지 않음)
+      this.announcementPermissionScheduler
+        .모든_공지사항_권한을_검증한다()
+        .catch((error) => {
+          // 에러 로깅만 하고 응답에는 영향 없음
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
+    return items;
   }
 
   /**
