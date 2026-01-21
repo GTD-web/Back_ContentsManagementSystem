@@ -9,15 +9,20 @@ import { IStorageService, UploadedFile } from './interfaces/storage.interface';
  * 로컬 파일 시스템 Storage Service
  * 
  * 개발 환경에서 사용하는 로컬 파일 저장소입니다.
- * 파일은 프로젝트의 'uploads' 폴더에 저장됩니다.
+ * 파일은 프로젝트의 'uploads/dev' 폴더에 저장됩니다.
  */
 @Injectable()
 export class LocalStorageService implements IStorageService {
   private readonly logger = new Logger(LocalStorageService.name);
   private readonly uploadDir: string;
   private readonly baseUrl: string;
+  private readonly envPrefix: string;
 
   constructor(private readonly configService: ConfigService) {
+    // NODE_ENV에 따라 환경별 prefix 결정
+    const env = this.configService.get<string>('NODE_ENV', 'development');
+    this.envPrefix = this.getEnvPrefix(env);
+
     // 업로드 디렉토리 (프로젝트 루트/uploads)
     this.uploadDir = this.configService.get<string>(
       'LOCAL_UPLOAD_DIR',
@@ -34,7 +39,21 @@ export class LocalStorageService implements IStorageService {
     // 업로드 디렉토리 생성
     this.ensureUploadDirExists();
 
-    this.logger.log(`로컬 스토리지 초기화 - 디렉토리: ${this.uploadDir}`);
+    this.logger.log(`로컬 스토리지 초기화 - 디렉토리: ${this.uploadDir}, Env: ${env}, Prefix: ${this.envPrefix}`);
+  }
+
+  /**
+   * NODE_ENV 값에 따라 환경별 prefix를 반환합니다.
+   */
+  private getEnvPrefix(env: string): string {
+    if (env === 'production' || env === 'prod') {
+      return 'prod';
+    }
+    if (env === 'staging' || env === 'stage') {
+      return 'stage';
+    }
+    // 기본값 (development, dev 등)
+    return 'dev';
   }
 
   /**
@@ -64,15 +83,17 @@ export class LocalStorageService implements IStorageService {
   }
 
   /**
-   * 파일을 로컬에 업로드합니다
+   * 파일을 로컬에 업로드합니다.
+   * 모든 파일은 환경별 폴더(dev) 안에 저장됩니다.
    */
   async uploadFile(
     file: Express.Multer.File,
     folder: string = 'uploads',
   ): Promise<UploadedFile> {
     try {
-      // 폴더 생성
-      const folderPath = await this.ensureFolderExists(folder);
+      // 환경별 prefix를 경로에 추가 (예: dev/lumir-stories)
+      const fullFolder = `${this.envPrefix}/${folder}`;
+      const folderPath = await this.ensureFolderExists(fullFolder);
 
       // 고유한 파일명 생성
       const fileExtension = file.originalname.split('.').pop();
@@ -82,8 +103,8 @@ export class LocalStorageService implements IStorageService {
       // 파일 저장
       await fs.writeFile(filePath, file.buffer);
 
-      // URL 생성
-      const url = `${this.baseUrl}/${folder}/${uniqueFileName}`;
+      // URL 생성 (환경 prefix 포함)
+      const url = `${this.baseUrl}/${fullFolder}/${uniqueFileName}`;
 
       this.logger.log(`파일 업로드 성공: ${file.originalname} → ${url}`);
 

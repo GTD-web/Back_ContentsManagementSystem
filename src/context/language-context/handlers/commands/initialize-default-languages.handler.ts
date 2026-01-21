@@ -31,9 +31,10 @@ export class InitializeDefaultLanguagesHandler
   ): Promise<Language[]> {
     this.logger.log('기본 언어 초기화 시작');
 
+    // 기본 언어 목록 (English를 첫 번째로 설정)
     const defaultLanguages = [
+      { code: LanguageCode.ENGLISH, name: 'English' }, // 기본 언어
       { code: LanguageCode.KOREAN, name: '한국어' },
-      { code: LanguageCode.ENGLISH, name: 'English' },
       { code: LanguageCode.JAPANESE, name: '日本語' },
       { code: LanguageCode.CHINESE, name: '中文' },
     ];
@@ -55,11 +56,22 @@ export class InitializeDefaultLanguagesHandler
         });
         const saved = await this.languageRepository.save(language);
         createdLanguages.push(saved);
-        this.logger.log(`기본 언어 추가 완료 - ${lang.name} (${lang.code})`);
+        
+        if (lang.code === LanguageCode.ENGLISH) {
+          this.logger.log(`✅ 기본 언어 추가 완료 - ${lang.name} (${lang.code}) [기본]`);
+        } else {
+          this.logger.log(`기본 언어 추가 완료 - ${lang.name} (${lang.code})`);
+        }
       } else {
-        this.logger.log(
-          `기본 언어 건너뛰기 - ${lang.name} (${lang.code}) 이미 존재`,
-        );
+        if (lang.code === LanguageCode.ENGLISH) {
+          this.logger.log(
+            `✅ 기본 언어 확인 완료 - ${lang.name} (${lang.code}) [기본, 이미 존재]`,
+          );
+        } else {
+          this.logger.log(
+            `기본 언어 건너뛰기 - ${lang.name} (${lang.code}) 이미 존재`,
+          );
+        }
       }
     }
 

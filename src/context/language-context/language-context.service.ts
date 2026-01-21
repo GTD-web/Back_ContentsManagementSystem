@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateLanguageCommand } from './handlers/commands/create-language.handler';
 import { UpdateLanguageCommand } from './handlers/commands/update-language.handler';
 import { DeleteLanguageCommand } from './handlers/commands/delete-language.handler';
@@ -13,6 +15,7 @@ import {
   LanguageListResult,
 } from './interfaces/language-context.interface';
 import { Language } from '@domain/common/language/language.entity';
+import { LanguageCode } from '@domain/common/language/language-code.types';
 
 /**
  * 언어 컨텍스트 서비스
@@ -20,11 +23,72 @@ import { Language } from '@domain/common/language/language.entity';
  * 언어 생성, 수정, 삭제 및 조회 비즈니스 로직을 담당합니다.
  */
 @Injectable()
-export class LanguageContextService {
+export class LanguageContextService implements OnModuleInit {
+  private readonly logger = new Logger(LanguageContextService.name);
+
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    @InjectRepository(Language)
+    private readonly languageRepository: Repository<Language>,
   ) {}
+
+  /**
+   * 모듈 초기화 시 기본 언어를 자동으로 추가한다
+   * CQRS 핸들러가 초기화되기 전에 실행되므로 직접 Repository 사용
+   */
+  async onModuleInit() {
+    try {
+      this.logger.log('🌐 서버 시작 시 기본 언어 초기화 시작...');
+      
+      // 기본 언어 목록 (English를 첫 번째로 설정)
+      const defaultLanguages = [
+        { code: LanguageCode.ENGLISH, name: 'English' }, // 기본 언어
+        { code: LanguageCode.KOREAN, name: '한국어' },
+        { code: LanguageCode.JAPANESE, name: '日本語' },
+        { code: LanguageCode.CHINESE, name: '中文' },
+      ];
+
+      const createdLanguages: Language[] = [];
+
+      for (const lang of defaultLanguages) {
+        // 이미 존재하는지 확인
+        const existing = await this.languageRepository.findOne({
+          where: { code: lang.code },
+        });
+
+        if (!existing) {
+          const language = this.languageRepository.create({
+            code: lang.code,
+            name: lang.name,
+            isActive: true,
+            createdBy: 'system',
+          });
+          const saved = await this.languageRepository.save(language);
+          createdLanguages.push(saved);
+          
+          if (lang.code === LanguageCode.ENGLISH) {
+            this.logger.log(`✅ 기본 언어 추가 완료 - ${lang.name} (${lang.code}) [기본]`);
+          } else {
+            this.logger.log(`   - ${lang.name} (${lang.code})`);
+          }
+        } else {
+          if (lang.code === LanguageCode.ENGLISH) {
+            this.logger.log(`✅ 기본 언어 확인 완료 - ${lang.name} (${lang.code}) [기본, 이미 존재]`);
+          }
+        }
+      }
+
+      if (createdLanguages.length > 0) {
+        this.logger.log(`✅ 기본 언어 초기화 완료 - ${createdLanguages.length}개 언어 추가됨`);
+      } else {
+        this.logger.log('✅ 기본 언어가 이미 존재합니다.');
+      }
+    } catch (error) {
+      this.logger.error('❌ 기본 언어 초기화 실패', error);
+      // 에러가 발생해도 서버 시작은 계속 진행
+    }
+  }
 
   /**
    * 언어를 생성한다
