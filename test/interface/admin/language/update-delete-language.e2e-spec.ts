@@ -127,7 +127,7 @@ describe('DELETE /api/admin/languages/:id (언어 삭제)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어', isActive: true });
+        .send({ code: 'en', name: 'English', isActive: true });
 
       const languageId = createResponse.body.id;
 
@@ -149,7 +149,7 @@ describe('DELETE /api/admin/languages/:id (언어 삭제)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어', isActive: true });
+        .send({ code: 'ja', name: '日本語', isActive: true });
 
       const languageId = createResponse.body.id;
 
@@ -179,6 +179,22 @@ describe('DELETE /api/admin/languages/:id (언어 삭제)', () => {
         .request()
         .delete(`/api/admin/languages/${nonExistentId}`)
         .expect(404);
+    });
+
+    it('기본 언어(ko) 삭제 시 400 에러가 발생해야 한다', async () => {
+      // Given: 기본 언어 ko 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({ code: 'ko', name: '한국어', isActive: true });
+
+      const languageId = createResponse.body.id;
+
+      // When & Then: 기본 언어는 삭제할 수 없음
+      await testSuite
+        .request()
+        .delete(`/api/admin/languages/${languageId}`)
+        .expect(400);
     });
   });
 });
