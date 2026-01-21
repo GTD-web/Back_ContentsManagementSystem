@@ -66,6 +66,10 @@ scripts/backup/dumps/*.sql
 /backup/
 !/backup/.gitkeep
 
+# Database automated backups (GFS 백업 전략)
+/backups/
+!/backups/.gitkeep
+
 # Local file uploads (로컬 개발 환경)
 /uploads/
 !/uploads/.gitkeep

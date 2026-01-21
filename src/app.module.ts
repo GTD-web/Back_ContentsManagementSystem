@@ -18,9 +18,11 @@ import { SurveyAdminModule } from './interface/admin/survey/survey.module';
 import { WikiModule } from './interface/admin/wiki/wiki.module';
 import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
 import { PermissionValidationModule } from './interface/admin/permission-validation/permission-validation.module';
+import { BackupModule } from './interface/admin/backup/backup.module';
 import { HealthModule } from './interface/common/health/health.module';
 import { CompanyModule } from './interface/common/company/company.module';
 import { AuthContextModule } from '@context/auth-context';
+import { BackupContextModule } from '@context/backup-context';
 import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
 
 /**
@@ -47,6 +49,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
 
     // Context Layer 모듈
     AuthContextModule,
+    BackupContextModule,
 
     // Interface Layer 모듈
     HealthModule,
@@ -65,6 +68,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     WikiModule,
     SeedDataModule,
     PermissionValidationModule,
+    BackupModule,
     CompanyModule,
   ],
   providers: [

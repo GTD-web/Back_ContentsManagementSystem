@@ -25,7 +25,10 @@
     "migration:generate": "npm run build && npm run typeorm -- migration:generate -d dist/src/migration.datasource.js",
     "migration:run": "npm run build && npm run typeorm -- migration:run -d dist/src/migration.datasource.js",
     "migration:revert": "npm run build && npm run typeorm -- migration:revert -d dist/src/migration.datasource.js",
-    "migration:show": "npm run build && npm run typeorm -- migration:show -d dist/src/migration.datasource.js"
+    "migration:show": "npm run build && npm run typeorm -- migration:show -d dist/src/migration.datasource.js",
+    "backup": "ts-node -r tsconfig-paths/register scripts/backup/run-backup.ts",
+    "backup:cleanup": "ts-node -r tsconfig-paths/register scripts/backup/cleanup-backups.ts",
+    "backup:list": "ts-node -r tsconfig-paths/register scripts/backup/list-backups.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.965.0",
