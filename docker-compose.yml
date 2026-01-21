@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
     environment:
       # 애플리케이션 설정
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 4001
   
       # 데이터베이스 연결 정보
@@ -47,20 +47,21 @@ services:
       DATABASE_NAME: lumir_cms
   
       # TypeORM 설정
-      DB_SYNCHRONIZE: 'false' # 프로덕션에서는 false 권장
-      DB_LOGGING: 'false' # 프로덕션에서는 false 권장
+      DB_SYNCHRONIZE: 'true'
+      DB_LOGGING: 'true'
   
-      # SSO 인증 설정 
-      SSO_BASE_URL: https://lsso-dev.lumir.space  
+      # SSO 인증 설정
+      SSO_BASE_URL: https://lsso-dev.lumir.space
+  
       # 메일 알림 서버 URL
-      MAIL_NOTIFICATION_SERVER_URL: https://lumir-notification-server.vercel.app 
+      MAIL_NOTIFICATION_SERVER_URL: https://lumir-notification-server.vercel.app
   
       # JWT 설정 (실제 운영 시 반드시 변경 필요)
       JWT_SECRET: your-secret-key-change-this
       JWT_EXPIRATION: 1d
   
       # 파일 업로드 설정
-      STORAGE_TYPE: local  # local 또는 s3
+      STORAGE_TYPE: local
       LOCAL_UPLOAD_DIR: uploads
       UPLOAD_LOCATION: ./uploads
       LOCAL_STORAGE_BASE_URL: http://localhost:4001/uploads
