@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +20,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
+import { Roles } from '@interface/common/decorators';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
 import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { CreateAnnouncementDto } from '@interface/common/dto/announcement/create-announcement.dto';
@@ -50,6 +53,8 @@ import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-
 
 @ApiTags('A-9. 관리자 - 공지사항')
 @ApiBearerAuth('Bearer')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('admin/announcements')
 export class AnnouncementController {
   constructor(

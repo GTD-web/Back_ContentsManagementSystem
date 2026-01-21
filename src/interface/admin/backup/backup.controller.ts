@@ -1,5 +1,20 @@
-import { Controller, Post, Get, Query, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Query,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
+import { Roles } from '@interface/common/decorators';
 import { BackupService } from '@context/backup-context/backup.service';
 import { BackupRetentionService } from '@context/backup-context/backup-retention.service';
 import { BackupType } from '@context/backup-context/backup.types';
@@ -10,6 +25,9 @@ import { BackupType } from '@context/backup-context/backup.types';
  * 데이터베이스 백업을 수동으로 실행하고 관리할 수 있는 API를 제공합니다.
  */
 @ApiTags('백업 관리')
+@ApiBearerAuth('Bearer')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('admin/backup')
 export class BackupController {
   private readonly logger = new Logger(BackupController.name);

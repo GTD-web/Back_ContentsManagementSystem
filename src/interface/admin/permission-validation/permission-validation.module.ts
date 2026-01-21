@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthContextModule } from '@context/auth-context';
 import { PermissionValidationController } from './permission-validation.controller';
 import { AnnouncementContextModule } from '@context/announcement-context/announcement-context.module';
 import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
@@ -10,6 +11,7 @@ import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
  */
 @Module({
   imports: [
+    AuthContextModule,
     AnnouncementContextModule,
     WikiContextModule,
   ],

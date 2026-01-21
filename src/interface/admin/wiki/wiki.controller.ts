@@ -11,6 +11,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import {
@@ -26,6 +27,8 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
+import { Roles } from '@interface/common/decorators';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
 import { WikiPermissionScheduler } from '@context/wiki-context/wiki-permission.scheduler';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
@@ -54,6 +57,8 @@ import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-
 
 @ApiTags('A-10. 관리자 - Wiki')
 @ApiBearerAuth('Bearer')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('admin/wiki')
 export class WikiController {
   constructor(

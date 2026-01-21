@@ -6,6 +6,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -14,6 +15,8 @@ import {
   ApiResponse,
   ApiBody,
 } from '@nestjs/swagger';
+import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
+import { Roles } from '@interface/common/decorators';
 import { SeedDataContextService } from '@context/seed-data-context/seed-data-context.service';
 import {
   SeedDataConfigDto,
@@ -27,6 +30,8 @@ import {
  */
 @ApiTags('A-0. 관리자 - 시드 데이터')
 @ApiBearerAuth('Bearer')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('admin/seed')
 export class SeedDataController {
   constructor(

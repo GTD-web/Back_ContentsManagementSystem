@@ -64,8 +64,12 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
         systemRoles: Record<string, string[]>;
       };
 
-      // CMS-DEV 시스템의 역할 추출
-      const cmsRoles = data.systemRoles['CMS-DEV'] || [];
+      // NODE_ENV에 따라 CMS 시스템 선택
+      const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+      const cmsSystemName = nodeEnv === 'production' ? 'CMS-PROD' : 'CMS-DEV';
+      
+      // 해당 CMS 시스템의 역할 추출
+      const cmsRoles = data.systemRoles[cmsSystemName] || [];
 
       // 자체 JWT 생성 (email, name 포함)
       const payload = {
@@ -82,7 +86,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
         expiresIn: '7d', // 리프레시 토큰은 7일
       });
 
-      this.logger.log(`로그인 성공: ${email} (역할: ${cmsRoles.join(', ')})`);
+      this.logger.log(`로그인 성공: ${email} (시스템: ${cmsSystemName}, 역할: ${cmsRoles.join(', ')})`);
 
       return {
         accessToken,
@@ -93,7 +97,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
           email: data.email,
           name: data.name,
           employeeNumber: data.employeeNumber,
-          roles: cmsRoles, // CMS-DEV 시스템의 역할
+          roles: cmsRoles, // CMS 시스템의 역할
           status: data.status,
         },
       };

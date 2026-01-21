@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
+import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
+import { Roles } from '@interface/common/decorators';
 import { SurveyBusinessService } from '@business/survey-business/survey-business.service';
 import { CreateSurveyDto } from '@interface/common/dto/survey/create-survey.dto';
 import { UpdateSurveyDto } from '@interface/common/dto/survey/update-survey.dto';
@@ -29,6 +32,8 @@ import {
 
 @ApiTags('A-10. 관리자 - 설문조사')
 @ApiBearerAuth('Bearer')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('admin/surveys')
 export class SurveyController {
   constructor(

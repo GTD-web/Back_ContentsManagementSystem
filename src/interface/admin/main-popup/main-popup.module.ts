@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthContextModule } from '@context/auth-context';
 import { MainPopupController } from './main-popup.controller';
 import { MainPopupBusinessModule } from '@business/main-popup-business/main-popup-business.module';
 
@@ -6,7 +7,7 @@ import { MainPopupBusinessModule } from '@business/main-popup-business/main-popu
  * 메인 팝업 인터페이스 모듈
  */
 @Module({
-  imports: [MainPopupBusinessModule],
+  imports: [AuthContextModule, MainPopupBusinessModule],
   controllers: [MainPopupController],
 })
 export class MainPopupInterfaceModule {}

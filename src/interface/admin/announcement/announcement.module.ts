@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthContextModule } from '@context/auth-context';
 import { AnnouncementController } from './announcement.controller';
 import { AnnouncementBusinessModule } from '@business/announcement-business/announcement-business.module';
 import { AnnouncementContextModule } from '@context/announcement-context/announcement-context.module';
@@ -8,6 +9,7 @@ import { DismissedPermissionLog } from '@domain/common/dismissed-permission-log/
 
 @Module({
   imports: [
+    AuthContextModule,
     AnnouncementBusinessModule,
     AnnouncementContextModule,
     TypeOrmModule.forFeature([AnnouncementPermissionLog, DismissedPermissionLog]),
