@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { faker } from '@faker-js/faker/locale/ko';
 
 // Domain Entities
@@ -113,6 +114,7 @@ export class SeedDataContextService {
     private readonly lumirStoryContextService: LumirStoryContextService,
     private readonly videoGalleryContextService: VideoGalleryContextService,
     private readonly wikiContextService: WikiContextService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -894,23 +896,24 @@ export class SeedDataContextService {
       `브로셔 시드 데이터 생성 시작 - 개수: ${count} (다국어 자동 생성)`,
     );
 
-    // 한국어 조회 (기준 언어)
+    // 기본 언어 조회 (기준 언어)
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 브로셔 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 브로셔 생성을 건너뜁니다.`);
       return 0;
     }
 
     let created = 0;
 
     for (let i = 0; i < count; i++) {
-      // 한국어로 기본 번역 생성 (나머지 언어는 자동으로 동기화됨)
+      // 기본 언어로 번역 생성 (나머지 언어는 자동으로 동기화됨)
       await this.brochureContextService.브로슈어를_생성한다({
         translations: [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${faker.company.catchPhrase()} - 브로셔 ${i + 1}`,
             description: faker.lorem.paragraphs(2),
           },
@@ -946,10 +949,11 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 전자공시 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 전자공시 생성을 건너뜁니다.`);
       return 0;
     }
 
@@ -973,7 +977,7 @@ export class SeedDataContextService {
       await this.electronicDisclosureContextService.전자공시를_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${year}년 ${quarter} ${type}`,
             description: `${year}년 ${quarter} ${type} 공시 내용입니다. 회사의 재무상태, 경영성과 및 주요 사업 현황을 포함하고 있습니다.`,
           },
@@ -1007,10 +1011,11 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. IR 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. IR 생성을 건너뜁니다.`);
       return 0;
     }
 
@@ -1029,7 +1034,7 @@ export class SeedDataContextService {
       await this.irContextService.IR을_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${new Date().getFullYear()}년 ${type} - IR ${i + 1}`,
             description: faker.lorem.paragraphs(2),
           },
@@ -1065,10 +1070,11 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 주주총회 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 주주총회 생성을 건너뜁니다.`);
       return 0;
     }
 
@@ -1082,7 +1088,7 @@ export class SeedDataContextService {
       await this.shareholdersMeetingContextService.주주총회를_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `제${60 - i}기 정기 주주총회`,
             description: `${year}년 제${60 - i}기 정기 주주총회를 개최합니다. 재무제표 승인, 이사 선임 등 주요 안건을 결의할 예정입니다.`,
           },
@@ -1101,7 +1107,7 @@ export class SeedDataContextService {
             result: 'accepted' as any,
             translations: [
               {
-                languageId: koreanLang.id,
+                languageId: defaultLang.id,
                 title: '재무제표 승인의 건',
               },
             ],
@@ -1115,7 +1121,7 @@ export class SeedDataContextService {
             result: 'accepted' as any,
             translations: [
               {
-                languageId: koreanLang.id,
+                languageId: defaultLang.id,
                 title: '이사 선임의 건',
               },
             ],
@@ -1152,10 +1158,11 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 메인 팝업 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 메인 팝업 생성을 건너뜁니다.`);
       return 0;
     }
 
@@ -1165,7 +1172,7 @@ export class SeedDataContextService {
       await this.mainPopupContextService.메인_팝업을_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${faker.company.catchPhrase()} - 이벤트 ${i + 1}`,
             description: faker.lorem.paragraph(),
           },

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   GetBrochureListHandler,
   GetBrochureListQuery,
@@ -16,6 +17,13 @@ describe('GetBrochureListHandler', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -23,6 +31,10 @@ describe('GetBrochureListHandler', () => {
         {
           provide: getRepositoryToken(Brochure),
           useValue: mockBrochureRepository,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -299,7 +311,7 @@ describe('GetBrochureListHandler', () => {
       expect(result.total).toBe(1);
     });
 
-    it('한국어 번역만 필터링해야 한다', async () => {
+    it('기본 언어 번역만 필터링해야 한다', async () => {
       // Given
       const query = new GetBrochureListQuery(undefined, 'order', 1, 10);
 
@@ -331,9 +343,9 @@ describe('GetBrochureListHandler', () => {
       const result = await handler.execute(query);
 
       // Then
-      // 핸들러 내부에서 한국어만 필터링
+      // 핸들러 내부에서 기본 언어(en)만 필터링
       expect(result.items[0].translations).toHaveLength(1);
-      expect(result.items[0].translations[0].language.code).toBe('ko');
+      expect(result.items[0].translations[0].language.code).toBe('en');
     });
 
     it('결과가 없을 때 빈 배열을 반환해야 한다', async () => {

@@ -7,6 +7,7 @@ import { CategoryService } from '@domain/common/category/category.service';
 import { SsoService } from '@domain/common/sso/sso.service';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
 import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
 import { Survey } from '@domain/sub/survey/survey.entity';
@@ -92,6 +93,10 @@ describe('AnnouncementBusinessService', () => {
     }),
   };
 
+  const mockDataSource = {
+    createQueryRunner: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -135,6 +140,10 @@ describe('AnnouncementBusinessService', () => {
         {
           provide: getRepositoryToken(SurveyCompletion),
           useValue: mockSurveyCompletionRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();

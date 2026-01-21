@@ -28,6 +28,7 @@ describe('SyncMainPopupTranslationsHandler', () => {
           provide: LanguageService,
           useValue: {
             코드로_언어를_조회한다: jest.fn(),
+            기본_언어를_조회한다: jest.fn(),
           },
         },
         {
@@ -89,7 +90,7 @@ describe('SyncMainPopupTranslationsHandler', () => {
         isSynced: true,
       } as MainPopupTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       mainPopupService.모든_메인_팝업을_조회한다.mockResolvedValue([popup1]);
@@ -103,7 +104,7 @@ describe('SyncMainPopupTranslationsHandler', () => {
       await handler.execute();
 
       // Then
-      expect(languageService.코드로_언어를_조회한다).toHaveBeenCalledWith('ko');
+      expect(languageService.기본_언어를_조회한다).toHaveBeenCalled();
       expect(mainPopupService.모든_메인_팝업을_조회한다).toHaveBeenCalled();
       expect(translationRepository.save).toHaveBeenCalledTimes(1);
 
@@ -128,7 +129,7 @@ describe('SyncMainPopupTranslationsHandler', () => {
         isPublic: true,
       } as MainPopup;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       mainPopupService.모든_메인_팝업을_조회한다.mockResolvedValue([popup1]);
@@ -144,7 +145,9 @@ describe('SyncMainPopupTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null);
+      languageService.기본_언어를_조회한다.mockResolvedValue(
+        null as unknown as Language,
+      );
 
       // When
       await handler.execute();
@@ -167,7 +170,7 @@ describe('SyncMainPopupTranslationsHandler', () => {
       const popup1: MainPopup = { id: 'popup-1' } as MainPopup;
       const popup2: MainPopup = { id: 'popup-2' } as MainPopup;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       mainPopupService.모든_메인_팝업을_조회한다.mockResolvedValue([

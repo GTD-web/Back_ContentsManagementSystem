@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { BrochureService } from '@domain/core/brochure/brochure.service';
 import { LanguageService } from '@domain/common/language/language.service';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
@@ -28,6 +29,7 @@ export class CreateBrochureHandler implements ICommandHandler<CreateBrochureComm
   constructor(
     private readonly brochureService: BrochureService,
     private readonly languageService: LanguageService,
+    private readonly configService: ConfigService,
     @InjectRepository(BrochureTranslation)
     private readonly brochureTranslationRepository: Repository<BrochureTranslation>,
   ) {}
@@ -91,10 +93,11 @@ export class CreateBrochureHandler implements ICommandHandler<CreateBrochureComm
 
     await this.brochureTranslationRepository.save(customTranslations);
 
-    // 첫 번째 번역 찾기 (한국어 우선, 없으면 첫 번째)
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    // 첫 번째 번역 찾기 (기본 언어 우선, 없으면 첫 번째)
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
-      data.translations.find((t) => t.languageId === koreanLang?.id) ||
+      data.translations.find((t) => t.languageId === defaultLang?.id) ||
       data.translations[0];
 
     // 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)

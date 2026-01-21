@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ShareholdersMeetingContextService } from '@context/shareholders-meeting-context/shareholders-meeting-context.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class ShareholdersMeetingBusinessService {
   constructor(
     private readonly shareholdersMeetingContextService: ShareholdersMeetingContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -314,9 +316,10 @@ export class ShareholdersMeetingBusinessService {
     const totalPages = Math.ceil(result.total / limit);
 
     // ShareholdersMeeting 엔티티를 DTO로 변환
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     const items = result.items.map((meeting) => {
-      const koreanTranslation =
-        meeting.translations?.find((t: any) => t.language?.code === 'ko') ||
+      const defaultTranslation =
+        meeting.translations?.find((t: any) => t.language?.code === defaultLanguageCode) ||
         meeting.translations?.[0];
 
       return {
@@ -325,8 +328,8 @@ export class ShareholdersMeetingBusinessService {
         order: meeting.order,
         location: meeting.location,
         meetingDate: meeting.meetingDate,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
         createdAt: meeting.createdAt,
         updatedAt: meeting.updatedAt,
       };

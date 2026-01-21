@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IRContextService } from '@context/ir-context/ir-context.service';
 import { IR } from '@domain/core/ir/ir.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class IRBusinessService {
   constructor(
     private readonly irContextService: IRContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -255,17 +257,18 @@ export class IRBusinessService {
     const totalPages = Math.ceil(result.total / limit);
 
     // IR 엔티티를 IRListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     const items: IRListItemDto[] = result.items.map((ir) => {
-      const koreanTranslation =
-        ir.translations?.find((t) => t.language?.code === 'ko') ||
+      const defaultTranslation =
+        ir.translations?.find((t) => t.language?.code === defaultLanguageCode) ||
         ir.translations?.[0];
 
       return {
         id: ir.id,
         isPublic: ir.isPublic,
         order: ir.order,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
         createdAt: ir.createdAt,
         updatedAt: ir.updatedAt,
       };

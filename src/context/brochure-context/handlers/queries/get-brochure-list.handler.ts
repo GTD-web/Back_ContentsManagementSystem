@@ -1,6 +1,7 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureListResult } from '../../interfaces/brochure-context.interface';
 import { Logger } from '@nestjs/common';
@@ -29,6 +30,7 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
   constructor(
     @InjectRepository(Brochure)
     private readonly brochureRepository: Repository<Brochure>,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(query: GetBrochureListQuery): Promise<BrochureListResult> {
@@ -38,11 +40,13 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
       `브로슈어 목록 조회 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+
     const queryBuilder = this.brochureRepository
       .createQueryBuilder('brochure')
       .leftJoinAndSelect('brochure.translations', 'translations')
       .leftJoinAndSelect('translations.language', 'language')
-      // 한국어 번역이 있는 브로슈어만 조회 (EXISTS 서브쿼리 사용)
+      // 기본 언어 번역이 있는 브로슈어만 조회 (EXISTS 서브쿼리 사용)
       .where((qb) => {
         const subQuery = qb
           .subQuery()
@@ -50,7 +54,7 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
           .from('brochure_translations', 'bt')
           .innerJoin('languages', 'lang', 'bt.languageId = lang.id')
           .where('bt.brochureId = brochure.id')
-          .andWhere("lang.code = 'ko'")
+          .andWhere('lang.code = :defaultLanguageCode', { defaultLanguageCode })
           .getQuery();
         return `EXISTS ${subQuery}`;
       });
@@ -79,10 +83,10 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
 
     const [items, total] = await queryBuilder.getManyAndCount();
 
-    // 목록 조회에서는 한국어 번역만 반환
+    // 목록 조회에서는 기본 언어 번역만 반환
     items.forEach((brochure) => {
       brochure.translations = brochure.translations.filter(
-        (translation) => translation.language.code === 'ko',
+        (translation) => translation.language.code === defaultLanguageCode,
       );
     });
 

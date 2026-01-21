@@ -28,6 +28,7 @@ describe('SyncIRTranslationsHandler', () => {
           provide: LanguageService,
           useValue: {
             코드로_언어를_조회한다: jest.fn(),
+            기본_언어를_조회한다: jest.fn(),
           },
         },
         {
@@ -85,7 +86,7 @@ describe('SyncIRTranslationsHandler', () => {
         isSynced: true,
       } as IRTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       irService.모든_IR을_조회한다.mockResolvedValue([ir1]);
@@ -99,7 +100,7 @@ describe('SyncIRTranslationsHandler', () => {
       await handler.execute();
 
       // Then
-      expect(languageService.코드로_언어를_조회한다).toHaveBeenCalledWith('ko');
+      expect(languageService.기본_언어를_조회한다).toHaveBeenCalled();
       expect(irService.모든_IR을_조회한다).toHaveBeenCalled();
       expect(translationRepository.save).toHaveBeenCalledTimes(1);
 
@@ -119,7 +120,7 @@ describe('SyncIRTranslationsHandler', () => {
 
       const ir1: IR = { id: 'ir-1', isPublic: true } as IR;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       irService.모든_IR을_조회한다.mockResolvedValue([ir1]);
@@ -135,7 +136,9 @@ describe('SyncIRTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null);
+      languageService.기본_언어를_조회한다.mockResolvedValue(
+        null as unknown as Language,
+      );
 
       // When
       await handler.execute();
@@ -158,7 +161,7 @@ describe('SyncIRTranslationsHandler', () => {
       const ir1: IR = { id: 'ir-1' } as IR;
       const ir2: IR = { id: 'ir-2' } as IR;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       irService.모든_IR을_조회한다.mockResolvedValue([ir1, ir2]);

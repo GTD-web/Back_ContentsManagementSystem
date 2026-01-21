@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Language } from './language.entity';
 import { LanguageCode } from './language-code.types';
 
@@ -15,6 +16,7 @@ export class LanguageService {
   constructor(
     @InjectRepository(Language)
     private readonly repository: Repository<Language>,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -142,5 +144,16 @@ export class LanguageService {
     return await this.repository.count({
       where: { isActive: true },
     });
+  }
+
+  /**
+   * 기본 언어를 조회한다
+   * 환경 변수(DEFAULT_LANGUAGE_CODE)에서 설정한 기본 언어를 반환합니다.
+   */
+  async 기본_언어를_조회한다(): Promise<Language> {
+    const defaultCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en') as LanguageCode;
+    this.logger.debug(`기본 언어 조회 - 코드: ${defaultCode}`);
+    
+    return await this.코드로_언어를_조회한다(defaultCode);
   }
 }

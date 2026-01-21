@@ -1,6 +1,7 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Language } from '@domain/common/language/language.entity';
 import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { LanguageCode } from '@domain/common/language/language-code.types';
@@ -19,12 +20,10 @@ export class DeleteLanguageCommand {
 export class DeleteLanguageHandler implements ICommandHandler<DeleteLanguageCommand> {
   private readonly logger = new Logger(DeleteLanguageHandler.name);
 
-  // 기본 언어 (삭제 불가)
-  private readonly DEFAULT_LANGUAGE_CODE = LanguageCode.ENGLISH;
-
   constructor(
     @InjectRepository(Language)
     private readonly languageRepository: Repository<Language>,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(command: DeleteLanguageCommand): Promise<boolean> {
@@ -39,8 +38,9 @@ export class DeleteLanguageHandler implements ICommandHandler<DeleteLanguageComm
       throw new NotFoundException(`언어를 찾을 수 없습니다. ID: ${id}`);
     }
 
-    // 기본 언어(English) 삭제 방지
-    if (language.code === this.DEFAULT_LANGUAGE_CODE) {
+    // 기본 언어 삭제 방지
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    if (language.code === defaultLanguageCode) {
       this.logger.warn(
         `기본 언어 삭제 시도 차단 - ${language.name} (${language.code})`,
       );

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { MainPopupBusinessService } from '@business/main-popup-business/main-popup-business.service';
 import { MainPopupContextService } from '@context/main-popup-context/main-popup-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -41,6 +42,13 @@ describe('MainPopupBusinessService', () => {
     getFileUrl: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,6 +60,10 @@ describe('MainPopupBusinessService', () => {
         {
           provide: CategoryService,
           useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: STORAGE_SERVICE,

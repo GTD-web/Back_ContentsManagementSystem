@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class ElectronicDisclosureBusinessService {
   constructor(
     private readonly electronicDisclosureContextService: ElectronicDisclosureContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -277,18 +279,19 @@ export class ElectronicDisclosureBusinessService {
     const totalPages = Math.ceil(result.total / limit);
 
     // ElectronicDisclosure 엔티티를 ElectronicDisclosureListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     const items: ElectronicDisclosureListItemDto[] = result.items.map(
       (disclosure) => {
-        const koreanTranslation = disclosure.translations?.find(
-          (t) => t.language?.code === 'ko'
+        const defaultTranslation = disclosure.translations?.find(
+          (t) => t.language?.code === defaultLanguageCode
         ) || disclosure.translations?.[0];
 
         return {
           id: disclosure.id,
           isPublic: disclosure.isPublic,
           order: disclosure.order,
-          title: koreanTranslation?.title || '',
-          description: koreanTranslation?.description || null,
+          title: defaultTranslation?.title || '',
+          description: defaultTranslation?.description || null,
           createdAt: disclosure.createdAt,
           updatedAt: disclosure.updatedAt,
         };

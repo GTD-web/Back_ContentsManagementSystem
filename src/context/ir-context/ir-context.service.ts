@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IRService } from '@domain/core/ir/ir.service';
 import { LanguageService } from '@domain/common/language/language.service';
 import { IR } from '@domain/core/ir/ir.entity';
@@ -15,6 +16,7 @@ export class IRContextService {
   constructor(
     private readonly irService: IRService,
     private readonly languageService: LanguageService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -135,10 +137,11 @@ export class IRContextService {
       createdBy,
     );
 
-    // 7. 기준 번역 선정 (한국어 우선, 없으면 첫 번째)
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    // 7. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
-      translations.find((t) => t.languageId === koreanLang?.id) ||
+      translations.find((t) => t.languageId === defaultLang?.id) ||
       translations[0];
 
     // 8. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)

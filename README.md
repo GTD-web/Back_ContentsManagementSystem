@@ -355,6 +355,11 @@ DATABASE_NAME=lumir_cms
 DB_SYNCHRONIZE=true  # 개발 환경에서만 true
 DB_LOGGING=true
 
+# 기본 언어 설정
+# 백엔드 어플리케이션의 기본 언어 코드 (ko, en, ja, zh 중 선택)
+# 이 설정은 번역 동기화, 기본 표시 언어, 테스트 환경에서 사용됩니다
+DEFAULT_LANGUAGE_CODE=en
+
 # 백업 설정
 BACKUP_ENABLED=true
 BACKUP_PATH=./backups/database

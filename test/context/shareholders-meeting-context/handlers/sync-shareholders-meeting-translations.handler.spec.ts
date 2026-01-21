@@ -38,6 +38,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
           provide: LanguageService,
           useValue: {
             코드로_언어를_조회한다: jest.fn(),
+            기본_언어를_조회한다: jest.fn(),
           },
         },
         {
@@ -111,7 +112,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: true, // 자동 동기화 대상
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -129,7 +130,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
       await handler.execute();
 
       // Then
-      expect(languageService.코드로_언어를_조회한다).toHaveBeenCalledWith('ko');
+      expect(languageService.기본_언어를_조회한다).toHaveBeenCalled();
       expect(shareholdersMeetingService.모든_주주총회를_조회한다).toHaveBeenCalled();
       expect(meetingTranslationRepository.findOne).toHaveBeenCalledWith({
         where: {
@@ -185,7 +186,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: true, // 자동 동기화 대상
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -244,7 +245,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         meetingDate: new Date('2024-03-15'),
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -261,7 +262,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(null as any);
 
       // When
       await handler.execute();
@@ -278,7 +279,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
       const meeting1 = { id: 'meeting-1', location: '서울', meetingDate: new Date() };
       const meeting2 = { id: 'meeting-2', location: '부산', meetingDate: new Date() };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting1 as any,
         meeting2 as any,
@@ -331,7 +332,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: true,
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -377,7 +378,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: true,
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -429,7 +430,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: true,
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);
@@ -473,7 +474,7 @@ describe('SyncShareholdersMeetingTranslationsHandler', () => {
         isSynced: false, // 수동 설정 - 동기화하지 않음
       };
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(koreanLanguage as any);
       shareholdersMeetingService.모든_주주총회를_조회한다.mockResolvedValue([
         meeting as any,
       ]);

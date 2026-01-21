@@ -29,14 +29,12 @@ export class SyncIRTranslationsHandler {
     this.logger.log('IR 번역 동기화 작업 시작');
 
     try {
-      // 한국어 조회
-      const koreanLanguage = await this.languageService.코드로_언어를_조회한다(
-        'ko' as any,
-      );
+      // 기본 언어 조회
+      const baseLanguage = await this.languageService.기본_언어를_조회한다();
 
-      if (!koreanLanguage) {
+      if (!baseLanguage) {
         this.logger.warn(
-          '한국어 언어를 찾을 수 없습니다. 동기화를 건너뜁니다.',
+          '기본 언어를 찾을 수 없습니다. 동기화를 건너뜁니다.',
         );
         return;
       }
@@ -47,17 +45,17 @@ export class SyncIRTranslationsHandler {
       let totalSyncedCount = 0;
 
       for (const ir of irs) {
-        // 한국어 원본 번역 조회
-        const koreanTranslation = await this.translationRepository.findOne({
+        // 기본 언어 원본 번역 조회
+        const baseTranslation = await this.translationRepository.findOne({
           where: {
             irId: ir.id,
-            languageId: koreanLanguage.id,
+            languageId: baseLanguage.id,
           },
         });
 
-        if (!koreanTranslation) {
+        if (!baseTranslation) {
           this.logger.warn(
-            `한국어 번역을 찾을 수 없습니다 - IR ID: ${ir.id}`,
+            `기본 언어 번역을 찾을 수 없습니다 - IR ID: ${ir.id}`,
           );
           continue;
         }
@@ -70,19 +68,19 @@ export class SyncIRTranslationsHandler {
           },
         });
 
-        // 한국어를 제외한 동기화 대상 번역들
+        // 기본 언어를 제외한 동기화 대상 번역들
         const translationsToSync = syncedTranslations.filter(
-          (t) => t.languageId !== koreanLanguage.id,
+          (t) => t.languageId !== baseLanguage.id,
         );
 
         if (translationsToSync.length === 0) {
           continue;
         }
 
-        // 한국어 원본과 동기화
+        // 기본 언어 원본과 동기화
         for (const translation of translationsToSync) {
-          translation.title = koreanTranslation.title;
-          translation.description = koreanTranslation.description;
+          translation.title = baseTranslation.title;
+          translation.description = baseTranslation.description;
           await this.translationRepository.save(translation);
           totalSyncedCount++;
         }

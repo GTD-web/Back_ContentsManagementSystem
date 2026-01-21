@@ -30,9 +30,10 @@ export class S3Service implements IStorageService {
     );
     this.bucketName = this.configService.get<string>('AWS_S3_BUCKET', '');
     
-    // NODE_ENV에 따라 환경별 prefix 결정
+    // NODE_ENV와 USE_REAL_S3_IN_TEST에 따라 환경별 prefix 결정
     const env = this.configService.get<string>('NODE_ENV', 'development');
-    this.envPrefix = this.getEnvPrefix(env);
+    const useRealS3InTest = this.configService.get<string>('USE_REAL_S3_IN_TEST', 'false') === 'true';
+    this.envPrefix = this.getEnvPrefix(env, useRealS3InTest);
 
     this.s3Client = new S3Client({
       region: this.region,
@@ -54,8 +55,14 @@ export class S3Service implements IStorageService {
 
   /**
    * NODE_ENV 값에 따라 환경별 prefix를 반환합니다.
+   * 테스트 환경에서 실제 S3를 사용하는 경우 'test' prefix를 반환합니다.
    */
-  private getEnvPrefix(env: string): string {
+  private getEnvPrefix(env: string, useRealS3InTest: boolean): string {
+    // 테스트 환경에서 실제 S3 사용 시 test prefix
+    if (env === 'test' && useRealS3InTest) {
+      return 'test';
+    }
+    
     if (env === 'production' || env === 'prod') {
       return 'prod';
     }
@@ -69,6 +76,9 @@ export class S3Service implements IStorageService {
   /**
    * 파일을 S3에 업로드합니다.
    * 모든 파일은 환경별 폴더(stage/prod) 안에 저장됩니다.
+   * 
+   * 참고: 2023년 4월부터 새로 생성되는 S3 버킷은 기본적으로 ACL을 비활성화합니다.
+   * 공개 액세스는 버킷 정책(Bucket Policy) 또는 CloudFront를 통해 관리하세요.
    */
   async uploadFile(
     file: Express.Multer.File,
@@ -84,7 +94,8 @@ export class S3Service implements IStorageService {
       Key: filePath,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read', // 공개 읽기 권한
+      // ACL 제거: 최신 S3 버킷은 ACL을 지원하지 않음
+      // 공개 액세스는 버킷 정책으로 관리
     };
 
     try {

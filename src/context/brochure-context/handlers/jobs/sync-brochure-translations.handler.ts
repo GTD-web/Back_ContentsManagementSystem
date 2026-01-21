@@ -29,14 +29,12 @@ export class SyncBrochureTranslationsHandler {
     this.logger.log('브로슈어 번역 동기화 작업 시작');
 
     try {
-      // 한국어 조회
-      const koreanLanguage = await this.languageService.코드로_언어를_조회한다(
-        'ko' as any,
-      );
+      // 기본 언어 조회
+      const baseLanguage = await this.languageService.기본_언어를_조회한다();
 
-      if (!koreanLanguage) {
+      if (!baseLanguage) {
         this.logger.warn(
-          '한국어 언어를 찾을 수 없습니다. 동기화를 건너뜁니다.',
+          '기본 언어를 찾을 수 없습니다. 동기화를 건너뜁니다.',
         );
         return;
       }
@@ -47,18 +45,18 @@ export class SyncBrochureTranslationsHandler {
       let totalSyncedCount = 0;
 
       for (const brochure of brochures) {
-        // 한국어 원본 번역 조회
-        const koreanTranslation =
+        // 기본 언어 원본 번역 조회
+        const baseTranslation =
           await this.brochureTranslationRepository.findOne({
             where: {
               brochureId: brochure.id,
-              languageId: koreanLanguage.id,
+              languageId: baseLanguage.id,
             },
           });
 
-        if (!koreanTranslation) {
+        if (!baseTranslation) {
           this.logger.warn(
-            `한국어 번역을 찾을 수 없습니다 - 브로슈어 ID: ${brochure.id}`,
+            `기본 언어 번역을 찾을 수 없습니다 - 브로슈어 ID: ${brochure.id}`,
           );
           continue;
         }
@@ -72,19 +70,19 @@ export class SyncBrochureTranslationsHandler {
             },
           });
 
-        // 한국어를 제외한 동기화 대상 번역들
+        // 기본 언어를 제외한 동기화 대상 번역들
         const translationsToSync = syncedTranslations.filter(
-          (t) => t.languageId !== koreanLanguage.id,
+          (t) => t.languageId !== baseLanguage.id,
         );
 
         if (translationsToSync.length === 0) {
           continue;
         }
 
-        // 한국어 원본과 동기화
+        // 기본 언어 원본과 동기화
         for (const translation of translationsToSync) {
-          translation.title = koreanTranslation.title;
-          translation.description = koreanTranslation.description;
+          translation.title = baseTranslation.title;
+          translation.description = baseTranslation.description;
           await this.brochureTranslationRepository.save(translation);
           totalSyncedCount++;
         }

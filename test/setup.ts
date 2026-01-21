@@ -32,6 +32,7 @@ beforeAll(async () => {
   process.env.DB_LOGGING = 'false';
   process.env.LOG_LEVEL = 'silent';
   process.env.PORT = '4001';
+  process.env.DEFAULT_LANGUAGE_CODE = process.env.DEFAULT_LANGUAGE_CODE || 'en';
 }, 60000);
 
 afterAll(async () => {

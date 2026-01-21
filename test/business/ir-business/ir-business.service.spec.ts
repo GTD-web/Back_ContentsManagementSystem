@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { IRBusinessService } from '@business/ir-business/ir-business.service';
 import { IRContextService } from '@context/ir-context/ir-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -40,6 +41,13 @@ describe('IRBusinessService', () => {
     getFileUrl: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +59,10 @@ describe('IRBusinessService', () => {
         {
           provide: CategoryService,
           useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: STORAGE_SERVICE,

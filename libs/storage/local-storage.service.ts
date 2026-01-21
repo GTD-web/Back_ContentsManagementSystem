@@ -44,8 +44,13 @@ export class LocalStorageService implements IStorageService {
 
   /**
    * NODE_ENV 값에 따라 환경별 prefix를 반환합니다.
+   * 테스트 환경에서는 'test' prefix를 사용합니다.
    */
   private getEnvPrefix(env: string): string {
+    // 테스트 환경
+    if (env === 'test') {
+      return 'test';
+    }
     if (env === 'production' || env === 'prod') {
       return 'prod';
     }

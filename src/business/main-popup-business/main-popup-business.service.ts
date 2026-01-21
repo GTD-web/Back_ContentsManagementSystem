@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MainPopupContextService } from '@context/main-popup-context/main-popup-context.service';
 import { MainPopup } from '@domain/sub/main-popup/main-popup.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class MainPopupBusinessService {
   constructor(
     private readonly mainPopupContextService: MainPopupContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -269,17 +271,18 @@ export class MainPopupBusinessService {
     const totalPages = Math.ceil(result.total / limit);
 
     // MainPopup 엔티티를 MainPopupListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     const items: MainPopupListItemDto[] = result.items.map((popup) => {
-      const koreanTranslation =
-        popup.translations?.find((t) => t.language?.code === 'ko') ||
+      const defaultTranslation =
+        popup.translations?.find((t) => t.language?.code === defaultLanguageCode) ||
         popup.translations?.[0];
 
       return {
         id: popup.id,
         isPublic: popup.isPublic,
         order: popup.order,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
         createdAt: popup.createdAt,
         updatedAt: popup.updatedAt,
       };

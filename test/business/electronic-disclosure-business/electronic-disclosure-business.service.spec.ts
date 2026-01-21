@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { ElectronicDisclosureBusinessService } from '@business/electronic-disclosure-business/electronic-disclosure-business.service';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -40,6 +41,13 @@ describe('ElectronicDisclosureBusinessService', () => {
     getFileUrl: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +59,10 @@ describe('ElectronicDisclosureBusinessService', () => {
         {
           provide: CategoryService,
           useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: STORAGE_SERVICE,
@@ -638,7 +650,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         id: categoryId,
         ...updateDto,
         entityType: 'electronic-disclosure',
-      } as Category;
+      } as any as Category;
 
       mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(mockCategory);
 

@@ -28,6 +28,7 @@ describe('SyncBrochureTranslationsHandler', () => {
           provide: LanguageService,
           useValue: {
             코드로_언어를_조회한다: jest.fn(),
+            기본_언어를_조회한다: jest.fn(),
           },
         },
         {
@@ -87,7 +88,7 @@ describe('SyncBrochureTranslationsHandler', () => {
         isSynced: true,
       } as BrochureTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       brochureService.모든_브로슈어를_조회한다.mockResolvedValue([brochure1]);
@@ -104,7 +105,7 @@ describe('SyncBrochureTranslationsHandler', () => {
       await handler.execute();
 
       // Then
-      expect(languageService.코드로_언어를_조회한다).toHaveBeenCalledWith('ko');
+      expect(languageService.기본_언어를_조회한다).toHaveBeenCalled();
       expect(brochureService.모든_브로슈어를_조회한다).toHaveBeenCalled();
 
       // 1번 저장 (영어만, 한국어는 제외)
@@ -129,7 +130,7 @@ describe('SyncBrochureTranslationsHandler', () => {
         isPublic: true,
       } as Brochure;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       brochureService.모든_브로슈어를_조회한다.mockResolvedValue([brochure1]);
@@ -175,7 +176,7 @@ describe('SyncBrochureTranslationsHandler', () => {
         isSynced: false, // 수동 관리
       } as BrochureTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       brochureService.모든_브로슈어를_조회한다.mockResolvedValue([brochure1]);
@@ -192,7 +193,9 @@ describe('SyncBrochureTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null);
+      languageService.기본_언어를_조회한다.mockResolvedValue(
+        null as unknown as Language,
+      );
 
       // When
       await handler.execute();
@@ -215,7 +218,7 @@ describe('SyncBrochureTranslationsHandler', () => {
       const brochure1: Brochure = { id: 'brochure-1' } as Brochure;
       const brochure2: Brochure = { id: 'brochure-2' } as Brochure;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       brochureService.모든_브로슈어를_조회한다.mockResolvedValue([
