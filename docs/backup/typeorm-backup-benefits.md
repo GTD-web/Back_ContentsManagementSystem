@@ -2,7 +2,7 @@
 
 ## 개요
 
-이 백업 시스템은 **TypeORM을 사용**하여 순수 Node.js/TypeScript로 구현되었습니다.  
+이 백업 시스템은 **TypeORM을 사용**하여 순수 Node.js/TypeScript로 구현되었습니다.
 전통적인 `pg_dump` 대신 데이터베이스 드라이버를 직접 사용합니다.
 
 ---

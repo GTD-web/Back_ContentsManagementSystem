@@ -37,7 +37,7 @@
 
 - 각 백업 타입은 독립적인 보관 기간을 가집니다
 - 매일 새벽 5시에 만료된 백업이 자동으로 삭제됩니다
-- 백업 파일은 PostgreSQL Custom Format (`.dump`)으로 저장됩니다
+- 백업 파일은 SQL 평문 형식 (`.sql`)으로 저장됩니다
 
 ### 디렉토리 구조
 
@@ -224,7 +224,7 @@ curl -X POST http://localhost:3000/admin/backup/execute?type=daily \
   "message": "백업이 성공적으로 완료되었습니다.",
   "result": {
     "type": "daily",
-    "filename": "backup_daily_20260121_153045.dump",
+    "filename": "backup_daily_20260121_153045.sql",
     "size": 1048576,
     "timestamp": "2026-01-21T15:30:45.123Z"
   }
@@ -254,7 +254,7 @@ curl -X POST http://localhost:3000/admin/backup/execute-all \
     {
       "type": "four_hourly",
       "success": true,
-      "filename": "backup_four_hourly_20260121_153045.dump"
+      "filename": "backup_four_hourly_20260121_153045.sql"
     },
     // ... 나머지 타입들
   ]
@@ -283,7 +283,7 @@ curl -X GET http://localhost:3000/admin/backup/list?type=daily \
   "backups": [
     {
       "type": "daily",
-      "filename": "backup_daily_20260121_010000.dump",
+      "filename": "backup_daily_20260121_010000.sql",
       "createdAt": "2026-01-21T01:00:00.000Z",
       "expiresAt": "2026-01-22T01:00:00.000Z"
     },
@@ -369,16 +369,18 @@ tail -f logs/application.log | grep -i backup
 
 # 로그 예시
 [BackupScheduler] 4시간 백업 시작
-[BackupService] 백업 성공: four_hourly - backup_four_hourly_20260121_040000.dump (2.5 MB)
+[BackupService] 백업 성공: four_hourly - backup_four_hourly_20260121_040000.sql (2.5 MB)
 [BackupScheduler] 만료된 백업 정리 시작
-[BackupRetentionService] 만료된 백업 삭제: four_hourly/backup_four_hourly_20260120_200000.dump (나이: 8시간)
+[BackupRetentionService] 만료된 백업 삭제: four_hourly/backup_four_hourly_20260120_200000.sql (나이: 8시간)
 ```
 
 ---
 
 ## 백업 복구
 
-### pg_restore를 사용한 복구
+백업 파일은 SQL 평문 형식이므로 `psql` 명령어로 간단하게 복구할 수 있습니다.
+
+### psql을 사용한 복구
 
 #### 1. 기본 복구
 
@@ -386,15 +388,13 @@ tail -f logs/application.log | grep -i backup
 # 환경변수 설정
 export PGPASSWORD="your_password"
 
-# 복구 실행 (-c 옵션: 기존 객체 먼저 삭제)
-pg_restore \
+# 복구 실행
+psql \
   -h localhost \
   -p 5432 \
   -U postgres \
   -d lumir_cms \
-  -c \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
+  -f ./backups/database/daily/backup_daily_20260121_010000.sql
 ```
 
 #### 2. 새 데이터베이스로 복구
@@ -404,42 +404,27 @@ pg_restore \
 createdb -h localhost -p 5432 -U postgres lumir_cms_restore
 
 # 복구 실행
-pg_restore \
+psql \
   -h localhost \
   -p 5432 \
   -U postgres \
   -d lumir_cms_restore \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
+  -f ./backups/database/daily/backup_daily_20260121_010000.sql
 ```
 
-#### 3. 특정 테이블만 복구
+#### 3. 환경변수를 사용한 복구
 
 ```bash
-# 특정 테이블만 복구
-pg_restore \
-  -h localhost \
-  -p 5432 \
-  -U postgres \
-  -d lumir_cms \
-  -t users \
-  -t posts \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
-```
+# .env 파일에서 환경변수 로드
+source .env
 
-#### 4. 스키마만 복구
-
-```bash
-# 데이터 없이 스키마만 복구
-pg_restore \
-  -h localhost \
-  -p 5432 \
-  -U postgres \
-  -d lumir_cms \
-  -s \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
+# psql 실행
+PGPASSWORD="$DATABASE_PASSWORD" psql \
+  -h "$DATABASE_HOST" \
+  -p "$DATABASE_PORT" \
+  -U "$DATABASE_USERNAME" \
+  -d "$DATABASE_NAME" \
+  -f "./backups/database/daily/backup_daily_20260121_010000.sql"
 ```
 
 ### 복구 스크립트 예시
@@ -465,7 +450,7 @@ fi
 # 백업 파일 확인
 if [ -z "$1" ]; then
   echo "Usage: $0 <backup-file>"
-  echo "Example: $0 ./backups/database/daily/backup_daily_20260121_010000.dump"
+  echo "Example: $0 ./backups/database/daily/backup_daily_20260121_010000.sql"
   exit 1
 fi
 
@@ -489,14 +474,12 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-PGPASSWORD="$DATABASE_PASSWORD" pg_restore \
+PGPASSWORD="$DATABASE_PASSWORD" psql \
   -h "$DATABASE_HOST" \
   -p "$DATABASE_PORT" \
   -U "$DATABASE_USERNAME" \
   -d "$DATABASE_NAME" \
-  -c \
-  -v \
-  "$BACKUP_FILE"
+  -f "$BACKUP_FILE"
 
 echo ""
 echo "백업 복구가 완료되었습니다."
@@ -511,8 +494,10 @@ chmod +x scripts/restore-backup.sh
 사용:
 
 ```bash
-./scripts/restore-backup.sh ./backups/database/daily/backup_daily_20260121_010000.dump
+./scripts/restore-backup.sh ./backups/database/daily/backup_daily_20260121_010000.sql
 ```
+
+> **상세 가이드**: [SQL 복구 가이드](./sql-restore-guide.md)를 참조하세요.
 
 ---
 
@@ -540,27 +525,24 @@ curl -X POST http://localhost:3000/admin/backup/execute?type=daily \
   -H "Authorization: Bearer {admin-token}"
 ```
 
-### 2. pg_dump 명령어를 찾을 수 없음
+### 2. 데이터베이스 연결 실패
 
-**증상**: `pg_dump: command not found` 오류
+**증상**: `Connection refused` 또는 `ECONNREFUSED` 오류
 
 **해결 방법**:
 
 ```bash
-# PostgreSQL 클라이언트 도구 설치 확인
-which pg_dump
+# 데이터베이스가 실행 중인지 확인
+docker compose ps
 
-# Ubuntu/Debian
-sudo apt-get install postgresql-client
+# PostgreSQL 프로세스 확인
+pg_isready -h localhost -p 5432
 
-# CentOS/RHEL
-sudo yum install postgresql
+# Docker PostgreSQL 시작
+docker compose up -d postgres
 
-# macOS
-brew install postgresql
-
-# Windows: PostgreSQL 설치 디렉토리를 PATH에 추가
-# 예: C:\Program Files\PostgreSQL\15\bin
+# .env 파일의 데이터베이스 설정 확인
+grep DATABASE .env
 ```
 
 ### 3. 디스크 공간 부족
@@ -582,7 +564,7 @@ curl -X POST http://localhost:3000/admin/backup/cleanup \
   -H "Authorization: Bearer {admin-token}"
 
 # 또는 오래된 백업 수동 삭제
-find ./backups/database/four_hourly -name "*.dump" -mtime +1 -delete
+find ./backups/database/four_hourly -name "*.sql" -mtime +1 -delete
 ```
 
 ### 4. 백업 파일이 너무 큼
@@ -593,7 +575,7 @@ find ./backups/database/four_hourly -name "*.dump" -mtime +1 -delete
 
 ```bash
 # 백업 파일 압축 추가 (향후 개선 사항)
-# 현재는 PostgreSQL Custom Format이 이미 압축되어 있습니다
+# SQL 파일은 텍스트 형식이므로 gzip 등으로 압축 가능
 
 # 백업 통계로 크기 확인
 curl -X GET http://localhost:3000/admin/backup/statistics \
@@ -605,34 +587,34 @@ curl -X GET http://localhost:3000/admin/backup/statistics \
 
 ### 5. 복구 실패
 
-**증상**: `pg_restore` 실행 중 오류 발생
+**증상**: `psql` 실행 중 오류 발생
 
 **해결 방법**:
 
 ```bash
-# 1. 백업 파일 무결성 확인
-pg_restore -l ./backups/database/daily/backup_daily_20260121_010000.dump
+# 1. 백업 파일 내용 확인
+head -n 50 ./backups/database/daily/backup_daily_20260121_010000.sql
 
-# 2. 오류 무시하고 계속 진행 (--no-owner, --no-privileges)
-pg_restore \
-  -h localhost \
-  -p 5432 \
-  -U postgres \
-  -d lumir_cms \
-  --no-owner \
-  --no-privileges \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
+# 2. SQL 파일이 올바른지 확인
+grep "CREATE TABLE" ./backups/database/daily/backup_daily_20260121_010000.sql
 
 # 3. 새 데이터베이스로 복구 시도
 createdb -h localhost -p 5432 -U postgres lumir_cms_restore
-pg_restore \
+psql \
   -h localhost \
   -p 5432 \
   -U postgres \
   -d lumir_cms_restore \
-  -v \
-  ./backups/database/daily/backup_daily_20260121_010000.dump
+  -f ./backups/database/daily/backup_daily_20260121_010000.sql
+
+# 4. 에러 발생 시 계속 진행
+psql \
+  -h localhost \
+  -p 5432 \
+  -U postgres \
+  -d lumir_cms \
+  -v ON_ERROR_STOP=0 \
+  -f ./backups/database/daily/backup_daily_20260121_010000.sql
 ```
 
 ---
@@ -700,10 +682,12 @@ chown -R app_user:app_group ./backups/database
 
 ## 추가 리소스
 
-- [PostgreSQL pg_dump 문서](https://www.postgresql.org/docs/current/app-pgdump.html)
-- [PostgreSQL pg_restore 문서](https://www.postgresql.org/docs/current/app-pgrestore.html)
+- [PostgreSQL psql 문서](https://www.postgresql.org/docs/current/app-psql.html)
+- [TypeORM 문서](https://typeorm.io/)
 - [NestJS Schedule 문서](https://docs.nestjs.com/techniques/task-scheduling)
 - [GFS 백업 전략](https://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son)
+- [SQL 복구 상세 가이드](./sql-restore-guide.md)
+- [TypeORM 백업의 장점](./typeorm-backup-benefits.md)
 
 ---
 
@@ -719,4 +703,4 @@ chown -R app_user:app_group ./backups/database
 ---
 
 **마지막 업데이트**: 2026-01-21  
-**버전**: 1.0.0
+**버전**: 2.0.0 (TypeORM 방식, SQL 파일)

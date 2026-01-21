@@ -135,7 +135,6 @@ npm run backup:cleanup
 - **[TypeORM 백업의 장점](./typeorm-backup-benefits.md)** ⭐ - pg_dump 대비 장점
 - **[SQL 복구 가이드](./sql-restore-guide.md)** - 복구 방법 상세
 - **[스크립트 사용 가이드](../../scripts/backup/README.md)** - 스크립트 상세
-- **[환경변수 설정](./environment-variables.md)** - 설정 옵션
 
 ---
 
