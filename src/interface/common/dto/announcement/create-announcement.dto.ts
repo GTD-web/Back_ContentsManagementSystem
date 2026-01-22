@@ -211,17 +211,6 @@ export class CreateAnnouncementDto {
 
   @ApiProperty({
     description:
-      '생성자 ID\n\n' +
-      '공지사항을 작성한 사용자의 ID입니다.\n' +
-      '일반적으로 자동으로 설정되므로 생략 가능합니다.',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
-
-  @ApiProperty({
-    description:
       '설문조사 정보\n\n' +
       '공지사항에 연결할 설문조사 데이터입니다.\n' +
       '공지사항과 함께 설문을 생성하려면 이 필드를 포함시킵니다.\n\n' +

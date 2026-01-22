@@ -188,17 +188,6 @@ export class UpdateAnnouncementDto {
 
   @ApiProperty({
     description:
-      '수정자 ID\n\n' +
-      '공지사항을 수정한 사용자의 ID입니다.\n' +
-      '일반적으로 자동으로 설정되므로 생략 가능합니다.',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
-
-  @ApiProperty({
-    description:
       '설문조사 정보 (수정 또는 생성)\n\n' +
       '공지사항에 연결할 설문조사 데이터입니다.\n' +
       '기존 설문이 있으면 수정되고, 없으면 새로 생성됩니다.\n\n' +
@@ -238,11 +227,6 @@ export class UpdateAnnouncementPublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
   @IsBoolean()
   isPublic: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -252,11 +236,6 @@ export class UpdateAnnouncementFixedDto {
   @ApiProperty({ description: '고정 여부', example: true })
   @IsBoolean()
   isFixed: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -266,11 +245,6 @@ export class UpdateAnnouncementOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -299,11 +273,6 @@ export class CreateAnnouncementCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
 
 /**
@@ -332,11 +301,6 @@ export class UpdateAnnouncementCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -346,9 +310,4 @@ export class UpdateAnnouncementCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }

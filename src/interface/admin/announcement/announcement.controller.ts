@@ -365,7 +365,8 @@ export class AnnouncementController {
       '**선택 필드:**\n' +
       '- `description`: 카테고리 설명\n' +
       '- `isActive`: 활성화 여부 (기본값: true)\n' +
-      '- `order`: 정렬 순서 (기본값: 0)',
+      '- `order`: 정렬 순서 (기본값: 0)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -373,11 +374,13 @@ export class AnnouncementController {
     type: AnnouncementCategoryResponseDto,
   })
   async 공지사항_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateAnnouncementCategoryDto,
   ): Promise<AnnouncementCategoryResponseDto> {
-    return await this.announcementBusinessService.공지사항_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.announcementBusinessService.공지사항_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -392,7 +395,8 @@ export class AnnouncementController {
       '- `name`: 카테고리 이름\n' +
       '- `description`: 카테고리 설명\n' +
       '- `isActive`: 활성화 여부\n' +
-      '- `order`: 정렬 순서',
+      '- `order`: 정렬 순서\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
     name: 'id',
@@ -410,12 +414,16 @@ export class AnnouncementController {
     description: '카테고리를 찾을 수 없음',
   })
   async 공지사항_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateAnnouncementCategoryDto,
   ): Promise<AnnouncementCategoryResponseDto> {
     return await this.announcementBusinessService.공지사항_카테고리를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -428,7 +436,8 @@ export class AnnouncementController {
     description:
       '공지사항 카테고리의 정렬 순서를 변경합니다.\n\n' +
       '**필수 필드:**\n' +
-      '- `order`: 정렬 순서 (숫자)',
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
     name: 'id',
@@ -446,13 +455,17 @@ export class AnnouncementController {
     description: '카테고리를 찾을 수 없음',
   })
   async 공지사항_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateAnnouncementCategoryOrderDto,
   ): Promise<AnnouncementCategoryResponseDto> {
     const result =
       await this.announcementBusinessService.공지사항_카테고리_오더를_변경한다(
         id,
-        updateDto,
+        {
+          ...updateDto,
+          updatedBy: user.id,
+        },
       );
     return result;
   }
@@ -731,7 +744,8 @@ export class AnnouncementController {
       '⚠️ **주의사항:**\n' +
       '- 날짜는 ISO 8601 형식 (예: `2024-01-01T00:00:00Z`)\n' +
       '- 설문 질문 타입별로 필요한 `form` 필드가 다릅니다\n' +
-      '- 제한공개 시 최소 하나의 권한 필드는 필수입니다',
+      '- 제한공개 시 최소 하나의 권한 필드는 필수입니다\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -824,7 +838,8 @@ export class AnnouncementController {
       '⚠️ **주의사항:**\n' +
       '- 공개된 공지사항은 수정 불가 (먼저 비공개로 전환 필요)\n' +
       '- 수정하지 않을 필드는 생략 가능합니다\n' +
-      '- 날짜는 ISO 8601 형식 사용',
+      '- 날짜는 ISO 8601 형식 사용\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
     name: 'id',
@@ -872,7 +887,8 @@ export class AnnouncementController {
       '**필수 필드:**\n' +
       '- `isPublic`: 공개 여부 (boolean)\n' +
       '  - `true`: 전사공개\n' +
-      '  - `false`: 제한공개',
+      '  - `false`: 제한공개\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
     name: 'id',
@@ -908,7 +924,8 @@ export class AnnouncementController {
       '**필수 필드:**\n' +
       '- `isFixed`: 고정 여부 (boolean)\n' +
       '  - `true`: 상단 고정\n' +
-      '  - `false`: 일반 공지',
+      '  - `false`: 일반 공지\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
     name: 'id',
