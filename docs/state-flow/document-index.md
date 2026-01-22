@@ -5,7 +5,7 @@
 ```
 docs/state-flow/
 ├── README.md                                    # 폴더 개요
-├── DOCUMENT-INDEX.md                            # 이 파일 (전체 문서 색인)
+├── document-index.md                            # 이 파일 (전체 문서 색인)
 ├── data-state-flow.md                           # 전체 아키텍처 설계 문서
 ├── public-state-management-policy.md            # 공개 상태 관리 정책 ⭐ NEW
 └── context-flows/                               # Context별 상세 흐름
@@ -520,7 +520,7 @@ docs/state-flow/
 1. **새 Context 추가 시**:
    - context-flows/에 새 문서 추가
    - context-flows/README.md 테이블 업데이트
-   - 이 문서(DOCUMENT-INDEX.md) 업데이트
+   - 이 문서(document-index.md) 업데이트
 
 2. **아키텍처 변경 시**:
    - data-state-flow.md 해당 섹션 수정
