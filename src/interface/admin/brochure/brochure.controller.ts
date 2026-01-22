@@ -182,7 +182,12 @@ export class BrochureController {
   @ApiOperation({
     summary: '브로슈어 생성',
     description:
-      '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 공개',
+      '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 공개\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)',
   })
   @ApiBody({
     description:
@@ -336,7 +341,12 @@ export class BrochureController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '브로슈어 공개 상태 수정',
-    description: '브로슈어의 공개 상태를 수정합니다.',
+    description:
+      '브로슈어의 공개 상태를 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `isPublic`: 공개 여부 (boolean)\n' +
+      '  - `true`: 공개\n' +
+      '  - `false`: 비공개',
   })
   @ApiResponse({
     status: 200,
@@ -367,7 +377,11 @@ export class BrochureController {
   @ApiOperation({
     summary: '브로슈어 오더 일괄 수정',
     description:
-      '여러 브로슈어의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 브로슈어 목록을 전달하면 됩니다.',
+      '여러 브로슈어의 정렬 순서를 한번에 수정합니다. ' +
+      '프론트엔드에서 변경된 순서대로 브로슈어 목록을 전달하면 됩니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `brochures`: 브로슈어 ID와 order를 포함한 객체 배열\n' +
+      '  - 각 객체: `{ id: string, order: number }`',
   })
   @ApiResponse({
     status: 200,
@@ -425,6 +439,11 @@ export class BrochureController {
     summary: '브로슈어 수정',
     description:
       '브로슈어의 번역 정보를 수정하고 첨부파일을 관리합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)\n\n' +
       '⚠️ **파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
@@ -537,7 +556,11 @@ export class BrochureController {
   @Patch(':id/categories')
   @ApiOperation({
     summary: '브로슈어 카테고리 수정',
-    description: '브로슈어의 카테고리를 수정합니다.',
+    description:
+      '브로슈어의 카테고리를 수정합니다.\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 카테고리 ID (UUID)\n' +
+      '  - null로 설정하면 카테고리 제거',
   })
   @ApiResponse({
     status: 200,
@@ -563,7 +586,13 @@ export class BrochureController {
   @Post('categories')
   @ApiOperation({
     summary: '브로슈어 카테고리 생성',
-    description: '새로운 브로슈어 카테고리를 생성합니다.',
+    description:
+      '새로운 브로슈어 카테고리를 생성합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `name`: 카테고리 이름\n\n' +
+      '**선택 필드:**\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `order`: 정렬 순서 (기본값: 0)',
   })
   @ApiResponse({
     status: 201,
@@ -584,7 +613,10 @@ export class BrochureController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '브로슈어 카테고리 오더 변경',
-    description: '브로슈어 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '브로슈어 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `order`: 정렬 순서 (숫자)',
   })
   @ApiResponse({
     status: 200,
