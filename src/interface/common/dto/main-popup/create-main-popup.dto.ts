@@ -91,6 +91,15 @@ export class CreateMainPopupDto {
   @ValidateNested({ each: true })
   @Type(() => CreateMainPopupTranslationDto)
   translations: CreateMainPopupTranslationDto[];
+
+  @ApiProperty({
+    description: '메인 팝업 카테고리 ID',
+    example: 'uuid-category',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
 }
 
 /**

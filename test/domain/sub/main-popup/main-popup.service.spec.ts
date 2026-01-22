@@ -112,6 +112,34 @@ describe('MainPopupService', () => {
       // Then
       expect(result.attachments).toEqual(createData.attachments);
     });
+
+    it('카테고리 ID와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given
+      const createData = {
+        isPublic: true,
+        order: 0,
+        categoryId: 'category-1',
+        attachments: null,
+        createdBy: 'user-1',
+      };
+
+      const mockPopup = {
+        id: 'popup-1',
+        ...createData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockMainPopupRepository.create.mockReturnValue(mockPopup as any);
+      mockMainPopupRepository.save.mockResolvedValue(mockPopup as any);
+
+      // When
+      const result = await service.메인_팝업을_생성한다(createData);
+
+      // Then
+      expect(mainPopupRepository.create).toHaveBeenCalledWith(createData);
+      expect(result.categoryId).toBe('category-1');
+    });
   });
 
   describe('모든_메인_팝업을_조회한다', () => {
@@ -294,6 +322,41 @@ describe('MainPopupService', () => {
         expect.objectContaining(updateData),
       );
       expect(result).toEqual(updatedPopup);
+    });
+
+    it('카테고리 ID를 업데이트해야 한다', async () => {
+      // Given
+      const popupId = 'popup-1';
+      const updateData = {
+        categoryId: 'category-1',
+      };
+
+      const existingPopup = {
+        id: popupId,
+        isPublic: true,
+        order: 0,
+        categoryId: null,
+      } as MainPopup;
+
+      const updatedPopup = {
+        ...existingPopup,
+        ...updateData,
+      } as MainPopup;
+
+      mockMainPopupRepository.findOne.mockResolvedValue(existingPopup);
+      mockMainPopupRepository.save.mockResolvedValue(updatedPopup);
+
+      // When
+      const result = await service.메인_팝업을_업데이트한다(
+        popupId,
+        updateData,
+      );
+
+      // Then
+      expect(mainPopupRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ categoryId: 'category-1' }),
+      );
+      expect(result.categoryId).toBe('category-1');
     });
   });
 

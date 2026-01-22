@@ -220,6 +220,7 @@ describe('MainPopupBusinessService', () => {
         translations,
         createdBy,
         undefined,
+        undefined,
       );
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(result).toEqual(mockPopup);
@@ -295,6 +296,49 @@ describe('MainPopupBusinessService', () => {
             mimeType: 'image/jpeg',
           },
         ],
+        undefined,
+      );
+      expect(result).toEqual(mockPopup);
+    });
+
+    it('카테고리와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given
+      const translations = [
+        {
+          languageId: 'lang-ko',
+          title: '메인 팝업 제목',
+          description: '메인 팝업 설명',
+        },
+      ];
+      const createdBy = 'user-1';
+      const categoryId = 'category-1';
+
+      const mockPopup = {
+        id: 'popup-1',
+        isPublic: true,
+        order: 0,
+        categoryId,
+        translations: [],
+      } as Partial<MainPopup> as MainPopup;
+
+      mockMainPopupContextService.메인_팝업을_생성한다.mockResolvedValue(
+        mockPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_생성한다(
+        translations,
+        createdBy,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
+        translations,
+        createdBy,
+        undefined,
+        categoryId,
       );
       expect(result).toEqual(mockPopup);
     });
@@ -350,6 +394,7 @@ describe('MainPopupBusinessService', () => {
         popupId,
         {
           translations,
+          categoryId: undefined,
           updatedBy,
         },
       );
@@ -509,6 +554,61 @@ describe('MainPopupBusinessService', () => {
       expect(
         mainPopupContextService.메인_팝업_파일을_수정한다,
       ).toHaveBeenCalledWith(popupId, [], updatedBy);
+      expect(result).toEqual(updatedPopup);
+    });
+
+    it('카테고리와 함께 메인 팝업을 수정해야 한다', async () => {
+      // Given
+      const popupId = 'popup-1';
+      const translations = [
+        {
+          languageId: 'lang-ko',
+          title: '수정된 제목',
+        },
+      ];
+      const updatedBy = 'user-1';
+      const categoryId = 'category-1';
+
+      const existingPopup = {
+        id: popupId,
+        isPublic: true,
+        attachments: [],
+        categoryId: null,
+      } as MainPopup;
+
+      const updatedPopup = {
+        ...existingPopup,
+        categoryId,
+      } as MainPopup;
+
+      mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
+        existingPopup,
+      );
+      mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
+        existingPopup,
+      );
+      mockMainPopupContextService.메인_팝업을_수정한다.mockResolvedValue(
+        updatedPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_수정한다(
+        popupId,
+        translations,
+        updatedBy,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(mainPopupContextService.메인_팝업을_수정한다).toHaveBeenCalledWith(
+        popupId,
+        {
+          translations,
+          categoryId,
+          updatedBy,
+        },
+      );
       expect(result).toEqual(updatedPopup);
     });
   });

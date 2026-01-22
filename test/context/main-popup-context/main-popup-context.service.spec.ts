@@ -282,6 +282,7 @@ describe('MainPopupContextService', () => {
         isPublic: true,
         order: 0,
         attachments: null,
+        categoryId: null,
         createdBy,
       });
       // 개별 설정된 번역 (isSynced: false)
@@ -368,9 +369,66 @@ describe('MainPopupContextService', () => {
         isPublic: true,
         order: 0,
         attachments,
+        categoryId: null,
         createdBy,
       });
       expect(result.attachments).toEqual(attachments);
+    });
+
+    it('카테고리와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given
+      const translations = [
+        {
+          languageId: 'lang-ko',
+          title: '메인 팝업 제목',
+          description: '메인 팝업 설명',
+        },
+      ];
+      const createdBy = 'user-1';
+      const categoryId = 'category-1';
+
+      const koreanLang = {
+        id: 'lang-ko',
+        code: 'ko',
+        name: '한국어',
+      } as Language;
+
+      const mockPopup = {
+        id: 'popup-1',
+        isPublic: true,
+        order: 0,
+        categoryId,
+        translations: [],
+      } as Partial<MainPopup> as MainPopup;
+
+      mockLanguageService.ID로_언어를_조회한다.mockResolvedValue(koreanLang);
+      mockLanguageService.모든_언어를_조회한다.mockResolvedValue([koreanLang]);
+      mockMainPopupService.다음_순서를_계산한다.mockResolvedValue(0);
+      mockMainPopupService.메인_팝업을_생성한다.mockResolvedValue(mockPopup);
+      mockMainPopupService.메인_팝업_번역을_생성한다.mockResolvedValue(
+        undefined,
+      );
+      mockMainPopupService.ID로_메인_팝업을_조회한다.mockResolvedValue(
+        mockPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_생성한다(
+        translations,
+        createdBy,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(mainPopupService.메인_팝업을_생성한다).toHaveBeenCalledWith({
+        isPublic: true,
+        order: 0,
+        attachments: null,
+        categoryId,
+        createdBy,
+      });
+      expect(result).toEqual(mockPopup);
     });
 
     it('중복된 언어 ID로 생성 시 BadRequestException을 던져야 한다', async () => {
@@ -490,6 +548,40 @@ describe('MainPopupContextService', () => {
         isSynced: false,
         updatedBy: 'user-1',
       });
+      expect(result).toEqual(mockPopup);
+    });
+
+    it('카테고리와 함께 메인 팝업을 수정해야 한다', async () => {
+      // Given
+      const popupId = 'popup-1';
+      const data = {
+        categoryId: 'category-1',
+        updatedBy: 'user-1',
+      };
+
+      const mockPopup = {
+        id: popupId,
+        categoryId: 'category-1',
+      } as MainPopup;
+
+      mockMainPopupService.메인_팝업을_업데이트한다.mockResolvedValue(
+        mockPopup,
+      );
+      mockMainPopupService.ID로_메인_팝업을_조회한다.mockResolvedValue(
+        mockPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_수정한다(popupId, data);
+
+      // Then
+      expect(mainPopupService.메인_팝업을_업데이트한다).toHaveBeenCalledWith(
+        popupId,
+        {
+          categoryId: 'category-1',
+          updatedBy: 'user-1',
+        },
+      );
       expect(result).toEqual(mockPopup);
     });
 

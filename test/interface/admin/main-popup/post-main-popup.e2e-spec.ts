@@ -173,6 +173,48 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
         });
       }
     });
+
+    it('카테고리 ID와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given - 먼저 카테고리 생성
+      const categoryResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups/categories')
+        .send({
+          name: '이벤트',
+          description: '이벤트 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
+      // When - 카테고리 ID와 함께 팝업 생성
+      const response = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field('translations', JSON.stringify([
+          {
+            languageId: testLanguageId,
+            title: '이벤트 팝업',
+            description: '특별 이벤트 안내',
+          },
+        ]))
+        .field('categoryId', categoryId)
+        .expect(201);
+
+      // Then
+      expect(response.body).toMatchObject({
+        id: expect.any(String),
+        categoryId: categoryId,
+      });
+
+      const koTranslation = response.body.translations.find(
+        (t: any) => t.languageId === testLanguageId,
+      );
+      expect(koTranslation).toMatchObject({
+        title: '이벤트 팝업',
+        description: '특별 이벤트 안내',
+      });
+    });
   });
 
   describe('실패 케이스 - 필수 필드 누락', () => {
@@ -283,6 +325,26 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
 
       // Then - 외래키 제약조건 또는 비즈니스 로직에 따라 400 또는 404 에러 발생
       expect([400, 404, 500]).toContain(response.status);
+    });
+
+    it('잘못된 UUID 형식의 categoryId로 생성 시 에러가 발생해야 한다', async () => {
+      // Given
+      const invalidCategoryId = 'invalid-uuid';
+
+      // When
+      const response = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field('translations', JSON.stringify([
+          {
+            languageId: testLanguageId,
+            title: '제목',
+          },
+        ]))
+        .field('categoryId', invalidCategoryId);
+
+      // Then
+      expect(response.status).toBe(400);
     });
   });
 });

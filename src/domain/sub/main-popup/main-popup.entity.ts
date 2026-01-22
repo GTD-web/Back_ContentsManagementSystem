@@ -46,6 +46,13 @@ export class MainPopup extends BaseEntity<MainPopup> {
   })
   order: number;
 
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '메인 팝업 카테고리 ID',
+  })
+  categoryId: string | null;
+
   @OneToMany(
     () => MainPopupTranslation,
     (translation) => translation.mainPopup,

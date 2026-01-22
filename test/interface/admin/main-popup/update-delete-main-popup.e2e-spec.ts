@@ -213,6 +213,60 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
       expect(targetTranslation).toBeDefined();
       expect(targetTranslation.title).toBe('수정된 제목');
     });
+
+    it('카테고리 ID를 수정할 수 있어야 한다', async () => {
+      // Given - 카테고리 생성
+      const categoryResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups/categories')
+        .send({
+          name: '공지사항',
+          description: '공지사항 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
+      // 메인 팝업 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '원본 제목',
+              description: '원본 설명',
+            },
+          ]),
+        );
+
+      const mainPopupId = createResponse.body.id;
+
+      // When - 카테고리 ID 추가
+      const response = await testSuite
+        .request()
+        .put(`/api/admin/main-popups/${mainPopupId}`)
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '원본 제목',
+              description: '원본 설명',
+            },
+          ]),
+        )
+        .field('categoryId', categoryId)
+        .expect(200);
+
+      // Then
+      expect(response.body).toMatchObject({
+        id: mainPopupId,
+        categoryId: categoryId,
+      });
+    });
   });
 
   describe('실패 케이스', () => {
