@@ -894,6 +894,35 @@ export class ShareholdersMeetingController {
     summary: '주주총회 카테고리 생성',
     description: '새로운 주주총회 카테고리를 생성합니다.',
   })
+  @ApiBody({
+    description: '주주총회 카테고리 생성 정보',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: {
+          type: 'string',
+          description: '카테고리 이름 (필수)',
+          example: '정기 주주총회',
+        },
+        description: {
+          type: 'string',
+          description: '카테고리 설명 (선택)',
+          example: '연례 정기 주주총회 자료',
+        },
+        isActive: {
+          type: 'boolean',
+          description: '활성화 여부 (선택, 기본값: true)',
+          default: true,
+        },
+        order: {
+          type: 'number',
+          description: '정렬 순서 (선택, 기본값: 0)',
+          default: 0,
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 201,
     description: '주주총회 카테고리 생성 성공',

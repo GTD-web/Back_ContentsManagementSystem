@@ -589,6 +589,25 @@ export class IRController {
     summary: 'IR 카테고리 생성',
     description: '새로운 IR 카테고리를 생성합니다.',
   })
+  @ApiBody({
+    description: 'IR 카테고리 생성 정보',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: {
+          type: 'string',
+          description: '카테고리 이름 (필수)',
+          example: '재무제표',
+        },
+        description: {
+          type: 'string',
+          description: '카테고리 설명 (선택)',
+          example: '분기별 재무제표 및 감사보고서',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 201,
     description: 'IR 카테고리 생성 성공',
