@@ -227,7 +227,8 @@ export class ShareholdersMeetingController {
   @ApiOperation({
     summary: '주주총회 생성',
     description:
-      '새로운 주주총회를 생성합니다. 제목, 설명, 장소, 일시와 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 주주총회를 생성합니다. 제목, 설명, 장소, 일시와 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -560,7 +561,9 @@ export class ShareholdersMeetingController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '주주총회 수정',
-    description: '주주총회의 번역 정보, 의결 결과 및 파일을 수정합니다.',
+    description:
+      '주주총회의 번역 정보, 의결 결과 및 파일을 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -819,7 +822,9 @@ export class ShareholdersMeetingController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '주주총회 공개 상태 수정',
-    description: '주주총회의 공개 상태를 수정합니다.',
+    description:
+      '주주총회의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -892,7 +897,9 @@ export class ShareholdersMeetingController {
   @Post('categories')
   @ApiOperation({
     summary: '주주총회 카테고리 생성',
-    description: '새로운 주주총회 카테고리를 생성합니다.',
+    description:
+      '새로운 주주총회 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description: '주주총회 카테고리 생성 정보',
@@ -928,6 +935,7 @@ export class ShareholdersMeetingController {
     description: '주주총회 카테고리 생성 성공',
   })
   async 주주총회_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: { name: string; description?: string; isActive?: boolean; order?: number },
   ): Promise<any> {
     // name 필드 검증
@@ -935,9 +943,10 @@ export class ShareholdersMeetingController {
       throw new BadRequestException('name 필드는 필수이며 비어있을 수 없습니다.');
     }
     
-    return await this.shareholdersMeetingBusinessService.주주총회_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.shareholdersMeetingBusinessService.주주총회_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -946,7 +955,9 @@ export class ShareholdersMeetingController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '주주총회 카테고리 수정',
-    description: '주주총회 카테고리를 수정합니다.',
+    description:
+      '주주총회 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -982,7 +993,9 @@ export class ShareholdersMeetingController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '주주총회 카테고리 오더 변경',
-    description: '주주총회 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '주주총회 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,

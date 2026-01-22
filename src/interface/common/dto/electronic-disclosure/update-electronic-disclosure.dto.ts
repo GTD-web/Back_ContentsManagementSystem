@@ -68,11 +68,6 @@ export class UpdateElectronicDisclosureDto {
   @ValidateNested({ each: true })
   @Type(() => UpdateElectronicDisclosureTranslationDto)
   translations?: UpdateElectronicDisclosureTranslationDto[];
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -82,11 +77,6 @@ export class UpdateElectronicDisclosurePublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
   @IsBoolean()
   isPublic: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -96,11 +86,6 @@ export class UpdateElectronicDisclosureOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -139,11 +124,6 @@ export class CreateElectronicDisclosureCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
 
 /**
@@ -154,11 +134,6 @@ export class UpdateElectronicDisclosureCategoryDto {
   @IsArray()
   @IsString({ each: true })
   categoryIds: string[];
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -182,11 +157,6 @@ export class UpdateElectronicDisclosureCategoryEntityDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -196,9 +166,4 @@ export class UpdateElectronicDisclosureCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }

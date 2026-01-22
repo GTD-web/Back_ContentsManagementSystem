@@ -218,9 +218,4 @@ export class CreateShareholdersMeetingDto {
   @ValidateNested({ each: true })
   @Type(() => CreateVoteResultDto)
   voteResults?: CreateVoteResultDto[];
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }

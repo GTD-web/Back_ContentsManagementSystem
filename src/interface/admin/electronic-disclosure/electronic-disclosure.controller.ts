@@ -240,7 +240,8 @@ export class ElectronicDisclosureController {
       '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
       '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
       '**선택 필드:**\n' +
-      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)',
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -432,7 +433,8 @@ export class ElectronicDisclosureController {
       '⚠️ **파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
-      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -542,7 +544,8 @@ export class ElectronicDisclosureController {
       '  - `true`: 공개\n' +
       '  - `false`: 비공개\n\n' +
       '**파라미터:**\n' +
-      '- `id`: 전자공시 ID (UUID, 필수)',
+      '- `id`: 전자공시 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -601,7 +604,8 @@ export class ElectronicDisclosureController {
       '- `name`: 카테고리 이름\n\n' +
       '**선택 필드:**\n' +
       '- `description`: 카테고리 설명\n' +
-      '- `order`: 정렬 순서 (기본값: 0)',
+      '- `order`: 정렬 순서 (기본값: 0)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -609,11 +613,13 @@ export class ElectronicDisclosureController {
     type: ElectronicDisclosureCategoryResponseDto,
   })
   async 전자공시_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateElectronicDisclosureCategoryDto,
   ): Promise<ElectronicDisclosureCategoryResponseDto> {
-    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -629,7 +635,8 @@ export class ElectronicDisclosureController {
       '- `description`: 카테고리 설명\n' +
       '- `order`: 정렬 순서\n\n' +
       '**파라미터:**\n' +
-      '- `id`: 카테고리 ID (UUID, 필수)',
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -665,7 +672,8 @@ export class ElectronicDisclosureController {
       '**필수 필드:**\n' +
       '- `order`: 정렬 순서 (숫자)\n\n' +
       '**파라미터:**\n' +
-      '- `id`: 카테고리 ID (UUID, 필수)',
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,

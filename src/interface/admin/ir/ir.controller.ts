@@ -233,7 +233,8 @@ export class IRController {
       '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
       '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
       '**선택 필드:**\n' +
-      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)',
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -443,7 +444,8 @@ export class IRController {
       '⚠️ **파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
-      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -557,7 +559,8 @@ export class IRController {
       '  - `true`: 공개\n' +
       '  - `false`: 비공개\n\n' +
       '**파라미터:**\n' +
-      '- `id`: IR ID (UUID, 필수)',
+      '- `id`: IR ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -620,7 +623,8 @@ export class IRController {
       '**필수 필드:**\n' +
       '- `name`: 카테고리 이름\n\n' +
       '**선택 필드:**\n' +
-      '- `description`: 카테고리 설명',
+      '- `description`: 카테고리 설명\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description: 'IR 카테고리 생성 정보',
@@ -651,6 +655,7 @@ export class IRController {
     description: '잘못된 요청 (name 필수 필드 누락)',
   })
   async IR_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: { name: string; description?: string },
   ): Promise<IRCategoryResponseDto> {
     // 필수 필드 검증
@@ -658,7 +663,10 @@ export class IRController {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
 
-    return await this.irBusinessService.IR_카테고리를_생성한다(createDto);
+    return await this.irBusinessService.IR_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -674,7 +682,8 @@ export class IRController {
       '- `description`: 카테고리 설명\n' +
       '- `order`: 정렬 순서\n\n' +
       '**파라미터:**\n' +
-      '- `id`: 카테고리 ID (UUID, 필수)',
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -711,7 +720,8 @@ export class IRController {
       '**필수 필드:**\n' +
       '- `order`: 정렬 순서 (숫자)\n\n' +
       '**파라미터:**\n' +
-      '- `id`: 카테고리 ID (UUID, 필수)',
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,

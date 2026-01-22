@@ -84,9 +84,4 @@ export class CreateIRDto {
   @ValidateNested({ each: true })
   @Type(() => CreateIRTranslationDto)
   translations: CreateIRTranslationDto[];
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }

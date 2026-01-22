@@ -181,7 +181,8 @@ export class LumirStoryController {
   @ApiOperation({
     summary: '루미르스토리 생성',
     description:
-      '새로운 루미르스토리를 생성합니다. 제목, 내용과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 루미르스토리를 생성합니다. 제목, 내용과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -322,7 +323,9 @@ export class LumirStoryController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '루미르스토리 수정',
-    description: '루미르스토리의 정보 및 파일을 수정합니다.',
+    description:
+      '루미르스토리의 정보 및 파일을 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -449,7 +452,9 @@ export class LumirStoryController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '루미르스토리 공개 상태 수정',
-    description: '루미르스토리의 공개 상태를 수정합니다.',
+    description:
+      '루미르스토리의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -461,12 +466,16 @@ export class LumirStoryController {
     description: '루미르스토리를 찾을 수 없음',
   })
   async 루미르스토리_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryPublicDto,
   ): Promise<LumirStoryResponseDto> {
     return await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -500,7 +509,9 @@ export class LumirStoryController {
   @Post('categories')
   @ApiOperation({
     summary: '루미르스토리 카테고리 생성',
-    description: '새로운 루미르스토리 카테고리를 생성합니다.',
+    description:
+      '새로운 루미르스토리 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -508,11 +519,13 @@ export class LumirStoryController {
     type: LumirStoryCategoryResponseDto,
   })
   async 루미르스토리_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateLumirStoryCategoryDto,
   ): Promise<LumirStoryCategoryResponseDto> {
-    return await this.lumirStoryBusinessService.루미르스토리_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.lumirStoryBusinessService.루미르스토리_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -521,7 +534,9 @@ export class LumirStoryController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '루미르스토리 카테고리 수정',
-    description: '루미르스토리의 카테고리를 수정합니다.',
+    description:
+      '루미르스토리의 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -532,12 +547,16 @@ export class LumirStoryController {
     description: '루미르스토리를 찾을 수 없음',
   })
   async 루미르스토리_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryCategoryDto,
   ): Promise<LumirStoryCategoryResponseDto> {
     return await this.lumirStoryBusinessService.루미르스토리_카테고리를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -547,7 +566,9 @@ export class LumirStoryController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '루미르스토리 카테고리 오더 변경',
-    description: '루미르스토리 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '루미르스토리 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -558,13 +579,17 @@ export class LumirStoryController {
     description: '카테고리를 찾을 수 없음',
   })
   async 루미르스토리_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryCategoryOrderDto,
   ): Promise<LumirStoryCategoryResponseDto> {
     const result =
       await this.lumirStoryBusinessService.루미르스토리_카테고리_오더를_변경한다(
         id,
-        updateDto,
+        {
+          ...updateDto,
+          updatedBy: user.id,
+        },
       );
     return result;
   }
