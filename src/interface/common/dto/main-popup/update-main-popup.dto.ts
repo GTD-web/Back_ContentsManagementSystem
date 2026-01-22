@@ -31,11 +31,6 @@ export class UpdateMainPopupCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -46,11 +41,6 @@ export class UpdateMainPopupCategoryOrderDto {
   @IsNumber()
   @IsNotEmpty()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**

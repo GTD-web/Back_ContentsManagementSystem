@@ -238,7 +238,8 @@ export class MainPopupController {
   @ApiOperation({
     summary: '메인 팝업 생성',
     description:
-      '새로운 메인 팝업을 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 메인 팝업을 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -440,7 +441,9 @@ export class MainPopupController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '메인 팝업 수정',
-    description: '메인 팝업의 번역 정보 및 파일을 수정합니다.',
+    description:
+      '메인 팝업의 번역 정보 및 파일을 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -559,7 +562,9 @@ export class MainPopupController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '메인 팝업 공개 상태 수정',
-    description: '메인 팝업의 공개 상태를 수정합니다.',
+    description:
+      '메인 팝업의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -630,7 +635,9 @@ export class MainPopupController {
   @Post('categories')
   @ApiOperation({
     summary: '메인 팝업 카테고리 생성',
-    description: '새로운 메인 팝업 카테고리를 생성합니다.',
+    description:
+      '새로운 메인 팝업 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -638,6 +645,7 @@ export class MainPopupController {
     type: MainPopupCategoryResponseDto,
   })
   async 메인_팝업_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateMainPopupCategoryDto,
   ): Promise<MainPopupCategoryResponseDto> {
     if (!createDto.name) {
@@ -656,9 +664,10 @@ export class MainPopupController {
       throw new BadRequestException('order는 숫자여야 합니다.');
     }
 
-    return await this.mainPopupBusinessService.메인_팝업_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.mainPopupBusinessService.메인_팝업_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -667,7 +676,9 @@ export class MainPopupController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '메인 팝업 카테고리 수정',
-    description: '메인 팝업 카테고리를 수정합니다.',
+    description:
+      '메인 팝업 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -698,7 +709,9 @@ export class MainPopupController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '메인 팝업 카테고리 오더 변경',
-    description: '메인 팝업 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '메인 팝업 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,

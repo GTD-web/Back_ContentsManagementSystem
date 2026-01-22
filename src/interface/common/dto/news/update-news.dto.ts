@@ -13,11 +13,6 @@ export class UpdateNewsPublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
   @IsBoolean()
   isPublic: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -27,11 +22,6 @@ export class UpdateNewsOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -60,11 +50,6 @@ export class CreateNewsCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
 
 /**
@@ -93,11 +78,6 @@ export class UpdateNewsCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -107,9 +87,4 @@ export class UpdateNewsCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
