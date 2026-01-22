@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Patch,
   Delete,
   Body,
@@ -18,7 +17,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
+import { Roles, CurrentUser } from '@interface/common/decorators';
+import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { LanguageBusinessService } from '@business/language-business/language-business.service';
 import { CreateLanguageDto } from '@interface/common/dto/language/create-language.dto';
 import { UpdateLanguageDto } from '@interface/common/dto/language/update-language.dto';
@@ -75,7 +75,14 @@ export class LanguageController {
   @Post()
   @ApiOperation({
     summary: '언어 생성',
-    description: '새로운 언어를 생성합니다.',
+    description:
+      '새로운 언어를 생성합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `code`: 언어 코드 (enum: "ko", "en", "ja", "zh")\n' +
+      '- `name`: 언어 이름\n\n' +
+      '**선택 필드:**\n' +
+      '- `isActive`: 활성화 여부 (boolean, 기본값: true)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -87,11 +94,13 @@ export class LanguageController {
     description: '이미 존재하는 언어 코드',
   })
   async 언어를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateLanguageDto,
   ): Promise<LanguageResponseDto> {
     return await this.languageBusinessService.언어를_생성한다({
       ...createDto,
-      isActive: createDto.isActive ?? true, // 기본값 true 설정
+      isActive: createDto.isActive ?? true,
+      createdBy: user.id,
     });
   }
 
@@ -102,7 +111,9 @@ export class LanguageController {
   @ApiOperation({
     summary: '기본 언어 초기화',
     description:
-      '한국어, 영어, 일본어, 중국어를 자동으로 추가합니다. 이미 존재하는 언어는 건너뜁니다.',
+      '한국어, 영어, 일본어, 중국어를 자동으로 추가합니다. ' +
+      '이미 존재하는 언어는 건너뜁니다.\n\n' +
+      '**Request Body**: 없음 (자동으로 기본 언어들 생성)',
   })
   @ApiResponse({
     status: 201,
@@ -116,30 +127,6 @@ export class LanguageController {
       items,
       total: items.length,
     };
-  }
-
-  /**
-   * 언어를 수정한다
-   */
-  @Put(':id')
-  @ApiOperation({
-    summary: '언어 수정',
-    description: '언어 정보를 수정합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '언어 수정 성공',
-    type: LanguageResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '언어를 찾을 수 없음',
-  })
-  async 언어를_수정한다(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateLanguageDto,
-  ): Promise<LanguageResponseDto> {
-    return await this.languageBusinessService.언어를_수정한다(id, updateDto);
   }
 
   /**
@@ -166,12 +153,19 @@ export class LanguageController {
   }
 
   /**
-   * 언어를 부분 수정한다 (PATCH)
+   * 언어를 수정한다
    */
   @Patch(':id')
   @ApiOperation({
-    summary: '언어 부분 수정',
-    description: '언어 정보를 부분 수정합니다.',
+    summary: '언어 수정',
+    description:
+      '언어 정보를 수정합니다. 전체 또는 일부 필드만 수정 가능합니다.\n\n' +
+      '**선택 필드 (모두 선택):**\n' +
+      '- `name`: 언어 이름\n' +
+      '- `isActive`: 활성화 여부 (boolean)\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 언어 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -182,11 +176,15 @@ export class LanguageController {
     status: 404,
     description: '언어를 찾을 수 없음',
   })
-  async 언어를_부분수정한다(
+  async 언어를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLanguageDto,
   ): Promise<LanguageResponseDto> {
-    return await this.languageBusinessService.언어를_수정한다(id, updateDto);
+    return await this.languageBusinessService.언어를_수정한다(id, {
+      ...updateDto,
+      updatedBy: user.id,
+    });
   }
 
   /**

@@ -27,9 +27,4 @@ export class CreateLanguageDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
