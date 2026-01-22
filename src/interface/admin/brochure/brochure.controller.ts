@@ -187,7 +187,8 @@ export class BrochureController {
       '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
       '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
       '**선택 필드:**\n' +
-      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)',
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -346,7 +347,8 @@ export class BrochureController {
       '**필수 필드:**\n' +
       '- `isPublic`: 공개 여부 (boolean)\n' +
       '  - `true`: 공개\n' +
-      '  - `false`: 비공개',
+      '  - `false`: 비공개\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -358,12 +360,16 @@ export class BrochureController {
     description: '브로슈어를 찾을 수 없음',
   })
   async 브로슈어_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochurePublicDto,
   ): Promise<BrochureResponseDto> {
     return await this.brochureBusinessService.브로슈어_공개를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -447,7 +453,8 @@ export class BrochureController {
       '⚠️ **파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
-      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -560,7 +567,8 @@ export class BrochureController {
       '브로슈어의 카테고리를 수정합니다.\n\n' +
       '**선택 필드:**\n' +
       '- `categoryId`: 카테고리 ID (UUID)\n' +
-      '  - null로 설정하면 카테고리 제거',
+      '  - null로 설정하면 카테고리 제거\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -571,12 +579,16 @@ export class BrochureController {
     description: '브로슈어를 찾을 수 없음',
   })
   async 브로슈어_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryDto,
   ): Promise<BrochureCategoryResponseDto> {
     return await this.brochureBusinessService.브로슈어_카테고리를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -592,7 +604,8 @@ export class BrochureController {
       '- `name`: 카테고리 이름\n\n' +
       '**선택 필드:**\n' +
       '- `description`: 카테고리 설명\n' +
-      '- `order`: 정렬 순서 (기본값: 0)',
+      '- `order`: 정렬 순서 (기본값: 0)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -600,11 +613,13 @@ export class BrochureController {
     type: BrochureCategoryResponseDto,
   })
   async 브로슈어_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateBrochureCategoryDto,
   ): Promise<BrochureCategoryResponseDto> {
-    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다(
-      createDto,
-    );
+    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -616,7 +631,8 @@ export class BrochureController {
     description:
       '브로슈어 카테고리의 정렬 순서를 변경합니다.\n\n' +
       '**필수 필드:**\n' +
-      '- `order`: 정렬 순서 (숫자)',
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -627,13 +643,17 @@ export class BrochureController {
     description: '카테고리를 찾을 수 없음',
   })
   async 브로슈어_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryOrderDto,
   ): Promise<BrochureCategoryResponseDto> {
     const result =
       await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
         id,
-        updateDto,
+        {
+          ...updateDto,
+          updatedBy: user.id,
+        },
       );
     return result;
   }

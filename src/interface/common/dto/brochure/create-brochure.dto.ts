@@ -86,9 +86,4 @@ export class CreateBrochureDto {
   @ValidateNested({ each: true })
   @Type(() => CreateBrochureTranslationDto)
   translations: CreateBrochureTranslationDto[];
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
