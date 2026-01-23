@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('루미르스토리 수정/삭제 (E2E)', () => {
   const testSuite = new BaseE2ETest();
   let lumirStoryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,6 +16,16 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 카테고리 먼저 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/lumir-stories/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 루미르스토리 생성
     const createResponse = await testSuite
       .request()
@@ -22,6 +33,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
       .send({
         title: '테스트 루미르 스토리',
         content: '테스트 내용',
+        categoryId,
       });
     lumirStoryId = createResponse.body.id;
   });
@@ -191,6 +203,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '스토리 1',
           content: '내용 1',
+          categoryId,
         });
 
       const createResponse2 = await testSuite
@@ -199,6 +212,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '스토리 2',
           content: '내용 2',
+          categoryId,
         });
 
       const id1 = createResponse1.body.id;

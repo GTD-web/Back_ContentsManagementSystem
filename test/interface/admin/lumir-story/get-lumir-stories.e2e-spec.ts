@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/lumir-stories (루미르스토리 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
   let lumirStoryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,6 +16,16 @@ describe('GET /api/admin/lumir-stories (루미르스토리 목록 조회)', () =
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 카테고리 먼저 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/lumir-stories/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 루미르스토리 생성
     const createResponse = await testSuite
       .request()
@@ -22,6 +33,7 @@ describe('GET /api/admin/lumir-stories (루미르스토리 목록 조회)', () =
       .send({
         title: '테스트 루미르 스토리',
         content: '테스트 내용',
+        categoryId,
       });
     lumirStoryId = createResponse.body.id;
   });
@@ -91,6 +103,7 @@ describe('GET /api/admin/lumir-stories (루미르스토리 목록 조회)', () =
 describe('GET /api/admin/lumir-stories/:id (루미르스토리 상세 조회)', () => {
   const testSuite = new BaseE2ETest();
   let lumirStoryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -103,6 +116,16 @@ describe('GET /api/admin/lumir-stories/:id (루미르스토리 상세 조회)', 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 카테고리 먼저 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/lumir-stories/categories')
+      .send({
+        name: '상세 조회 카테고리',
+        description: '상세 조회용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 루미르스토리 생성
     const createResponse = await testSuite
       .request()
@@ -110,6 +133,7 @@ describe('GET /api/admin/lumir-stories/:id (루미르스토리 상세 조회)', 
       .send({
         title: '상세 조회 테스트',
         content: '상세 조회 내용',
+        categoryId,
       });
     lumirStoryId = createResponse.body.id;
   });

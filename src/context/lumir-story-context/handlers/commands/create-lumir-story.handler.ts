@@ -38,6 +38,7 @@ export class CreateLumirStoryHandler
     const saved = await this.lumirStoryService.루미르스토리를_생성한다({
       title: data.title,
       content: data.content,
+      categoryId: data.categoryId,
       imageUrl: data.imageUrl || null,
       isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산

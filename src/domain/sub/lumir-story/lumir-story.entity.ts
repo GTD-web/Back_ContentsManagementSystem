@@ -25,6 +25,13 @@ export class LumirStory extends BaseEntity<LumirStory> {
   content: string;
 
   @Column({
+    type: 'uuid',
+    comment: '카테고리 ID',
+  })
+  @Index('idx_lumir_story_category_id')
+  categoryId: string;
+
+  @Column({
     type: 'text',
     nullable: true,
     comment: '썸네일/대표 이미지 URL (AWS S3)',

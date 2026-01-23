@@ -6,6 +6,7 @@ import { LumirStory } from '@domain/sub/lumir-story/lumir-story.entity';
 export interface CreateLumirStoryDto {
   title: string;
   content: string;
+  categoryId: string;
   imageUrl?: string | null;
   attachments?: Array<{
     fileName: string;
@@ -22,6 +23,7 @@ export interface CreateLumirStoryDto {
 export interface UpdateLumirStoryDto {
   title?: string;
   content?: string;
+  categoryId?: string;
   imageUrl?: string | null;
   isPublic?: boolean;
   order?: number;

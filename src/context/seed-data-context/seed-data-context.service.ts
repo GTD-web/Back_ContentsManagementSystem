@@ -1418,11 +1418,33 @@ export class SeedDataContextService {
       '기술',
     ];
 
+    // 루미르스토리 카테고리 조회 또는 생성
+    let categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.LUMIR_STORY,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.log('루미르스토리 카테고리가 없어 기본 카테고리 생성');
+      const defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.LUMIR_STORY,
+        name: '일반',
+        description: '일반 루미르스토리',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      categories = [defaultCategory];
+    }
+
     for (let i = 0; i < count; i++) {
       const theme = storyThemes[i % storyThemes.length];
+      const category = categories[i % categories.length];
+      
       await this.lumirStoryContextService.루미르스토리를_생성한다({
         title: `루미르의 ${theme} 이야기 - Story ${i + 1}`,
         content: `루미르는 ${theme}을(를) 통해 끊임없이 발전하고 있습니다. ${faker.lorem.paragraphs(3)}`,
+        categoryId: category.id,
         imageUrl: `https://example.com/images/story_${i + 1}.jpg`,
         attachments: [
           {

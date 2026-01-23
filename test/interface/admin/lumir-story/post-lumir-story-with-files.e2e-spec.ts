@@ -42,6 +42,18 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
 
   describe('파일 업로드 테스트', () => {
     it('파일과 함께 루미르스토리를 생성할 수 있어야 한다', async () => {
+      // 카테고리 먼저 생성
+      const categoryResponse = await testHelper
+        .request()
+        .post('/api/admin/lumir-stories/categories')
+        .send({
+          name: '파일 테스트',
+          description: '파일 테스트 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
       // 테스트용 PDF 파일 생성
       const testFileContent = 'This is a test lumir story PDF for E2E testing.';
       const testFileName = 'test-lumir-story.pdf';
@@ -52,6 +64,7 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
         .post('/api/admin/lumir-stories')
         .field('title', '파일 테스트 루미르 스토리')
         .field('content', '파일 업로드 테스트용 루미르스토리입니다')
+        .field('categoryId', categoryId)
         .attach('files', pdfBuffer, {
           filename: testFileName,
           contentType: 'application/pdf',
@@ -64,6 +77,7 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
       // 루미르스토리 생성 확인
       expect(lumirStory).toBeDefined();
       expect(lumirStory.id).toBeDefined();
+      expect(lumirStory.categoryId).toBe(categoryId);
 
       // 파일 업로드 확인
       expect(lumirStory.attachments).toBeDefined();
@@ -95,6 +109,18 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
     });
 
     it('여러 파일을 동시에 업로드할 수 있어야 한다', async () => {
+      // 카테고리 먼저 생성
+      const categoryResponse = await testHelper
+        .request()
+        .post('/api/admin/lumir-stories/categories')
+        .send({
+          name: '다중 파일',
+          description: '다중 파일 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
       const file1Buffer = createTestPdfBuffer('First test PDF');
       const file2Buffer = createTestPdfBuffer('Second test PDF');
       const file1Name = 'test-file-1.pdf';
@@ -105,6 +131,7 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
         .post('/api/admin/lumir-stories')
         .field('title', '다중 파일 테스트 루미르 스토리')
         .field('content', '여러 파일 업로드 테스트')
+        .field('categoryId', categoryId)
         .attach('files', file1Buffer, {
           filename: file1Name,
           contentType: 'application/pdf',
@@ -135,6 +162,18 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
     });
 
     it('기존 루미르스토리에 파일을 추가할 수 있어야 한다', async () => {
+      // 카테고리 먼저 생성
+      const categoryResponse = await testHelper
+        .request()
+        .post('/api/admin/lumir-stories/categories')
+        .send({
+          name: '파일 추가',
+          description: '파일 추가 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
       // 먼저 파일 없이 루미르스토리 생성
       const createResponse = await testHelper
         .request()
@@ -142,6 +181,7 @@ describe('[E2E] POST /api/admin/lumir-stories - 파일 업로드', () => {
         .send({
           title: '파일 추가 테스트',
           content: '파일 추가 테스트 내용',
+          categoryId,
         });
 
       const lumirStoryId = createResponse.body.id;

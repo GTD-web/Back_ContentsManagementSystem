@@ -204,6 +204,7 @@ describe('LumirStoryBusinessService', () => {
       // Given
       const title = '루미르 스토리 제목';
       const content = '루미르 스토리 내용';
+      const categoryId = 'category-1';
       const createdBy = 'user-1';
 
       const mockCreateResult = {
@@ -217,6 +218,7 @@ describe('LumirStoryBusinessService', () => {
         id: 'lumir-story-1',
         title,
         content,
+        categoryId,
         isPublic: true,
         order: 0,
       } as any;
@@ -232,6 +234,7 @@ describe('LumirStoryBusinessService', () => {
       const result = await service.루미르스토리를_생성한다(
         title,
         content,
+        categoryId,
         undefined,
         createdBy,
       );
@@ -242,6 +245,7 @@ describe('LumirStoryBusinessService', () => {
       ).toHaveBeenCalledWith({
         title,
         content,
+        categoryId,
         imageUrl: undefined,
         attachments: undefined,
         createdBy,
@@ -256,6 +260,7 @@ describe('LumirStoryBusinessService', () => {
       // Given
       const title = '루미르 스토리 제목';
       const content = '루미르 스토리 내용';
+      const categoryId = 'category-1';
       const createdBy = 'user-1';
       const files = [
         {
@@ -286,6 +291,7 @@ describe('LumirStoryBusinessService', () => {
         id: 'lumir-story-1',
         title,
         content,
+        categoryId,
         isPublic: true,
         order: 0,
         attachments: mockUploadedFiles,
@@ -303,6 +309,7 @@ describe('LumirStoryBusinessService', () => {
       const result = await service.루미르스토리를_생성한다(
         title,
         content,
+        categoryId,
         undefined,
         createdBy,
         files,
@@ -319,6 +326,7 @@ describe('LumirStoryBusinessService', () => {
         expect.objectContaining({
           title,
           content,
+          categoryId,
           attachments: expect.arrayContaining([
             expect.objectContaining({
               fileName: 'story.pdf',
@@ -512,6 +520,7 @@ describe('LumirStoryBusinessService', () => {
       const lumirStoryId = 'lumir-story-1';
       const title = '수정된 제목';
       const content = '수정된 내용';
+      const categoryId = 'category-2';
       const updatedBy = 'user-1';
       const files = [
         {
@@ -547,6 +556,7 @@ describe('LumirStoryBusinessService', () => {
         id: lumirStoryId,
         title,
         content,
+        categoryId,
       } as LumirStory;
 
       mockLumirStoryContextService.루미르스토리_상세_조회한다.mockResolvedValue(
@@ -566,6 +576,7 @@ describe('LumirStoryBusinessService', () => {
         lumirStoryId,
         title,
         content,
+        categoryId,
         undefined,
         updatedBy,
         files,
@@ -600,6 +611,7 @@ describe('LumirStoryBusinessService', () => {
       ).toHaveBeenCalledWith(lumirStoryId, {
         title,
         content,
+        categoryId,
         imageUrl: undefined,
         updatedBy,
       });
@@ -611,6 +623,7 @@ describe('LumirStoryBusinessService', () => {
       const lumirStoryId = 'lumir-story-1';
       const title = '수정된 제목';
       const content = '수정된 내용';
+      const categoryId = 'category-2';
       const updatedBy = 'user-1';
 
       const mockExistingLumirStory = {
@@ -629,6 +642,7 @@ describe('LumirStoryBusinessService', () => {
         id: lumirStoryId,
         title,
         content,
+        categoryId,
       } as LumirStory;
 
       mockLumirStoryContextService.루미르스토리_상세_조회한다.mockResolvedValue(
@@ -647,6 +661,7 @@ describe('LumirStoryBusinessService', () => {
         lumirStoryId,
         title,
         content,
+        categoryId,
         undefined,
         updatedBy,
         undefined,

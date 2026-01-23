@@ -186,7 +186,7 @@ export class LumirStoryController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목과 내용은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목, 내용, 카테고리 ID는 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 첨부파일과 함께 생성\n' +
       '- `files`를 전송하지 않으면: 파일 없이 생성',
@@ -203,6 +203,11 @@ export class LumirStoryController {
           description: '내용',
           example: '루미르는 끊임없이 혁신하고 있습니다...',
         },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (UUID)',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
         imageUrl: {
           type: 'string',
           description: '썸네일/대표 이미지 URL (선택)',
@@ -214,7 +219,7 @@ export class LumirStoryController {
           description: '첨부파일 목록 (PDF/JPG/PNG/WEBP만 가능)',
         },
       },
-      required: ['title', 'content'],
+      required: ['title', 'content', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -231,7 +236,7 @@ export class LumirStoryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<LumirStoryResponseDto> {
-    const { title, content, imageUrl } = body;
+    const { title, content, categoryId, imageUrl } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -241,9 +246,14 @@ export class LumirStoryController {
       throw new BadRequestException('content 필드는 필수입니다.');
     }
 
+    if (!categoryId) {
+      throw new BadRequestException('categoryId 필드는 필수입니다.');
+    }
+
     return await this.lumirStoryBusinessService.루미르스토리를_생성한다(
       title,
       content,
+      categoryId,
       imageUrl || null,
       user.id,
       files,
@@ -347,6 +357,11 @@ export class LumirStoryController {
           description: '내용',
           example: '루미르는 끊임없이 혁신하고 있습니다...',
         },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (UUID, 선택)',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
         imageUrl: {
           type: 'string',
           description: '썸네일/대표 이미지 URL (선택)',
@@ -377,7 +392,7 @@ export class LumirStoryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<any> {
-    const { title, content, imageUrl } = body;
+    const { title, content, categoryId, imageUrl } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -391,6 +406,7 @@ export class LumirStoryController {
       id,
       title,
       content,
+      categoryId,
       imageUrl || null,
       user.id,
       files,

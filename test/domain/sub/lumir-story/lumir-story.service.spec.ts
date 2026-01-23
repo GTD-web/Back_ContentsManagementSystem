@@ -43,6 +43,7 @@ describe('LumirStoryService', () => {
       const createData = {
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         isPublic: true,
         order: 0,
         createdBy: 'user-1',
@@ -74,6 +75,7 @@ describe('LumirStoryService', () => {
       const createData = {
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         isPublic: true,
         order: 0,
         attachments: [
@@ -116,6 +118,7 @@ describe('LumirStoryService', () => {
       const createData = {
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         imageUrl: 'https://s3.aws.com/image.jpg',
         isPublic: true,
         order: 0,

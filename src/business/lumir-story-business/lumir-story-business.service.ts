@@ -97,6 +97,7 @@ export class LumirStoryBusinessService {
   async 루미르스토리를_생성한다(
     title: string,
     content: string,
+    categoryId: string,
     imageUrl?: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
@@ -132,6 +133,7 @@ export class LumirStoryBusinessService {
     const createData = {
       title,
       content,
+      categoryId,
       imageUrl,
       attachments:
         attachments && attachments.length > 0 ? attachments : undefined,
@@ -340,6 +342,7 @@ export class LumirStoryBusinessService {
     lumirStoryId: string,
     title: string,
     content: string,
+    categoryId?: string,
     imageUrl?: string | null,
     updatedBy?: string,
     files?: Express.Multer.File[],
@@ -399,14 +402,20 @@ export class LumirStoryBusinessService {
     );
 
     // 5. 내용 수정
+    const updateData: any = {
+      title,
+      content,
+      imageUrl,
+      updatedBy,
+    };
+
+    if (categoryId !== undefined) {
+      updateData.categoryId = categoryId;
+    }
+
     const result = await this.lumirStoryContextService.루미르스토리를_수정한다(
       lumirStoryId,
-      {
-        title,
-        content,
-        imageUrl,
-        updatedBy,
-      },
+      updateData,
     );
 
     this.logger.log(`루미르스토리 수정 완료 - 루미르스토리 ID: ${lumirStoryId}`);

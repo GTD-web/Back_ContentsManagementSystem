@@ -40,6 +40,7 @@ describe('CreateLumirStoryHandler', () => {
       const command = new CreateLumirStoryCommand({
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -47,6 +48,7 @@ describe('CreateLumirStoryHandler', () => {
         id: 'lumir-story-1',
         title: command.data.title,
         content: command.data.content,
+        categoryId: command.data.categoryId,
         isPublic: true,
         order: 0,
         imageUrl: null,
@@ -68,6 +70,7 @@ describe('CreateLumirStoryHandler', () => {
         expect.objectContaining({
           title: command.data.title,
           content: command.data.content,
+          categoryId: 'category-1',
           isPublic: true,
           order: 0,
           createdBy: 'user-1',
@@ -85,6 +88,7 @@ describe('CreateLumirStoryHandler', () => {
       const command = new CreateLumirStoryCommand({
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         attachments: [
           {
             fileName: 'story.pdf',
@@ -100,6 +104,7 @@ describe('CreateLumirStoryHandler', () => {
         id: 'lumir-story-1',
         title: command.data.title,
         content: command.data.content,
+        categoryId: command.data.categoryId,
         isPublic: true,
         order: 0,
         attachments: command.data.attachments,
@@ -117,6 +122,7 @@ describe('CreateLumirStoryHandler', () => {
       // Then
       expect(lumirStoryService.루미르스토리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           attachments: command.data.attachments,
         }),
       );
@@ -128,6 +134,7 @@ describe('CreateLumirStoryHandler', () => {
       const command = new CreateLumirStoryCommand({
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         imageUrl: 'https://s3.aws.com/image.jpg',
         createdBy: 'user-1',
       });
@@ -136,6 +143,7 @@ describe('CreateLumirStoryHandler', () => {
         id: 'lumir-story-1',
         title: command.data.title,
         content: command.data.content,
+        categoryId: command.data.categoryId,
         imageUrl: command.data.imageUrl,
         isPublic: true,
         order: 0,
@@ -153,6 +161,7 @@ describe('CreateLumirStoryHandler', () => {
       // Then
       expect(lumirStoryService.루미르스토리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           imageUrl: 'https://s3.aws.com/image.jpg',
         }),
       );
@@ -164,11 +173,13 @@ describe('CreateLumirStoryHandler', () => {
       const command = new CreateLumirStoryCommand({
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
       const mockLumirStory = {
         id: 'lumir-story-1',
+        categoryId: 'category-1',
         isPublic: true,
         order: 5, // 계산된 order
         createdAt: new Date(),
@@ -186,6 +197,7 @@ describe('CreateLumirStoryHandler', () => {
       expect(lumirStoryService.다음_순서를_계산한다).toHaveBeenCalled();
       expect(lumirStoryService.루미르스토리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           order: 5,
         }),
       );
