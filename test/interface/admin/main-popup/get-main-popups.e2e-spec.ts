@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -45,6 +46,20 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
       'main_popup_translations',
       'main_popups',
     ]);
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+    
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -82,7 +97,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
                 languageId: testLanguageId,
                 ...popup,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
       }
 
       // When
@@ -111,7 +127,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
       }
 
       // When - 첫 페이지 조회 (limit=10)
@@ -152,7 +169,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
       }
 
       // When
@@ -179,7 +197,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
               title: '공개 팝업',
               description: '공개된 팝업입니다',
             },
-          ]));
+          ]))
+          .field('categoryId', testCategoryId);
 
       // 공개 상태로 변경
       await testSuite
@@ -197,7 +216,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
               title: '비공개 팝업',
               description: '비공개 팝업입니다',
             },
-          ]));
+          ]))
+          .field('categoryId', testCategoryId);
 
       // 비공개 상태로 변경
       await testSuite
@@ -244,7 +264,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
       }
 
       // When
@@ -269,7 +290,8 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
         // 생성 시간 차이를 두기 위한 대기
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -289,6 +311,7 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
 describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -331,6 +354,20 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
       'main_popup_translations',
       'main_popups',
     ]);
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+    
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -358,7 +395,8 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]));
+            ]))
+          .field('categoryId', testCategoryId);
       }
 
       // When
@@ -377,6 +415,7 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
 describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -419,6 +458,20 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
       'main_popup_translations',
       'main_popups',
     ]);
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+    
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -434,6 +487,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
               description: '테스트 설명',
             },
           ]))
+          .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;
@@ -500,6 +554,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
               description: 'English description',
             },
           ]))
+          .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;

@@ -96,9 +96,9 @@ export class MainPopupBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string,
     createdBy?: string,
     files?: Express.Multer.File[],
-    categoryId?: string,
   ): Promise<MainPopup> {
     this.logger.log(`메인 팝업 생성 시작 - 번역 수: ${translations.length}`);
 
@@ -130,9 +130,9 @@ export class MainPopupBusinessService {
     // 메인 팝업 생성
     const result = await this.mainPopupContextService.메인_팝업을_생성한다(
       translations,
+      categoryId,
       createdBy,
       attachments,
-      categoryId,
     );
 
     this.logger.log(`메인 팝업 생성 완료 - ID: ${result.id}`);
@@ -151,9 +151,9 @@ export class MainPopupBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string,
     updatedBy?: string,
     files?: Express.Multer.File[],
-    categoryId?: string,
   ): Promise<MainPopup> {
     this.logger.log(
       `메인 팝업 수정 시작 - ID: ${id}, 번역 수: ${translations?.length || 0}`,
@@ -209,7 +209,7 @@ export class MainPopupBusinessService {
     // 5. 번역 및 카테고리 수정
     const result = await this.mainPopupContextService.메인_팝업을_수정한다(id, {
       translations,
-      categoryId: categoryId !== undefined ? categoryId : undefined,
+      categoryId,
       updatedBy,
     });
 

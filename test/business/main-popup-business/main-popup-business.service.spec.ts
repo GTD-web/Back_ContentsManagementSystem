@@ -197,11 +197,13 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
 
       const mockPopup = {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         translations: [],
       } as Partial<MainPopup> as MainPopup;
 
@@ -212,14 +214,16 @@ describe('MainPopupBusinessService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
+        undefined,
       );
 
       // Then
       expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
-        undefined,
         undefined,
       );
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
@@ -236,6 +240,7 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
       const files = [
         {
           originalname: 'popup.jpg',
@@ -258,6 +263,7 @@ describe('MainPopupBusinessService', () => {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         attachments: [
           {
             fileName: 'popup.jpg',
@@ -276,6 +282,7 @@ describe('MainPopupBusinessService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
         files,
       );
@@ -287,6 +294,7 @@ describe('MainPopupBusinessService', () => {
       );
       expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
         [
           {
@@ -296,7 +304,6 @@ describe('MainPopupBusinessService', () => {
             mimeType: 'image/jpeg',
           },
         ],
-        undefined,
       );
       expect(result).toEqual(mockPopup);
     });
@@ -328,17 +335,17 @@ describe('MainPopupBusinessService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
         undefined,
-        categoryId,
       );
 
       // Then
       expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
         undefined,
-        categoryId,
       );
       expect(result).toEqual(mockPopup);
     });
@@ -356,10 +363,12 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
 
       const existingPopup = {
         id: popupId,
         isPublic: true,
+        categoryId,
         attachments: [],
       } as Partial<MainPopup> as MainPopup;
 
@@ -381,7 +390,9 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        categoryId,
         updatedBy,
+        undefined,
       );
 
       // Then
@@ -394,7 +405,7 @@ describe('MainPopupBusinessService', () => {
         popupId,
         {
           translations,
-          categoryId: undefined,
+          categoryId,
           updatedBy,
         },
       );
@@ -470,6 +481,7 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        'category-1',
         updatedBy,
         newFiles,
       );
@@ -543,7 +555,9 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        'category-1',
         updatedBy,
+        undefined,
       );
 
       // Then
@@ -572,9 +586,9 @@ describe('MainPopupBusinessService', () => {
       const existingPopup = {
         id: popupId,
         isPublic: true,
+        categoryId,
         attachments: [],
-        categoryId: null,
-      } as MainPopup;
+      } as Partial<MainPopup> as MainPopup;
 
       const updatedPopup = {
         ...existingPopup,
@@ -595,9 +609,9 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        categoryId,
         updatedBy,
         undefined,
-        categoryId,
       );
 
       // Then

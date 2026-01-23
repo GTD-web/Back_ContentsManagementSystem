@@ -107,9 +107,8 @@ export class UpdateMainPopupDto {
   @ApiProperty({
     description: '메인 팝업 카테고리 ID',
     example: 'uuid-category',
-    required: false,
   })
-  @IsOptional()
   @IsString()
-  categoryId?: string;
+  @IsNotEmpty()
+  categoryId: string;
 }

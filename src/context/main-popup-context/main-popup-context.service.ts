@@ -92,6 +92,7 @@ export class MainPopupContextService {
       title: string;
       description?: string;
     }>,
+    categoryId: string,
     createdBy?: string,
     attachments?: Array<{
       fileName: string;
@@ -99,7 +100,6 @@ export class MainPopupContextService {
       fileSize: number;
       mimeType: string;
     }>,
-    categoryId?: string,
   ): Promise<MainPopup> {
     this.logger.log(`메인 팝업 생성 시작 - 번역 수: ${translations.length}`);
 
@@ -126,7 +126,7 @@ export class MainPopupContextService {
       isPublic: true,
       order: nextOrder,
       attachments: attachments || null,
-      categoryId: categoryId || null,
+      categoryId,
       createdBy,
     });
 
@@ -184,7 +184,7 @@ export class MainPopupContextService {
     data: {
       isPublic?: boolean;
       order?: number;
-      categoryId?: string;
+      categoryId: string;
       translations?: Array<{
         id?: string;
         languageId: string;
@@ -200,7 +200,7 @@ export class MainPopupContextService {
     const updateData: any = {};
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
     if (data.order !== undefined) updateData.order = data.order;
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
+    updateData.categoryId = data.categoryId;
     if (data.updatedBy) updateData.updatedBy = data.updatedBy;
 
     if (Object.keys(updateData).length > 0) {

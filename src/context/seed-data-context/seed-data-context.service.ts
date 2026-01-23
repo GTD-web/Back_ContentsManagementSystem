@@ -1344,6 +1344,28 @@ export class SeedDataContextService {
       return 0;
     }
 
+    // 메인 팝업 카테고리 생성 (없으면 생성)
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      'MAIN_POPUP' as any,
+      false,
+    );
+    
+    let defaultCategory;
+    if (categories.length === 0) {
+      defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: 'MAIN_POPUP' as any,
+        name: '이벤트',
+        description: '이벤트 및 프로모션',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      this.logger.log(`메인 팝업 카테고리 생성 완료 - ID: ${defaultCategory.id}`);
+    } else {
+      defaultCategory = categories[0];
+      this.logger.log(`기존 메인 팝업 카테고리 사용 - ID: ${defaultCategory.id}`);
+    }
+
     let created = 0;
 
     for (let i = 0; i < count; i++) {
@@ -1355,6 +1377,7 @@ export class SeedDataContextService {
             description: faker.lorem.paragraph(),
           },
         ],
+        defaultCategory.id,
         'seed',
         [
           {

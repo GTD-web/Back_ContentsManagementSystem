@@ -57,6 +57,7 @@ describe('MainPopupService', () => {
       const createData = {
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
         attachments: null,
         createdBy: 'user-1',
       };
@@ -85,6 +86,7 @@ describe('MainPopupService', () => {
       const createData = {
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
         attachments: [
           {
             fileName: 'popup.jpg',
@@ -328,14 +330,14 @@ describe('MainPopupService', () => {
       // Given
       const popupId = 'popup-1';
       const updateData = {
-        categoryId: 'category-1',
+        categoryId: 'category-2',
       };
 
       const existingPopup = {
         id: popupId,
         isPublic: true,
         order: 0,
-        categoryId: null,
+        categoryId: 'category-1',
       } as MainPopup;
 
       const updatedPopup = {
@@ -354,9 +356,9 @@ describe('MainPopupService', () => {
 
       // Then
       expect(mainPopupRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ categoryId: 'category-1' }),
+        expect.objectContaining({ categoryId: 'category-2' }),
       );
-      expect(result.categoryId).toBe('category-1');
+      expect(result.categoryId).toBe('category-2');
     });
   });
 

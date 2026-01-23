@@ -236,6 +236,7 @@ describe('MainPopupContextService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
 
       const koreanLang = {
         id: 'lang-ko',
@@ -253,6 +254,7 @@ describe('MainPopupContextService', () => {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         translations: [],
       } as Partial<MainPopup> as MainPopup;
 
@@ -271,7 +273,12 @@ describe('MainPopupContextService', () => {
       );
 
       // When
-      const result = await service.메인_팝업을_생성한다(translations, createdBy);
+      const result = await service.메인_팝업을_생성한다(
+        translations,
+        categoryId,
+        createdBy,
+        undefined,
+      );
 
       // Then
       expect(languageService.ID로_언어를_조회한다).toHaveBeenCalledWith(
@@ -282,7 +289,7 @@ describe('MainPopupContextService', () => {
         isPublic: true,
         order: 0,
         attachments: null,
-        categoryId: null,
+        categoryId,
         createdBy,
       });
       // 개별 설정된 번역 (isSynced: false)
@@ -324,6 +331,7 @@ describe('MainPopupContextService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
       const attachments = [
         {
           fileName: 'popup.jpg',
@@ -343,6 +351,7 @@ describe('MainPopupContextService', () => {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         attachments,
       } as MainPopup;
 
@@ -360,6 +369,7 @@ describe('MainPopupContextService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
         attachments,
       );
@@ -369,7 +379,7 @@ describe('MainPopupContextService', () => {
         isPublic: true,
         order: 0,
         attachments,
-        categoryId: null,
+        categoryId,
         createdBy,
       });
       expect(result.attachments).toEqual(attachments);
@@ -415,9 +425,9 @@ describe('MainPopupContextService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
         undefined,
-        categoryId,
       );
 
       // Then
@@ -443,6 +453,7 @@ describe('MainPopupContextService', () => {
           title: '제목 2',
         },
       ];
+      const categoryId = 'category-1';
 
       const koreanLang = {
         id: 'lang-ko',
@@ -454,7 +465,12 @@ describe('MainPopupContextService', () => {
 
       // When & Then
       await expect(
-        service.메인_팝업을_생성한다(translations, 'user-1'),
+        service.메인_팝업을_생성한다(
+          translations,
+          categoryId,
+          'user-1',
+          undefined,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -482,7 +498,7 @@ describe('MainPopupContextService', () => {
       );
 
       // When
-      const result = await service.메인_팝업을_수정한다(popupId, data);
+      const result = await service.메인_팝업을_수정한다(popupId, { ...data, categoryId: 'category-1' });
 
       // Then
       expect(mainPopupService.메인_팝업을_업데이트한다).toHaveBeenCalledWith(
@@ -490,6 +506,7 @@ describe('MainPopupContextService', () => {
         {
           isPublic: false,
           order: 5,
+          categoryId: 'category-1',
           updatedBy: 'user-1',
         },
       );
@@ -508,6 +525,7 @@ describe('MainPopupContextService', () => {
           },
         ],
         updatedBy: 'user-1',
+        categoryId: 'category-1',
       };
 
       const mockPopup = {
@@ -597,6 +615,7 @@ describe('MainPopupContextService', () => {
           },
         ],
         updatedBy: 'user-1',
+        categoryId: 'category-1',
       };
 
       const mockPopup = {

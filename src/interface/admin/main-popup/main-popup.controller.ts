@@ -263,7 +263,7 @@ export class MainPopupController {
         },
         categoryId: {
           type: 'string',
-          description: '메인 팝업 카테고리 ID (선택사항)',
+          description: '메인 팝업 카테고리 ID (필수)',
           example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
         },
         files: {
@@ -273,7 +273,7 @@ export class MainPopupController {
             '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
-      required: ['translations'],
+      required: ['translations', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -365,25 +365,27 @@ export class MainPopupController {
       }
     }
 
-    // categoryId 검증
+    // categoryId 검증 (필수)
     const categoryId = body?.categoryId;
-    if (categoryId && typeof categoryId !== 'string') {
+    if (!categoryId) {
+      throw new BadRequestException('categoryId는 필수입니다.');
+    }
+    
+    if (typeof categoryId !== 'string') {
       throw new BadRequestException('categoryId는 문자열이어야 합니다.');
     }
 
-    // categoryId가 있으면 UUID 형식 검증
-    if (categoryId) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(categoryId)) {
-        throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
-      }
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(categoryId)) {
+      throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
     }
 
     return await this.mainPopupBusinessService.메인_팝업을_생성한다(
       translations,
+      categoryId,
       user.id,
       files,
-      categoryId || undefined,
     );
   }
 
@@ -499,7 +501,7 @@ export class MainPopupController {
             '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
-      required: ['translations'],
+      required: ['translations', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -518,8 +520,8 @@ export class MainPopupController {
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<MainPopupResponseDto> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
+    const idUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!idUuidRegex.test(id)) {
       throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
     }
 
@@ -573,26 +575,28 @@ export class MainPopupController {
       }
     }
 
-    // categoryId 검증
+    // categoryId 검증 (필수)
     const categoryId = body?.categoryId;
-    if (categoryId && typeof categoryId !== 'string') {
+    if (!categoryId) {
+      throw new BadRequestException('categoryId는 필수입니다.');
+    }
+    
+    if (typeof categoryId !== 'string') {
       throw new BadRequestException('categoryId는 문자열이어야 합니다.');
     }
 
-    // categoryId가 있으면 UUID 형식 검증
-    if (categoryId) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(categoryId)) {
-        throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
-      }
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(categoryId)) {
+      throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
     }
 
     return await this.mainPopupBusinessService.메인_팝업을_수정한다(
       id,
       translations,
+      categoryId,
       user.id,
       files,
-      categoryId,
     );
   }
 
