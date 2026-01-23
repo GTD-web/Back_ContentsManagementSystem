@@ -260,7 +260,6 @@ export class LumirStoryBusinessService {
       name?: string;
       description?: string;
       isActive?: boolean;
-      order?: number;
       updatedBy?: string;
     },
   ): Promise<Category> {

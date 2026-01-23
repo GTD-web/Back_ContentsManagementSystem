@@ -73,11 +73,6 @@ export class UpdateLumirStoryCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '정렬 순서', required: false })
-  @IsOptional()
-  @IsNumber()
-  order?: number;
 }
 
 /**

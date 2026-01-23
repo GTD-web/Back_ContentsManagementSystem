@@ -309,11 +309,6 @@ export class UpdateAnnouncementCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '정렬 순서', required: false })
-  @IsOptional()
-  @IsNumber()
-  order?: number;
 }
 
 /**
