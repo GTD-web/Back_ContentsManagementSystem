@@ -1,5 +1,6 @@
-import { Entity, Column, Index } from 'typeorm';
+import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
+import { Category } from '@domain/common/category/category.entity';
 
 /**
  * VideoGallery Entity (비디오 갤러리)
@@ -10,6 +11,7 @@ import { BaseEntity } from '@libs/database/base/base.entity';
 @Entity('video_galleries')
 @Index('idx_video_gallery_is_public', ['isPublic'])
 @Index('idx_video_gallery_order', ['order'])
+@Index('idx_video_gallery_category_id', ['categoryId'])
 export class VideoGallery extends BaseEntity<VideoGallery> {
   @Column({
     type: 'varchar',
@@ -24,6 +26,16 @@ export class VideoGallery extends BaseEntity<VideoGallery> {
     comment: '설명',
   })
   description: string | null;
+
+  @Column({
+    type: 'uuid',
+    comment: '카테고리 ID',
+  })
+  categoryId: string;
+
+  @ManyToOne(() => Category)
+  @JoinColumn({ name: 'categoryId' })
+  category: Category;
 
   @Column({
     type: 'boolean',

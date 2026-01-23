@@ -39,7 +39,8 @@ export class VideoGalleryService {
     this.logger.debug(`비디오갤러리 목록 조회`);
 
     const queryBuilder =
-      this.videoGalleryRepository.createQueryBuilder('videoGallery');
+      this.videoGalleryRepository.createQueryBuilder('videoGallery')
+        .leftJoinAndSelect('videoGallery.category', 'category');
 
     if (options?.isPublic !== undefined) {
       queryBuilder.where('videoGallery.isPublic = :isPublic', {
@@ -65,6 +66,7 @@ export class VideoGalleryService {
 
     const videoGallery = await this.videoGalleryRepository.findOne({
       where: { id },
+      relations: ['category'],
     });
 
     if (!videoGallery) {
@@ -128,6 +130,7 @@ export class VideoGalleryService {
       order: { order: 'DESC' },
       select: ['order'],
       take: 1,
+      relations: [], // eager loading 비활성화
     });
 
     return maxOrderVideoGalleries.length > 0
@@ -148,6 +151,7 @@ export class VideoGalleryService {
       order: {
         order: 'ASC',
       },
+      relations: ['category'],
     });
   }
 

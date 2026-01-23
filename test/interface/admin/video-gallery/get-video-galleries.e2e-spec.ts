@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/video-galleries (비디오갤러리 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,6 +16,16 @@ describe('GET /api/admin/video-galleries (비디오갤러리 목록 조회)', ()
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 생성
     const createResponse = await testSuite
       .request()
@@ -22,6 +33,7 @@ describe('GET /api/admin/video-galleries (비디오갤러리 목록 조회)', ()
       .send({
         title: '테스트 비디오 갤러리',
         description: '테스트 내용',
+        categoryId,
       });
     videoGalleryId = createResponse.body.id;
   });
@@ -100,6 +112,7 @@ describe('GET /api/admin/video-galleries (비디오갤러리 목록 조회)', ()
 
 describe('GET /api/admin/video-galleries/all (비디오갤러리 전체 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -112,15 +125,28 @@ describe('GET /api/admin/video-galleries/all (비디오갤러리 전체 목록 �
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 여러 개 생성
     await testSuite.request().post('/api/admin/video-galleries').send({
       title: '비디오 갤러리 1',
+      categoryId,
     });
     await testSuite.request().post('/api/admin/video-galleries').send({
       title: '비디오 갤러리 2',
+      categoryId,
     });
     await testSuite.request().post('/api/admin/video-galleries').send({
       title: '비디오 갤러리 3',
+      categoryId,
     });
   });
 
@@ -142,6 +168,7 @@ describe('GET /api/admin/video-galleries/all (비디오갤러리 전체 목록 �
 describe('GET /api/admin/video-galleries/:id (비디오갤러리 상세 조회)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -154,6 +181,16 @@ describe('GET /api/admin/video-galleries/:id (비디오갤러리 상세 조회)'
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 생성
     const createResponse = await testSuite
       .request()
@@ -161,6 +198,7 @@ describe('GET /api/admin/video-galleries/:id (비디오갤러리 상세 조회)'
       .send({
         title: '상세 조회 테스트',
         description: '상세 조회 내용',
+        categoryId,
       });
     videoGalleryId = createResponse.body.id;
   });

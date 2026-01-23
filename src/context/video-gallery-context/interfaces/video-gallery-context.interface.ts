@@ -16,6 +16,7 @@ export interface VideoSourceDto {
 export interface CreateVideoGalleryDto {
   title: string;
   description?: string | null;
+  categoryId: string;
   videoSources?: VideoSourceDto[];
   createdBy?: string;
 }

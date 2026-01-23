@@ -108,8 +108,8 @@ describe('GetVideoGalleryDetailHandler', () => {
 
       // Then
       expect(result.videoSources).toHaveLength(2);
-      expect(result.videoSources[0].type).toBe('youtube');
-      expect(result.videoSources[1].type).toBe('upload');
+      expect(result.videoSources![0].type).toBe('youtube');
+      expect(result.videoSources![1].type).toBe('upload');
     });
 
     it('존재하지 않는 비디오갤러리 조회 시 NotFoundException을 발생시켜야 한다', async () => {

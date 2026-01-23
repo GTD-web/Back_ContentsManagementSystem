@@ -1452,7 +1452,7 @@ export class SeedDataContextService {
   ): Promise<number> {
     this.logger.log(`비디오갤러리 시드 데이터 생성 시작 - 개수: ${count}`);
 
-    let created = 0;
+    // 먼저 카테고리를 생성
     const videoCategories = [
       '회사 소개',
       '제품 소개',
@@ -1462,8 +1462,23 @@ export class SeedDataContextService {
       '이벤트',
     ];
 
+    const createdCategories: Category[] = [];
+    for (const categoryName of videoCategories) {
+      const category = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.VIDEO_GALLERY,
+        name: categoryName,
+        description: `${categoryName} 관련 영상`,
+        isActive: true,
+        order: createdCategories.length,
+        createdBy: 'seed',
+      });
+      createdCategories.push(category);
+    }
+
+    let created = 0;
+
     for (let i = 0; i < count; i++) {
-      const category = videoCategories[i % videoCategories.length];
+      const category = createdCategories[i % createdCategories.length];
       const videoIds = [
         'dQw4w9WgXcQ',
         'jNQXAC9IVRw',
@@ -1474,8 +1489,9 @@ export class SeedDataContextService {
       const videoId = videoIds[i % videoIds.length];
 
       await this.videoGalleryContextService.비디오갤러리를_생성한다({
-        title: `${category} - 영상 ${i + 1}`,
-        description: `${category}에 관한 영상입니다. 루미르의 다양한 활동과 성과를 소개합니다.`,
+        title: `${category.name} - 영상 ${i + 1}`,
+        description: `${category.name}에 관한 영상입니다. 루미르의 다양한 활동과 성과를 소개합니다.`,
+        categoryId: category.id,
         videoSources: [
           {
             type: 'youtube',

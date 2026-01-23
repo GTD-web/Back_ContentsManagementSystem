@@ -96,6 +96,7 @@ export class VideoGalleryBusinessService {
    */
   async 비디오갤러리를_생성한다(
     title: string,
+    categoryId: string,
     description?: string | null,
     youtubeUrls?: string[],
     createdBy?: string,
@@ -144,6 +145,7 @@ export class VideoGalleryBusinessService {
     // 생성 데이터 구성
     const createData = {
       title,
+      categoryId,
       description,
       videoSources: videoSources.length > 0 ? videoSources : undefined,
       createdBy,

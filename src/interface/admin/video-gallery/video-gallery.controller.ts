@@ -191,7 +191,7 @@ export class VideoGalleryController {
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목과 카테고리는 필수입니다.\n\n' +
       '**비디오 소스 (여러 개 가능)**:\n' +
       '- `youtubeUrls`: YouTube 비디오 URL 배열 (여러 개 가능)\n' +
       '- `files`: 직접 비디오 파일 업로드 (여러 개 가능)\n' +
@@ -204,6 +204,11 @@ export class VideoGalleryController {
           type: 'string',
           description: '제목',
           example: '회사 소개 영상',
+        },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (필수)',
+          example: '550e8400-e29b-41d4-a716-446655440000',
         },
         description: {
           type: 'string',
@@ -222,7 +227,7 @@ export class VideoGalleryController {
           description: '비디오 파일 목록',
         },
       },
-      required: ['title'],
+      required: ['title', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -239,10 +244,14 @@ export class VideoGalleryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<VideoGalleryResponseDto> {
-    const { title, description, youtubeUrls } = body;
+    const { title, categoryId, description, youtubeUrls } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
+    }
+
+    if (!categoryId) {
+      throw new BadRequestException('categoryId 필드는 필수입니다.');
     }
 
     // youtubeUrls가 JSON 문자열로 전달될 수 있으므로 파싱
@@ -263,6 +272,7 @@ export class VideoGalleryController {
 
     return await this.videoGalleryBusinessService.비디오갤러리를_생성한다(
       title,
+      categoryId,
       description || null,
       parsedYoutubeUrls,
       user.id,
