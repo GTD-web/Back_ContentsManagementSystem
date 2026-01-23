@@ -433,6 +433,7 @@ describe('전자공시 CRUD API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -489,6 +490,7 @@ describe('전자공시 CRUD API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -513,6 +515,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .put('/api/admin/electronic-disclosures/00000000-0000-0000-0000-000000000001')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([

@@ -306,6 +306,7 @@ describe('ElectronicDisclosureContextService', () => {
       expect(electronicDisclosureService.전자공시를_생성한다).toHaveBeenCalledWith({
         isPublic: true,
         order: 0,
+        categoryId,
         attachments,
         createdBy,
       });

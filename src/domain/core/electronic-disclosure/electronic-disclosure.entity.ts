@@ -27,6 +27,12 @@ export class ElectronicDisclosure extends BaseEntity<ElectronicDisclosure> {
   order: number;
 
   @Column({
+    type: 'uuid',
+    comment: '전자공시 카테고리 ID',
+  })
+  categoryId: string;
+
+  @Column({
     type: 'jsonb',
     nullable: true,
     comment: '첨부파일 목록 (AWS S3 URLs)',

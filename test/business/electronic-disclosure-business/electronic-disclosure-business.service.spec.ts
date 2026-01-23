@@ -302,6 +302,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
       const files = [
         {
           originalname: 'new-disclosure.pdf',
@@ -354,6 +355,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         disclosureId,
         translations,
         updatedBy,
+        categoryId,
         files,
       );
 
@@ -381,6 +383,13 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
       expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
         disclosureId,
+        expect.objectContaining({
+          categoryId,
+          updatedBy,
+        }),
+      );
+      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+        disclosureId,
         {
           translations,
           updatedBy,
@@ -399,6 +408,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
 
       const mockExistingDisclosure = {
         id: disclosureId,
@@ -433,6 +443,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         disclosureId,
         translations,
         updatedBy,
+        categoryId,
         undefined,
       );
 
@@ -444,6 +455,13 @@ describe('ElectronicDisclosureBusinessService', () => {
       expect(
         electronicDisclosureContextService.전자공시_파일을_수정한다,
       ).toHaveBeenCalledWith(disclosureId, [], updatedBy);
+      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+        disclosureId,
+        expect.objectContaining({
+          categoryId,
+          updatedBy,
+        }),
+      );
       expect(result.attachments).toEqual([]);
     });
   });

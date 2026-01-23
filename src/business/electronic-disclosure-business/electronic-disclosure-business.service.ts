@@ -156,7 +156,8 @@ export class ElectronicDisclosureBusinessService {
       title: string;
       description?: string;
     }>,
-    updatedBy?: string,
+    updatedBy: string,
+    categoryId: string,
     files?: Express.Multer.File[],
   ): Promise<ElectronicDisclosure> {
     this.logger.log(
@@ -209,7 +210,17 @@ export class ElectronicDisclosureBusinessService {
       `전자공시 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
+    // 5. categoryId 업데이트
+    await this.electronicDisclosureContextService.전자공시를_수정한다(
+      id,
+      {
+        categoryId,
+        updatedBy,
+      },
+    );
+    this.logger.log(`전자공시 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`);
+
+    // 6. 번역 수정
     const result = await this.electronicDisclosureContextService.전자공시를_수정한다(
       id,
       {

@@ -88,6 +88,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -147,6 +148,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -175,6 +177,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -270,6 +273,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -378,6 +382,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -430,6 +435,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -458,6 +464,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -485,6 +492,7 @@ describe('전자공시 번역 동기화 API', () => {
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([

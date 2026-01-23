@@ -183,6 +183,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -227,6 +228,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -268,6 +270,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([

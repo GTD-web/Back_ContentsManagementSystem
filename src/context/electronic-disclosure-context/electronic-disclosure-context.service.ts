@@ -132,6 +132,7 @@ export class ElectronicDisclosureContextService {
     const disclosure = await this.electronicDisclosureService.전자공시를_생성한다({
       isPublic: true,
       order: nextOrder,
+      categoryId,
       attachments: attachments || null,
       createdBy,
     });
@@ -203,6 +204,7 @@ export class ElectronicDisclosureContextService {
     data: {
       isPublic?: boolean;
       order?: number;
+      categoryId?: string;
       translations?: Array<{
         id?: string;
         languageId: string;
@@ -218,6 +220,7 @@ export class ElectronicDisclosureContextService {
     const updateData: any = {};
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.updatedBy) updateData.updatedBy = data.updatedBy;
 
     if (Object.keys(updateData).length > 0) {

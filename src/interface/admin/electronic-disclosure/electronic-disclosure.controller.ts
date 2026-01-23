@@ -470,7 +470,8 @@ export class ElectronicDisclosureController {
       '전자공시의 번역 정보 및 파일을 수정합니다.\n\n' +
       '**필수 필드:**\n' +
       '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
-      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
+      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n' +
+      '- `categoryId`: 전자공시 카테고리 ID (UUID)\n\n' +
       '**선택 필드:**\n' +
       '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
       '**파라미터:**\n' +
@@ -498,6 +499,12 @@ export class ElectronicDisclosureController {
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"2024년 1분기 실적 공시","description":"2024년 1분기 실적 공시 자료입니다."}]',
         },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '전자공시 카테고리 ID (필수)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -505,7 +512,7 @@ export class ElectronicDisclosureController {
             '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
-      required: ['translations'],
+      required: ['translations', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -568,10 +575,16 @@ export class ElectronicDisclosureController {
       }
     }
 
+    // categoryId 필수 검증
+    if (!body.categoryId) {
+      throw new BadRequestException('categoryId 필드는 필수입니다.');
+    }
+
     return await this.electronicDisclosureBusinessService.전자공시를_수정한다(
       id,
       translations,
       user.id,
+      body.categoryId,
       files,
     );
   }

@@ -79,6 +79,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .expect(200);
 
@@ -121,6 +122,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .attach('files', Buffer.from('New PDF'), 'new.pdf')
         .expect(200);
@@ -164,6 +166,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .expect(200);
 
@@ -203,6 +206,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .attach('files', Buffer.from('PDF 1'), 'file1.pdf')
         .attach('files', Buffer.from('PDF 2'), 'file2.pdf')
@@ -225,6 +229,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       await testSuite
         .request()
         .put('/api/admin/electronic-disclosures/00000000-0000-0000-0000-000000000001')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .expect(404);
     });
@@ -251,6 +256,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .expect(400);
     });
   });
@@ -570,6 +576,7 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(updatedTranslations))
         .expect(200);
 
