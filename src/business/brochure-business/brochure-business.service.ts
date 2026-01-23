@@ -286,11 +286,13 @@ export class BrochureBusinessService {
 
     // 2. 새 카테고리 매핑 생성
     if (data.categoryIds.length > 0) {
-      await this.categoryService.엔티티에_카테고리를_매핑한다(
-        brochureId,
-        data.categoryIds,
-        data.updatedBy,
-      );
+      for (const categoryId of data.categoryIds) {
+        await this.categoryService.엔티티에_카테고리를_매핑한다(
+          brochureId,
+          categoryId,
+          data.updatedBy,
+        );
+      }
     }
 
     // 3. 업데이트된 카테고리 목록 조회
