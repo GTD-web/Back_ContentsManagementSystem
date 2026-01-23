@@ -24,7 +24,6 @@ import { BackupType } from '@context/backup-context/backup.types';
  *
  * 데이터베이스 백업을 수동으로 실행하고 관리할 수 있는 API를 제공합니다.
  */
-@ApiTags('백업 관리')
 @ApiBearerAuth('Bearer')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
