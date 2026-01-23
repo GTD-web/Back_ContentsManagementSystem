@@ -40,6 +40,7 @@ export class IR extends BaseEntity<IR> {
 
   @Column({
     type: 'uuid',
+    name: 'category_id',
     comment: 'IR 카테고리 ID',
   })
   categoryId: string;

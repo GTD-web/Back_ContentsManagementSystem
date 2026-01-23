@@ -26,6 +26,7 @@ export class LumirStory extends BaseEntity<LumirStory> {
 
   @Column({
     type: 'uuid',
+    name: 'category_id',
     comment: '카테고리 ID',
   })
   @Index('idx_lumir_story_category_id')

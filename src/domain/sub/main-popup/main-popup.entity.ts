@@ -48,6 +48,7 @@ export class MainPopup extends BaseEntity<MainPopup> {
 
   @Column({
     type: 'uuid',
+    name: 'category_id',
     nullable: false,
     comment: '메인 팝업 카테고리 ID',
   })
