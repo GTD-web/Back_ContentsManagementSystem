@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('PUT /api/admin/video-galleries/batch-order (비디오갤러리 오더 일괄 수정)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryIds: string[] = [];
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,19 +16,29 @@ describe('PUT /api/admin/video-galleries/batch-order (비디오갤러리 오더 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 여러 개 생성
     const response1 = await testSuite
       .request()
       .post('/api/admin/video-galleries')
-      .send({ title: '비디오 갤러리 1' });
+      .send({ title: '비디오 갤러리 1', categoryId });
     const response2 = await testSuite
       .request()
       .post('/api/admin/video-galleries')
-      .send({ title: '비디오 갤러리 2' });
+      .send({ title: '비디오 갤러리 2', categoryId });
     const response3 = await testSuite
       .request()
       .post('/api/admin/video-galleries')
-      .send({ title: '비디오 갤러리 3' });
+      .send({ title: '비디오 갤러리 3', categoryId });
 
     videoGalleryIds = [
       response1.body.id,
