@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ShareholdersMeetingModule } from '@domain/core/shareholders-meeting/shareholders-meeting.module';
 import { LanguageModule } from '@domain/common/language/language.module';
+import { CategoryModule } from '@domain/common/category/category.module';
 import { ShareholdersMeetingContextService } from './shareholders-meeting-context.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
 import { ShareholdersMeetingTranslation } from '@domain/core/shareholders-meeting/shareholders-meeting-translation.entity';
@@ -26,6 +27,7 @@ import { ShareholdersMeetingSyncScheduler } from './shareholders-meeting-sync.sc
     ]),
     ShareholdersMeetingModule,
     LanguageModule,
+    CategoryModule,
   ],
   providers: [
     ShareholdersMeetingContextService,

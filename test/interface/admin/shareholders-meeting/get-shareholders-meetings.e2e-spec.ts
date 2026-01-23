@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
   let meetingIds: string[] = [];
 
   beforeAll(async () => {
@@ -29,12 +30,27 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
 
     languageId = koreanLanguage.id;
 
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 주주총회 여러 개 생성
     for (let i = 1; i <= 5; i++) {
       const response = await testSuite
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [
             {
               languageId,
@@ -305,6 +321,7 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [
             {
               languageId,

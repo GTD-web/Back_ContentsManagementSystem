@@ -174,6 +174,7 @@ describe('ShareholdersMeetingService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -189,6 +190,7 @@ describe('ShareholdersMeetingService', () => {
 
       // Then
       expect(shareholdersMeetingRepository.createQueryBuilder).toHaveBeenCalledWith('meeting');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('meeting.category', 'category');
       expect(result).toEqual(mockMeetings);
     });
 
@@ -205,6 +207,7 @@ describe('ShareholdersMeetingService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -219,6 +222,7 @@ describe('ShareholdersMeetingService', () => {
       const result = await service.모든_주주총회를_조회한다({ isPublic: true });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('meeting.category', 'category');
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('meeting.isPublic = :isPublic', {
         isPublic: true,
       });
@@ -233,6 +237,7 @@ describe('ShareholdersMeetingService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -249,6 +254,7 @@ describe('ShareholdersMeetingService', () => {
       });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('meeting.category', 'category');
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('meeting.meetingDate', 'DESC');
       expect(result).toEqual(mockMeetings);
     });
@@ -262,6 +268,7 @@ describe('ShareholdersMeetingService', () => {
       ];
 
       const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
@@ -279,6 +286,7 @@ describe('ShareholdersMeetingService', () => {
       });
 
       // Then
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('meeting.category', 'category');
       expect(mockQueryBuilder.where).toHaveBeenCalledWith('meeting.createdAt >= :startDate', {
         startDate,
       });
@@ -312,6 +320,7 @@ describe('ShareholdersMeetingService', () => {
       expect(shareholdersMeetingRepository.findOne).toHaveBeenCalledWith({
         where: { id: meetingId },
         relations: [
+          'category',
           'translations',
           'translations.language',
           'voteResults',
@@ -369,6 +378,7 @@ describe('ShareholdersMeetingService', () => {
       expect(shareholdersMeetingRepository.findOne).toHaveBeenCalledWith({
         where: { id: meetingId },
         relations: [
+          'category',
           'translations',
           'translations.language',
           'voteResults',
@@ -406,6 +416,7 @@ describe('ShareholdersMeetingService', () => {
       expect(shareholdersMeetingRepository.findOne).toHaveBeenCalledWith({
         where: { id: meetingId },
         relations: [
+          'category',
           'translations',
           'translations.language',
           'voteResults',
@@ -549,6 +560,7 @@ describe('ShareholdersMeetingService', () => {
         where: { isPublic: true },
         order: { meetingDate: 'DESC' },
         relations: [
+          'category',
           'translations',
           'translations.language',
           'voteResults',

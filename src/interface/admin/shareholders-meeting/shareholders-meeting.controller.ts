@@ -233,6 +233,7 @@ export class ShareholdersMeetingController {
   @ApiBody({
     description:
       '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
+      '- **categoryId**: 주주총회 카테고리 ID (필수)\n' +
       '- **translations**: JSON 문자열 (CreateShareholdersMeetingTranslationDto[])\n' +
       '- **location**: 주주총회 장소\n' +
       '- **meetingDate**: 주주총회 일시\n' +
@@ -241,6 +242,12 @@ export class ShareholdersMeetingController {
     schema: {
       type: 'object',
       properties: {
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '주주총회 카테고리 ID (필수)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         translations: {
           type: 'string',
           description:
@@ -292,7 +299,7 @@ export class ShareholdersMeetingController {
             '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
-      required: ['translations', 'location', 'meetingDate'],
+      required: ['categoryId', 'translations', 'location', 'meetingDate'],
     },
   })
   @ApiResponse({
@@ -309,6 +316,17 @@ export class ShareholdersMeetingController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ShareholdersMeeting> {
+    // categoryId 검증
+    if (!body.categoryId) {
+      throw new BadRequestException('categoryId 필드는 필수입니다.');
+    }
+
+    // UUID 형식 검증
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(body.categoryId)) {
+      throw new BadRequestException('categoryId는 올바른 UUID 형식이어야 합니다.');
+    }
+
     // translations가 JSON 문자열로 전달될 수 있으므로 파싱
     let translations = body.translations;
 
@@ -364,6 +382,7 @@ export class ShareholdersMeetingController {
     }
 
     const meetingData = {
+      categoryId: body.categoryId,
       location: body.location,
       meetingDate,
     };
@@ -579,6 +598,12 @@ export class ShareholdersMeetingController {
     schema: {
       type: 'object',
       properties: {
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '주주총회 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         translations: {
           type: 'string',
           description:
@@ -703,6 +728,14 @@ export class ShareholdersMeetingController {
 
     // meetingData 준비 및 검증
     const meetingData: any = {};
+    if (body.categoryId) {
+      // UUID 형식 검증
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(body.categoryId)) {
+        throw new BadRequestException('categoryId는 올바른 UUID 형식이어야 합니다.');
+      }
+      meetingData.categoryId = body.categoryId;
+    }
     if (body.location) {
       meetingData.location = body.location;
     }

@@ -52,7 +52,8 @@ export class ShareholdersMeetingService {
     this.logger.debug(`주주총회 목록 조회`);
 
     const queryBuilder =
-      this.shareholdersMeetingRepository.createQueryBuilder('meeting');
+      this.shareholdersMeetingRepository.createQueryBuilder('meeting')
+        .leftJoinAndSelect('meeting.category', 'category');
 
     let hasWhere = false;
 
@@ -102,6 +103,7 @@ export class ShareholdersMeetingService {
     const meeting = await this.shareholdersMeetingRepository.findOne({
       where: { id },
       relations: [
+        'category',
         'translations',
         'translations.language',
         'voteResults',
@@ -204,6 +206,7 @@ export class ShareholdersMeetingService {
         meetingDate: 'DESC',
       },
       relations: [
+        'category',
         'translations',
         'translations.language',
         'voteResults',

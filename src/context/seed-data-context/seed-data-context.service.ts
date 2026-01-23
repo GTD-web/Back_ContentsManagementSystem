@@ -1256,6 +1256,27 @@ export class SeedDataContextService {
       return 0;
     }
 
+    // 주주총회 카테고리 조회 또는 생성
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.SHAREHOLDERS_MEETING,
+      true,
+    );
+
+    let defaultCategory = categories.find(c => c.isActive);
+    
+    if (!defaultCategory) {
+      // 기본 카테고리 생성
+      defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.SHAREHOLDERS_MEETING,
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      this.logger.log(`주주총회 기본 카테고리 생성됨 - ID: ${defaultCategory.id}`);
+    }
+
     let created = 0;
     const currentYear = new Date().getFullYear();
 
@@ -1272,6 +1293,7 @@ export class SeedDataContextService {
           },
         ],
         {
+          categoryId: defaultCategory.id,
           location: `서울시 강남구 루미르빌딩 ${i + 1}층 대회의실`,
           meetingDate,
         },

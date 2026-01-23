@@ -208,6 +208,7 @@ describe('ShareholdersMeetingBusinessService', () => {
         },
       ];
       const meetingData = {
+        categoryId: 'category-1',
         location: '서울 강남구 루미르 본사',
         meetingDate: new Date('2024-03-15'),
       };
@@ -256,6 +257,7 @@ describe('ShareholdersMeetingBusinessService', () => {
         },
       ];
       const meetingData = {
+        categoryId: 'category-1',
         location: '서울 강남구',
         meetingDate: new Date('2024-03-15'),
       };
@@ -358,6 +360,7 @@ describe('ShareholdersMeetingBusinessService', () => {
         },
       ];
       const meetingData = {
+        categoryId: 'category-1',
         location: '부산 해운대',
         meetingDate: new Date('2024-06-20'),
       };

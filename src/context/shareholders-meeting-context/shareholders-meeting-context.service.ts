@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { EventBus } from '@nestjs/cqrs';
 import { ShareholdersMeetingService } from '@domain/core/shareholders-meeting/shareholders-meeting.service';
 import { LanguageService } from '@domain/common/language/language.service';
+import { CategoryService } from '@domain/common/category/category.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
 import { VoteResult } from '@domain/core/shareholders-meeting/vote-result.entity';
 import { VoteResultType } from '@domain/core/shareholders-meeting/vote-result-type.types';
+import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
 import { ShareholdersMeetingTranslationUpdatedEvent } from './events/shareholders-meeting-translation-updated.event';
 
 /**
@@ -20,6 +22,7 @@ export class ShareholdersMeetingContextService {
   constructor(
     private readonly shareholdersMeetingService: ShareholdersMeetingService,
     private readonly languageService: LanguageService,
+    private readonly categoryService: CategoryService,
     private readonly configService: ConfigService,
     private readonly eventBus: EventBus,
   ) {}
@@ -95,6 +98,7 @@ export class ShareholdersMeetingContextService {
       description?: string;
     }>,
     meetingData: {
+      categoryId: string;
       location: string;
       meetingDate: Date;
     },
@@ -120,27 +124,37 @@ export class ShareholdersMeetingContextService {
   ): Promise<ShareholdersMeeting> {
     this.logger.log(`주주총회 생성 시작 - 번역 수: ${translations.length}`);
 
-    // 1. 언어 ID 검증
+    // 1. 카테고리 유효성 검증
+    const category = await this.categoryService.ID로_카테고리를_조회한다(meetingData.categoryId);
+    if (category.entityType !== CategoryEntityType.SHAREHOLDERS_MEETING) {
+      throw new BadRequestException('주주총회 카테고리가 아닙니다.');
+    }
+    if (!category.isActive) {
+      throw new BadRequestException('비활성화된 카테고리입니다.');
+    }
+
+    // 2. 언어 ID 검증
     const languageIds = translations.map((t) => t.languageId);
     const languages = await Promise.all(
       languageIds.map((id) => this.languageService.ID로_언어를_조회한다(id)),
     );
 
-    // 2. 중복 언어 체크
+    // 3. 중복 언어 체크
     const uniqueLanguageIds = new Set(languageIds);
     if (uniqueLanguageIds.size !== languageIds.length) {
       throw new BadRequestException('중복된 언어 ID가 있습니다.');
     }
 
-    // 3. 모든 활성 언어 조회 (자동 동기화용)
+    // 4. 모든 활성 언어 조회 (자동 동기화용)
     const allLanguages = await this.languageService.모든_언어를_조회한다(false);
 
-    // 4. 다음 순서 계산
+    // 5. 다음 순서 계산
     const nextOrder =
       await this.shareholdersMeetingService.다음_순서를_계산한다();
 
-    // 5. 주주총회 생성 (기본값: 공개)
+    // 6. 주주총회 생성 (기본값: 공개)
     const meeting = await this.shareholdersMeetingService.주주총회를_생성한다({
+      categoryId: meetingData.categoryId,
       isPublic: true,
       order: nextOrder,
       location: meetingData.location,
@@ -149,7 +163,7 @@ export class ShareholdersMeetingContextService {
       createdBy,
     });
 
-    // 6. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
+    // 7. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
     await this.shareholdersMeetingService.주주총회_번역을_생성한다(
       meeting.id,
       translations.map((t) => ({
@@ -161,14 +175,14 @@ export class ShareholdersMeetingContextService {
       createdBy,
     );
 
-    // 7. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
+    // 8. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
     const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
       translations.find((t) => t.languageId === defaultLang?.id) ||
       translations[0];
 
-    // 8. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)
+    // 9. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)
     const remainingLanguages = allLanguages.filter(
       (lang) => !languageIds.includes(lang.id),
     );
@@ -191,7 +205,7 @@ export class ShareholdersMeetingContextService {
       `주주총회 생성 완료 - ID: ${meeting.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})`,
     );
 
-    // 9. 의결 결과(안건) 생성
+    // 10. 의결 결과(안건) 생성
     if (voteResults && voteResults.length > 0) {
       this.logger.log(`의결 결과 생성 시작 - 안건 수: ${voteResults.length}`);
 
@@ -251,7 +265,7 @@ export class ShareholdersMeetingContextService {
       this.logger.log(`의결 결과 생성 완료 - 안건 수: ${voteResults.length}`);
     }
 
-    // 10. 번역 포함하여 재조회
+    // 11. 번역 포함하여 재조회
     return await this.shareholdersMeetingService.ID로_주주총회를_조회한다(
       meeting.id,
     );
@@ -263,6 +277,7 @@ export class ShareholdersMeetingContextService {
   async 주주총회를_수정한다(
     id: string,
     data: {
+      categoryId?: string;
       location?: string;
       meetingDate?: Date;
       isPublic?: boolean;
@@ -292,8 +307,20 @@ export class ShareholdersMeetingContextService {
   ): Promise<ShareholdersMeeting> {
     this.logger.log(`주주총회 수정 시작 - ID: ${id}`);
 
+    // 카테고리 유효성 검증 (categoryId가 제공된 경우)
+    if (data.categoryId) {
+      const category = await this.categoryService.ID로_카테고리를_조회한다(data.categoryId);
+      if (category.entityType !== CategoryEntityType.SHAREHOLDERS_MEETING) {
+        throw new BadRequestException('주주총회 카테고리가 아닙니다.');
+      }
+      if (!category.isActive) {
+        throw new BadRequestException('비활성화된 카테고리입니다.');
+      }
+    }
+
     // 주주총회 기본 정보 업데이트
     const updateData: any = {};
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.location !== undefined) updateData.location = data.location;
     if (data.meetingDate !== undefined)
       updateData.meetingDate = data.meetingDate;
@@ -587,7 +614,7 @@ export class ShareholdersMeetingContextService {
       `주주총회 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}`,
     );
 
-    // 전체 목록 조회
+    // 전체 목록 조회 (category 포함)
     const allMeetings =
       await this.shareholdersMeetingService.모든_주주총회를_조회한다({
         isPublic,
@@ -595,6 +622,12 @@ export class ShareholdersMeetingContextService {
         startDate,
         endDate,
       });
+
+    // 각 주주총회에 대해 번역 정보 로드
+    for (const meeting of allMeetings) {
+      const translations = await this.shareholdersMeetingService.주주총회_번역을_조회한다(meeting.id);
+      meeting.translations = translations;
+    }
 
     // 페이징 적용
     const total = allMeetings.length;
