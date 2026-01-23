@@ -460,7 +460,8 @@ export class BrochureController {
       '브로슈어의 번역 정보를 수정하고 첨부파일을 관리합니다.\n\n' +
       '**필수 필드:**\n' +
       '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
-      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
+      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n' +
+      '- `categoryId`: 브로슈어 카테고리 ID (UUID)\n\n' +
       '**선택 필드:**\n' +
       '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)\n\n' +
       '⚠️ **파일 관리 방식**:\n' +
@@ -486,6 +487,12 @@ export class BrochureController {
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]',
         },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '브로슈어 카테고리 ID (필수)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -493,7 +500,7 @@ export class BrochureController {
             '첨부파일 목록 (PDF/JPG/PNG/WEBP만 가능) - 전송한 파일들로 완전히 교체됩니다',
         },
       },
-      required: ['translations'],
+      required: ['translations', 'categoryId'],
     },
   })
   @ApiResponse({
@@ -539,10 +546,16 @@ export class BrochureController {
       );
     }
 
+    // categoryId 필수 검증
+    if (!body.categoryId) {
+      throw new BadRequestException('categoryId 필드는 필수입니다.');
+    }
+
     return await this.brochureBusinessService.브로슈어를_수정한다(
       id,
       translations,
       user.id,
+      body.categoryId,
       files,
     );
   }

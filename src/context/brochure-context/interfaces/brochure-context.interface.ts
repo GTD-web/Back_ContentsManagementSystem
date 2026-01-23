@@ -29,6 +29,7 @@ export interface CreateBrochureDto {
 export interface UpdateBrochureDto {
   isPublic?: boolean;
   order?: number;
+  categoryId: string;
   attachments?: Array<{
     fileName: string;
     fileUrl: string;

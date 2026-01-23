@@ -80,6 +80,7 @@ export class CreateBrochureHandler implements ICommandHandler<CreateBrochureComm
     const saved = await this.brochureService.브로슈어를_생성한다({
       isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산
+      categoryId: data.categoryId, // 필수
       attachments: data.attachments || null,
       createdBy: data.createdBy,
       updatedBy: data.createdBy, // 생성 시점이므로 createdBy와 동일

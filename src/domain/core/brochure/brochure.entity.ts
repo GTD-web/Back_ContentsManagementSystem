@@ -39,6 +39,12 @@ export class Brochure extends BaseEntity<Brochure> {
   })
   order: number;
 
+  @Column({
+    type: 'uuid',
+    comment: '브로슈어 카테고리 ID',
+  })
+  categoryId: string;
+
   @OneToMany(() => BrochureTranslation, (translation) => translation.brochure, {
     cascade: true,
   })

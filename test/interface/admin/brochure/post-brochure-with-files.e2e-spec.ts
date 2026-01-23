@@ -202,6 +202,7 @@ describe('[E2E] POST /api/admin/brochures - 파일 업로드', () => {
           languageId,
           title: '파일 추가 테스트 브로슈어',
         }]))
+        .field('categoryId', categoryId)
         .attach('files', pdfBuffer, { filename: fileName, contentType: 'application/pdf' })
         .expect(200);
 
@@ -258,6 +259,7 @@ describe('[E2E] POST /api/admin/brochures - 파일 업로드', () => {
           languageId,
           title: '파일 삭제 테스트 브로슈어',
         }]))
+        .field('categoryId', categoryId)
         // files를 전송하지 않으면 기존 파일이 모두 삭제됨
         .expect(200);
 

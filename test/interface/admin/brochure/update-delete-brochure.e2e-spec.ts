@@ -75,6 +75,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .expect(200);
 
       // Then
@@ -100,6 +101,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .expect(200);
 
       // Then
@@ -121,6 +123,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .expect(404);
     });
 
@@ -129,6 +132,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
       await testSuite
         .request()
         .put(`/api/admin/brochures/${brochureId}`)
+        .field('categoryId', categoryId)
         .expect(400);
     });
   });
@@ -265,6 +269,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .expect(200);
 
       // When - 삭제
@@ -358,6 +363,7 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .expect(200);
 
       // Then - 수정된 번역의 isSynced가 false인지 확인

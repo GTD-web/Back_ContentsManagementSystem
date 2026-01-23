@@ -36,7 +36,9 @@ export class UpdateBrochureHandler implements ICommandHandler<UpdateBrochureComm
     this.logger.log(`브로슈어 수정 시작 - ID: ${id}`);
 
     // 브로슈어 업데이트
-    const updateData: Partial<Brochure> = {};
+    const updateData: Partial<Brochure> = {
+      categoryId: data.categoryId,
+    };
     if (data.isPublic !== undefined) {
       updateData.isPublic = data.isPublic;
     }

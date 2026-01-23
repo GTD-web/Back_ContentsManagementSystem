@@ -389,7 +389,8 @@ export class BrochureBusinessService {
       title: string;
       description?: string;
     }>,
-    updatedBy?: string,
+    updatedBy: string,
+    categoryId: string,
     files?: Express.Multer.File[],
   ): Promise<BrochureTranslation[]> {
     if (!translations || translations.length === 0) {
@@ -445,7 +446,14 @@ export class BrochureBusinessService {
       `브로슈어 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
+    // 5. categoryId 업데이트
+    await this.brochureContextService.브로슈어를_수정한다(brochureId, {
+      categoryId,
+      updatedBy,
+    });
+    this.logger.log(`브로슈어 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`);
+
+    // 6. 번역 수정
     const result = await this.brochureContextService.브로슈어_번역들을_수정한다(
       brochureId,
       {

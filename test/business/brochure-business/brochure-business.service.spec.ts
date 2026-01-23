@@ -684,6 +684,7 @@ describe('BrochureBusinessService', () => {
     it('파일을 포함하여 브로슈어를 수정해야 한다', async () => {
       // Given
       const brochureId = 'brochure-1';
+      const categoryId = 'category-1';
       const translations = [
         {
           languageId: 'language-1',
@@ -738,6 +739,9 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
+      mockBrochureContextService.브로슈어를_수정한다.mockResolvedValue(
+        {} as any,
+      );
       mockBrochureContextService.브로슈어_번역들을_수정한다.mockResolvedValue(
         mockUpdatedTranslations,
       );
@@ -747,6 +751,7 @@ describe('BrochureBusinessService', () => {
         brochureId,
         translations,
         updatedBy,
+        categoryId,
         files,
       );
 
@@ -772,6 +777,13 @@ describe('BrochureBusinessService', () => {
           updatedBy,
         }),
       );
+      expect(brochureContextService.브로슈어를_수정한다).toHaveBeenCalledWith(
+        brochureId,
+        expect.objectContaining({
+          categoryId,
+          updatedBy,
+        }),
+      );
       expect(
         brochureContextService.브로슈어_번역들을_수정한다,
       ).toHaveBeenCalledWith(brochureId, {
@@ -784,6 +796,7 @@ describe('BrochureBusinessService', () => {
     it('파일 없이 브로슈어를 수정해야 한다', async () => {
       // Given
       const brochureId = 'brochure-1';
+      const categoryId = 'category-1';
       const translations = [
         {
           languageId: 'language-1',
@@ -819,6 +832,9 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
+      mockBrochureContextService.브로슈어를_수정한다.mockResolvedValue(
+        {} as any,
+      );
       mockBrochureContextService.브로슈어_번역들을_수정한다.mockResolvedValue(
         mockUpdatedTranslations,
       );
@@ -828,6 +844,7 @@ describe('BrochureBusinessService', () => {
         brochureId,
         translations,
         updatedBy,
+        categoryId,
         undefined,
       );
 
@@ -840,6 +857,13 @@ describe('BrochureBusinessService', () => {
         brochureId,
         expect.objectContaining({
           attachments: [],
+          updatedBy,
+        }),
+      );
+      expect(brochureContextService.브로슈어를_수정한다).toHaveBeenCalledWith(
+        brochureId,
+        expect.objectContaining({
+          categoryId,
           updatedBy,
         }),
       );
