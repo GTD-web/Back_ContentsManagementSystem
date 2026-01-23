@@ -66,7 +66,7 @@ export class CreateFileDto {
   })
   @IsOptional()
   @IsString()
-  title?: string;
+  title?: string | null;
 
   @ApiPropertyOptional({
     description: '문서 본문',
@@ -74,7 +74,7 @@ export class CreateFileDto {
   })
   @IsOptional()
   @IsString()
-  content?: string;
+  content?: string | null;
 
   @ApiPropertyOptional({
     description: '공개 여부',
@@ -227,7 +227,7 @@ export class UpdateFileDto {
   })
   @IsOptional()
   @IsString()
-  title?: string;
+  title?: string | null;
 
   @ApiPropertyOptional({
     description: '문서 본문',
@@ -235,7 +235,7 @@ export class UpdateFileDto {
   })
   @IsOptional()
   @IsString()
-  content?: string;
+  content?: string | null;
 }
 
 /**
@@ -254,7 +254,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankIds?: string[];
+  permissionRankIds?: string[] | null;
 
   @ApiPropertyOptional({
     description: '직책 ID 목록 (UUID)',
@@ -264,7 +264,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionIds?: string[];
+  permissionPositionIds?: string[] | null;
 
   @ApiPropertyOptional({
     description: '부서 ID 목록 (UUID)',
@@ -274,7 +274,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionDepartmentIds?: string[];
+  permissionDepartmentIds?: string[] | null;
 }
 
 /**

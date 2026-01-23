@@ -1,27 +1,29 @@
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
+import {
+  CreateFolderDto as BaseCreateFolderDto,
+  CreateFileDto as BaseCreateFileDto,
+  UpdateFolderDto as BaseUpdateFolderDto,
+  UpdateFileDto as BaseUpdateFileDto,
+  UpdateWikiPublicDto as BaseUpdateWikiPublicDto,
+  UpdateFilePublicDto as BaseUpdateFilePublicDto,
+  UpdateWikiPathDto as BaseUpdateWikiPathDto,
+} from '@interface/common/dto/wiki/wiki.dto';
 
 /**
- * 폴더 생성 DTO
+ * 폴더 생성 DTO (Context Layer용 - createdBy 포함)
  */
-export interface CreateFolderDto {
-  name: string;
-  parentId?: string | null;
+export interface CreateFolderDto extends BaseCreateFolderDto {
   isPublic?: boolean;
   permissionRankIds?: string[] | null;
   permissionPositionIds?: string[] | null;
   permissionDepartmentIds?: string[] | null;
-  order?: number;
   createdBy?: string;
 }
 
 /**
- * 파일 생성 DTO
+ * 파일 생성 DTO (Context Layer용 - createdBy, 추가 필드 포함)
  */
-export interface CreateFileDto {
-  name: string;
-  parentId?: string | null;
-  title?: string | null;
-  content?: string | null;
+export interface CreateFileDto extends BaseCreateFileDto {
   fileUrl?: string | null;
   fileSize?: number | null;
   mimeType?: string | null;
@@ -31,13 +33,13 @@ export interface CreateFileDto {
     fileSize: number;
     mimeType: string;
   }> | null;
-  isPublic?: boolean;
-  order?: number;
+  permissionRankIds?: string[] | null;
+  permissionPositionIds?: string[] | null;
   createdBy?: string;
 }
 
 /**
- * 위키 수정 DTO
+ * 위키 수정 DTO (Context Layer용 - updatedBy 포함)
  */
 export interface UpdateWikiDto {
   name?: string;
@@ -52,7 +54,7 @@ export interface UpdateWikiDto {
 }
 
 /**
- * 위키 파일 수정 DTO
+ * 위키 파일 수정 DTO (Context Layer용)
  */
 export interface UpdateWikiFileDto {
   fileUrl?: string | null;
@@ -68,21 +70,16 @@ export interface UpdateWikiFileDto {
 }
 
 /**
- * 위키 공개 수정 DTO
+ * 위키 공개 수정 DTO (Context Layer용 - updatedBy 포함)
  */
-export interface UpdateWikiPublicDto {
-  isPublic: boolean;
-  permissionRankIds?: string[] | null;
-  permissionPositionIds?: string[] | null;
-  permissionDepartmentIds?: string[] | null;
+export interface UpdateWikiPublicDto extends BaseUpdateWikiPublicDto {
   updatedBy?: string;
 }
 
 /**
- * 위키 경로 수정 DTO
+ * 위키 경로 수정 DTO (Context Layer용 - updatedBy 포함)
  */
-export interface UpdateWikiPathDto {
-  parentId: string | null;
+export interface UpdateWikiPathDto extends BaseUpdateWikiPathDto {
   updatedBy?: string;
 }
 
