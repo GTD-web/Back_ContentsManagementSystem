@@ -4,11 +4,14 @@ import { GetOrganizationInfoQuery } from './handlers/queries/get-organization-in
 import { GetDepartmentListQuery } from './handlers/queries/get-department-list.handler';
 import { GetRankListQuery } from './handlers/queries/get-rank-list.handler';
 import { GetPositionListQuery } from './handlers/queries/get-position-list.handler';
+import { GetEmployeeQuery } from './handlers/queries/get-employee.handler';
+import { GetEmployeeListQuery } from './handlers/queries/get-employee-list.handler';
 import {
   OrganizationInfo,
   DepartmentListResult,
   RankListResult,
   PositionListResult,
+  Employee,
 } from './interfaces/company-context.interface';
 
 /**
@@ -49,6 +52,22 @@ export class CompanyContextService {
    */
   async 직책_정보를_가져온다(): Promise<PositionListResult> {
     const query = new GetPositionListQuery();
+    return await this.queryBus.execute(query);
+  }
+
+  /**
+   * 직원 정보를 조회한다 (단건)
+   */
+  async 직원_정보를_조회한다(employeeId: string): Promise<Employee | null> {
+    const query = new GetEmployeeQuery(employeeId);
+    return await this.queryBus.execute(query);
+  }
+
+  /**
+   * 직원 목록을 조회한다 (복수)
+   */
+  async 직원_목록을_조회한다(employeeIds: string[]): Promise<Employee[]> {
+    const query = new GetEmployeeListQuery(employeeIds);
     return await this.queryBus.execute(query);
   }
 }

@@ -481,6 +481,32 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 직원 정보를 조회한다 (단건)
+   */
+  async 직원_정보를_조회한다(employeeId: string): Promise<any> {
+    this.logger.log(`직원 정보 조회 시작 (SSO) - ID: ${employeeId}`);
+
+    const result = await this.companyContextService.직원_정보를_조회한다(employeeId);
+
+    this.logger.log(`직원 정보 조회 완료 (SSO) - ID: ${employeeId}`);
+
+    return result;
+  }
+
+  /**
+   * 직원 목록을 조회한다 (복수)
+   */
+  async 직원_목록을_조회한다(employeeIds: string[]): Promise<any[]> {
+    this.logger.log(`직원 목록 조회 시작 (SSO) - 요청 수: ${employeeIds.length}명`);
+
+    const result = await this.companyContextService.직원_목록을_조회한다(employeeIds);
+
+    this.logger.log(`직원 목록 조회 완료 (SSO) - 조회 수: ${result.length}명`);
+
+    return result;
+  }
+
+  /**
    * 공지사항 카테고리 목록을 조회한다
    */
   async 공지사항_카테고리_목록을_조회한다(): Promise<Category[]> {
