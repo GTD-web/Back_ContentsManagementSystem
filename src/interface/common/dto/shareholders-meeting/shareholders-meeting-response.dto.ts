@@ -62,7 +62,38 @@ export class VoteResultDto {
   agendaNumber: number;
 
   @ApiProperty({
-    description: '찬성표 수',
+    description: '전체 투표 수',
+    example: 1000000,
+  })
+  totalVote: number;
+
+  @ApiProperty({
+    description: '찬성 투표 수',
+    example: 850000,
+  })
+  yesVote: number;
+
+  @ApiProperty({
+    description: '반대 투표 수',
+    example: 150000,
+  })
+  noVote: number;
+
+  @ApiProperty({
+    description: '찬성률 (%)',
+    example: 85.5,
+  })
+  approvalRating: number;
+
+  @ApiProperty({
+    description: '의결 결과',
+    enum: ['accepted', 'rejected'],
+    example: 'accepted',
+  })
+  result: string;
+
+  @ApiProperty({
+    description: '찬성표 수 (deprecated: yesVote 사용)',
     example: 1000000,
     required: false,
     nullable: true,
@@ -70,7 +101,7 @@ export class VoteResultDto {
   favorVotes: number | null;
 
   @ApiProperty({
-    description: '반대표 수',
+    description: '반대표 수 (deprecated: noVote 사용)',
     example: 50000,
     required: false,
     nullable: true,
@@ -78,7 +109,7 @@ export class VoteResultDto {
   oppositionVotes: number | null;
 
   @ApiProperty({
-    description: '기권표 수',
+    description: '기권표 수 (deprecated: 계산값 사용)',
     example: 10000,
     required: false,
     nullable: true,

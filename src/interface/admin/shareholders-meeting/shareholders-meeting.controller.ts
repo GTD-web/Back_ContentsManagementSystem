@@ -478,9 +478,25 @@ export class ShareholdersMeetingController {
       files,
     );
 
+    const { category, ...result } = shareholdersMeeting;
     return {
-      ...shareholdersMeeting,
-      categoryName: shareholdersMeeting.category?.name,
+      ...result,
+      categoryName: category?.name,
+      voteResults: shareholdersMeeting.voteResults?.map((vr) => ({
+        id: vr.id,
+        agendaNumber: vr.agendaNumber,
+        totalVote: vr.totalVote,
+        yesVote: vr.yesVote,
+        noVote: vr.noVote,
+        approvalRating: vr.approvalRating,
+        result: vr.result,
+        favorVotes: vr.yesVote,
+        oppositionVotes: vr.noVote,
+        abstentionVotes: vr.totalVote - vr.yesVote - vr.noVote,
+        translations: vr.translations,
+        createdAt: vr.createdAt,
+        updatedAt: vr.updatedAt,
+      })) || [],
     };
   }
 
@@ -906,9 +922,25 @@ export class ShareholdersMeetingController {
       user.id,
     );
 
+    const { category, ...result } = shareholdersMeeting;
     return {
-      ...shareholdersMeeting,
-      categoryName: shareholdersMeeting.category?.name,
+      ...result,
+      categoryName: category?.name,
+      voteResults: shareholdersMeeting.voteResults?.map((vr) => ({
+        id: vr.id,
+        agendaNumber: vr.agendaNumber,
+        totalVote: vr.totalVote,
+        yesVote: vr.yesVote,
+        noVote: vr.noVote,
+        approvalRating: vr.approvalRating,
+        result: vr.result,
+        favorVotes: vr.yesVote,
+        oppositionVotes: vr.noVote,
+        abstentionVotes: vr.totalVote - vr.yesVote - vr.noVote,
+        translations: vr.translations,
+        createdAt: vr.createdAt,
+        updatedAt: vr.updatedAt,
+      })) || [],
     };
   }
 
