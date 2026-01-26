@@ -149,7 +149,7 @@ export class CompanyController {
   @ApiQuery({
     name: 'employeeIds',
     description: '직원 ID 목록 (콤마로 구분)',
-    example: '23047,20029,20030',
+    example: '23047,24019,24024',
     required: true,
   })
   @ApiResponse({
