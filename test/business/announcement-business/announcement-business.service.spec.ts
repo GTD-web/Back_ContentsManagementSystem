@@ -301,6 +301,7 @@ describe('AnnouncementBusinessService', () => {
     it('컨텍스트 서비스를 호출하여 공지사항을 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId: 'category-1',
         title: '새 공지사항',
         content: '새 내용',
         isPublic: true,

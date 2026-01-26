@@ -105,7 +105,7 @@ describe('AnnouncementService - 읽음 표시 (Lazy Creation)', () => {
       // Then
       expect(mockAnnouncementRepository.findOne).toHaveBeenCalledWith({
         where: { id: announcementId },
-        relations: ['survey', 'survey.questions'],
+        relations: ['category', 'survey', 'survey.questions'],
       });
       expect(mockReadRepository.findOne).toHaveBeenCalledWith({
         where: { announcementId, employeeId },
@@ -145,7 +145,7 @@ describe('AnnouncementService - 읽음 표시 (Lazy Creation)', () => {
       // Then
       expect(mockAnnouncementRepository.findOne).toHaveBeenCalledWith({
         where: { id: announcementId },
-        relations: ['survey', 'survey.questions'],
+        relations: ['category', 'survey', 'survey.questions'],
       });
       expect(mockReadRepository.findOne).toHaveBeenCalledWith({
         where: { announcementId, employeeId },
@@ -166,7 +166,7 @@ describe('AnnouncementService - 읽음 표시 (Lazy Creation)', () => {
 
       expect(mockAnnouncementRepository.findOne).toHaveBeenCalledWith({
         where: { id: announcementId },
-        relations: ['survey', 'survey.questions'],
+        relations: ['category', 'survey', 'survey.questions'],
       });
       expect(mockReadRepository.findOne).not.toHaveBeenCalled();
       expect(mockReadRepository.create).not.toHaveBeenCalled();

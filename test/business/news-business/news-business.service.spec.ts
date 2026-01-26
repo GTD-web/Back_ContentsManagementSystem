@@ -213,7 +213,7 @@ describe('NewsBusinessService', () => {
         categoryId,
         isPublic: true,
         order: 0,
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스를_생성한다.mockResolvedValue(mockNews);
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(mockNews);
@@ -275,7 +275,7 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockNewsContextService.뉴스를_생성한다.mockResolvedValue(mockNews);
@@ -355,7 +355,7 @@ describe('NewsBusinessService', () => {
       const mockNews = {
         id: newsId,
         isPublic: false,
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스_공개를_수정한다.mockResolvedValue(mockNews);
 
@@ -383,7 +383,7 @@ describe('NewsBusinessService', () => {
         category: {
           name: '신제품',
         },
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(mockNews);
 
@@ -579,15 +579,26 @@ describe('NewsBusinessService', () => {
       const existingNews = {
         id: newsId,
         title: '기존 제목',
+        description: null,
+        url: null,
+        isPublic: false,
+        order: 0,
+        categoryId: 'old-category',
         attachments: [],
-      } as News;
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        createdBy: 'user-1',
+        updatedBy: null,
+        version: 1,
+      } as any as News;
 
       const updatedNews = {
         ...existingNews,
         title,
         description,
         categoryId,
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
         existingNews,
@@ -649,7 +660,7 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       const uploadedFiles = [
         {
@@ -671,7 +682,7 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
         existingNews,
@@ -737,13 +748,13 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       const updatedNews = {
         ...existingNews,
         title,
         attachments: [],
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
         existingNews,

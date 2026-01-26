@@ -18,7 +18,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
   describe('성공 케이스', () => {
     it('모든 뉴스를 조회해야 한다', async () => {
       // Given - 3개의 뉴스 생성
-      const newsList = [];
+      const newsList: any[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()
@@ -29,7 +29,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
           .field('categoryId', '123e4567-e89b-12d3-a456-426614174000')
           .expect(201);
 
-        newsList.push(response.body);
+        newsList.push(response.body as any);
       }
 
       // When

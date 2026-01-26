@@ -214,16 +214,30 @@ describe('NewsService', () => {
         id: newsId,
         title: '뉴스 1',
         isPublic: true,
+        category: { name: '신제품' },
       } as News;
 
-      mockRepository.findOne.mockResolvedValue(mockNews);
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockNews],
+          raw: [{ category_name: '신제품' }],
+        }),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When
       const result = await service.ID로_뉴스를_조회한다(newsId);
 
       // Then
-      expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: newsId },
+      expect(repository.createQueryBuilder).toHaveBeenCalledWith('news');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('news.id = :id', {
+        id: newsId,
       });
       expect(result).toEqual(mockNews);
     });
@@ -231,7 +245,19 @@ describe('NewsService', () => {
     it('존재하지 않는 ID로 조회 시 NotFoundException을 던져야 한다', async () => {
       // Given
       const newsId = 'non-existent';
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(service.ID로_뉴스를_조회한다(newsId)).rejects.toThrow(
@@ -255,6 +281,7 @@ describe('NewsService', () => {
         title: '기존 제목',
         description: '기존 설명',
         isPublic: true,
+        category: { name: '신제품' },
       } as News;
 
       const updatedNews = {
@@ -262,14 +289,26 @@ describe('NewsService', () => {
         ...updateData,
       } as News;
 
-      mockRepository.findOne.mockResolvedValue(existingNews);
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [existingNews],
+          raw: [{ category_name: '신제품' }],
+        }),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockRepository.save.mockResolvedValue(updatedNews);
 
       // When
       const result = await service.뉴스를_업데이트한다(newsId, updateData);
 
       // Then
-      expect(repository.findOne).toHaveBeenCalled();
+      expect(repository.createQueryBuilder).toHaveBeenCalled();
       expect(repository.save).toHaveBeenCalledWith(
         expect.objectContaining(updateData),
       );
@@ -285,16 +324,29 @@ describe('NewsService', () => {
         id: newsId,
         title: '뉴스 1',
         isPublic: true,
+        category: { name: '신제품' },
       } as News;
 
-      mockRepository.findOne.mockResolvedValue(mockNews);
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockNews],
+          raw: [{ category_name: '신제품' }],
+        }),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockRepository.softRemove.mockResolvedValue(mockNews);
 
       // When
       const result = await service.뉴스를_삭제한다(newsId);
 
       // Then
-      expect(repository.findOne).toHaveBeenCalled();
+      expect(repository.createQueryBuilder).toHaveBeenCalled();
       expect(repository.softRemove).toHaveBeenCalledWith(mockNews);
       expect(result).toBe(true);
     });
@@ -400,13 +452,38 @@ describe('NewsService', () => {
         { id: 'non-existent', order: 1 },
       ];
 
-      const mockNews = { id: 'news-1', order: 0 } as News;
+      const mockNews = {
+        id: 'news-1',
+        order: 0,
+        category: { name: '신제품' },
+      } as News;
 
-      mockRepository.findOne.mockImplementation((options: any) => {
-        if (options.where.id === 'news-1') {
-          return Promise.resolve(mockNews);
+      let callCount = 0;
+      mockRepository.createQueryBuilder.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // 첫 번째 호출: news-1 - 성공
+          return {
+            leftJoin: jest.fn().mockReturnThis(),
+            addSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            getRawAndEntities: jest.fn().mockResolvedValue({
+              entities: [mockNews],
+              raw: [{ category_name: '신제품' }],
+            }),
+          } as any;
+        } else {
+          // 두 번째 호출: non-existent - 실패
+          return {
+            leftJoin: jest.fn().mockReturnThis(),
+            addSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            getRawAndEntities: jest.fn().mockResolvedValue({
+              entities: [],
+              raw: [],
+            }),
+          } as any;
         }
-        return Promise.resolve(null);
       });
 
       mockRepository.save.mockResolvedValue(mockNews);

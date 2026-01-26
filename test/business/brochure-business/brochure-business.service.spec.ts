@@ -385,14 +385,16 @@ describe('BrochureBusinessService', () => {
         updatedBy: 'user-1',
       };
 
-      const mockResult = {
+      const mockDetailResult = {
         id: brochureId,
         isPublic: false,
-      } as any as Brochure;
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
+        translations: [],
+      } as any;
 
-      mockBrochureContextService.브로슈어_공개를_수정한다.mockResolvedValue(
-        mockResult,
-      );
+      mockBrochureContextService.브로슈어_공개를_수정한다.mockResolvedValue(undefined);
+      mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(mockDetailResult);
 
       // When
       const result = await service.브로슈어_공개를_수정한다(
@@ -405,7 +407,8 @@ describe('BrochureBusinessService', () => {
         brochureId,
         updateDto,
       );
-      expect(result).toEqual(mockResult);
+      expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledWith(brochureId);
+      expect(result).toEqual(mockDetailResult);
     });
   });
 
@@ -464,9 +467,29 @@ describe('BrochureBusinessService', () => {
         { id: 'brochure-2' } as Brochure,
       ];
 
+      const mockDetailResults = [
+        {
+          id: 'brochure-1',
+          categoryId: 'category-1',
+          categoryName: '테스트 카테고리',
+          isPublic: true,
+          translations: [],
+        },
+        {
+          id: 'brochure-2',
+          categoryId: 'category-1',
+          categoryName: '테스트 카테고리',
+          isPublic: true,
+          translations: [],
+        },
+      ];
+
       mockBrochureContextService.기본_브로슈어들을_생성한다.mockResolvedValue(
         mockBrochures,
       );
+      mockBrochureContextService.브로슈어_상세_조회한다
+        .mockResolvedValueOnce(mockDetailResults[0])
+        .mockResolvedValueOnce(mockDetailResults[1]);
 
       // When
       const result = await service.기본_브로슈어들을_생성한다(createdBy);
@@ -475,7 +498,8 @@ describe('BrochureBusinessService', () => {
       expect(
         brochureContextService.기본_브로슈어들을_생성한다,
       ).toHaveBeenCalledWith(createdBy);
-      expect(result).toEqual(mockBrochures);
+      expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(mockDetailResults);
     });
   });
 

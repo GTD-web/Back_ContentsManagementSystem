@@ -294,17 +294,31 @@ describe('ElectronicDisclosureService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '사업보고서' },
       };
 
-      mockElectronicDisclosureRepository.findOne.mockResolvedValue(mockDisclosure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockDisclosure],
+          raw: [{ category_name: '사업보고서' }],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When
       const result = await service.ID로_전자공시를_조회한다(disclosureId);
 
       // Then
-      expect(electronicDisclosureRepository.findOne).toHaveBeenCalledWith({
-        where: { id: disclosureId },
-        relations: ['translations', 'translations.language'],
+      expect(electronicDisclosureRepository.createQueryBuilder).toHaveBeenCalledWith('disclosure');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('disclosure.id = :id', {
+        id: disclosureId,
       });
       expect(result).toEqual(mockDisclosure);
     });
@@ -312,7 +326,20 @@ describe('ElectronicDisclosureService', () => {
     it('전자공시가 없으면 NotFoundException을 던져야 한다', async () => {
       // Given
       const disclosureId = 'non-existent';
-      mockElectronicDisclosureRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(service.ID로_전자공시를_조회한다(disclosureId)).rejects.toThrow(
@@ -337,6 +364,7 @@ describe('ElectronicDisclosureService', () => {
         id: disclosureId,
         isPublic: true,
         order: 0,
+        category: { name: '사업보고서' },
       };
 
       const mockUpdatedDisclosure = {
@@ -344,8 +372,19 @@ describe('ElectronicDisclosureService', () => {
         ...updateData,
       };
 
-      mockElectronicDisclosureRepository.findOne.mockResolvedValue(
-        mockExistingDisclosure as any,
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockExistingDisclosure],
+          raw: [{ category_name: '사업보고서' }],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
       );
       mockElectronicDisclosureRepository.save.mockResolvedValue(
         mockUpdatedDisclosure as any,
@@ -355,7 +394,7 @@ describe('ElectronicDisclosureService', () => {
       const result = await service.전자공시를_업데이트한다(disclosureId, updateData);
 
       // Then
-      expect(electronicDisclosureRepository.findOne).toHaveBeenCalled();
+      expect(electronicDisclosureRepository.createQueryBuilder).toHaveBeenCalled();
       expect(electronicDisclosureRepository.save).toHaveBeenCalledWith(
         expect.objectContaining(updateData),
       );
@@ -371,16 +410,30 @@ describe('ElectronicDisclosureService', () => {
         id: disclosureId,
         isPublic: true,
         order: 0,
+        category: { name: '사업보고서' },
       };
 
-      mockElectronicDisclosureRepository.findOne.mockResolvedValue(mockDisclosure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockDisclosure],
+          raw: [{ category_name: '사업보고서' }],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockElectronicDisclosureRepository.softRemove.mockResolvedValue(mockDisclosure as any);
 
       // When
       const result = await service.전자공시를_삭제한다(disclosureId);
 
       // Then
-      expect(electronicDisclosureRepository.findOne).toHaveBeenCalled();
+      expect(electronicDisclosureRepository.createQueryBuilder).toHaveBeenCalled();
       expect(electronicDisclosureRepository.softRemove).toHaveBeenCalledWith(mockDisclosure);
       expect(result).toBe(true);
     });
@@ -397,12 +450,26 @@ describe('ElectronicDisclosureService', () => {
         id: disclosureId,
         isPublic,
         updatedBy,
+        category: { name: '사업보고서' },
       };
 
-      mockElectronicDisclosureRepository.findOne.mockResolvedValue({
-        id: disclosureId,
-        isPublic: true,
-      } as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [{
+            id: disclosureId,
+            isPublic: true,
+          }],
+          raw: [{ category_name: '사업보고서' }],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockElectronicDisclosureRepository.save.mockResolvedValue(mockDisclosure as any);
 
       // When

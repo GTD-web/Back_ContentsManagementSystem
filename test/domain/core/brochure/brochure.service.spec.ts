@@ -227,17 +227,33 @@ describe('BrochureService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '제품 소개' },
       };
 
-      mockBrochureRepository.findOne.mockResolvedValue(mockBrochure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockBrochure],
+          raw: [{ category_name: '제품 소개' }],
+        }),
+      };
+
+      mockBrochureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When
       const result = await service.ID로_브로슈어를_조회한다(brochureId);
 
       // Then
-      expect(brochureRepository.findOne).toHaveBeenCalledWith({
-        where: { id: brochureId },
-        relations: ['translations', 'translations.language'],
+      expect(brochureRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'brochure',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('brochure.id = :id', {
+        id: brochureId,
       });
       expect(result).toEqual(mockBrochure);
     });
@@ -245,7 +261,20 @@ describe('BrochureService', () => {
     it('브로슈어가 존재하지 않으면 NotFoundException을 던져야 한다', async () => {
       // Given
       const brochureId = 'non-existent-id';
-      mockBrochureRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockBrochureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(
@@ -268,6 +297,7 @@ describe('BrochureService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '제품 소개' },
       };
 
       const mockUpdatedBrochure = {
@@ -275,7 +305,20 @@ describe('BrochureService', () => {
         ...updateData,
       };
 
-      mockBrochureRepository.findOne.mockResolvedValue(mockBrochure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockBrochure],
+          raw: [{ category_name: '제품 소개' }],
+        }),
+      };
+
+      mockBrochureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockBrochureRepository.save.mockResolvedValue(
         mockUpdatedBrochure as any,
       );
@@ -287,10 +330,7 @@ describe('BrochureService', () => {
       );
 
       // Then
-      expect(brochureRepository.findOne).toHaveBeenCalledWith({
-        where: { id: brochureId },
-        relations: ['translations', 'translations.language'],
-      });
+      expect(brochureRepository.createQueryBuilder).toHaveBeenCalled();
       expect(brochureRepository.save).toHaveBeenCalled();
       expect(result.isPublic).toBe(false);
     });
@@ -305,19 +345,30 @@ describe('BrochureService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '제품 소개' },
       };
 
-      mockBrochureRepository.findOne.mockResolvedValue(mockBrochure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockBrochure],
+          raw: [{ category_name: '제품 소개' }],
+        }),
+      };
+
+      mockBrochureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockBrochureRepository.softRemove.mockResolvedValue(mockBrochure as any);
 
       // When
       const result = await service.브로슈어를_삭제한다(brochureId);
 
       // Then
-      expect(brochureRepository.findOne).toHaveBeenCalledWith({
-        where: { id: brochureId },
-        relations: ['translations', 'translations.language'],
-      });
+      expect(brochureRepository.createQueryBuilder).toHaveBeenCalled();
       expect(brochureRepository.softRemove).toHaveBeenCalledWith(mockBrochure);
       expect(result).toBe(true);
     });
@@ -335,6 +386,7 @@ describe('BrochureService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '제품 소개' },
       };
 
       const mockUpdatedBrochure = {
@@ -343,7 +395,20 @@ describe('BrochureService', () => {
         updatedBy,
       };
 
-      mockBrochureRepository.findOne.mockResolvedValue(mockBrochure as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockBrochure],
+          raw: [{ category_name: '제품 소개' }],
+        }),
+      };
+
+      mockBrochureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockBrochureRepository.save.mockResolvedValue(
         mockUpdatedBrochure as any,
       );

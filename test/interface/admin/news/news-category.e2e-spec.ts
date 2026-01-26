@@ -376,7 +376,7 @@ describe('뉴스 카테고리 API (News Categories)', () => {
 
     it('여러 카테고리를 생성하고 오더로 정렬할 수 있어야 한다', async () => {
       // Given - 3개의 카테고리 생성
-      const categories = [];
+      const categories: any[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()
@@ -386,7 +386,7 @@ describe('뉴스 카테고리 API (News Categories)', () => {
             order: i,
           })
           .expect(201);
-        categories.push(response.body);
+        categories.push(response.body as any);
       }
 
       // When - 오더 역순으로 변경

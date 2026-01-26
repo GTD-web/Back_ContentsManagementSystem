@@ -279,18 +279,30 @@ describe('LumirStoryService', () => {
         content: '내용',
         isPublic: true,
         order: 0,
+        category: { name: '혁신' },
       };
 
-      mockLumirStoryRepository.findOne.mockResolvedValue(
-        mockLumirStory as any,
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockLumirStory],
+          raw: [{ category_name: '혁신' }],
+        }),
+      };
+
+      mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
       );
 
       // When
       const result = await service.ID로_루미르스토리를_조회한다(lumirStoryId);
 
       // Then
-      expect(lumirStoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: lumirStoryId },
+      expect(lumirStoryRepository.createQueryBuilder).toHaveBeenCalledWith('lumirStory');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('lumirStory.id = :id', {
+        id: lumirStoryId,
       });
       expect(result).toEqual(mockLumirStory);
     });
@@ -298,7 +310,19 @@ describe('LumirStoryService', () => {
     it('루미르스토리가 존재하지 않으면 NotFoundException을 던져야 한다', async () => {
       // Given
       const lumirStoryId = 'non-existent-id';
-      mockLumirStoryRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(
@@ -323,6 +347,7 @@ describe('LumirStoryService', () => {
         content: '원래 내용',
         isPublic: true,
         order: 0,
+        category: { name: '혁신' },
       };
 
       const mockUpdatedLumirStory = {
@@ -330,8 +355,18 @@ describe('LumirStoryService', () => {
         ...updateData,
       };
 
-      mockLumirStoryRepository.findOne.mockResolvedValue(
-        mockLumirStory as any,
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockLumirStory],
+          raw: [{ category_name: '혁신' }],
+        }),
+      };
+
+      mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
       );
       mockLumirStoryRepository.save.mockResolvedValue(
         mockUpdatedLumirStory as any,
@@ -344,9 +379,7 @@ describe('LumirStoryService', () => {
       );
 
       // Then
-      expect(lumirStoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: lumirStoryId },
-      });
+      expect(lumirStoryRepository.createQueryBuilder).toHaveBeenCalled();
       expect(lumirStoryRepository.save).toHaveBeenCalled();
       expect(result.title).toBe('수정된 제목');
       expect(result.content).toBe('수정된 내용');
@@ -362,10 +395,21 @@ describe('LumirStoryService', () => {
         title: '루미르 스토리',
         isPublic: true,
         order: 0,
+        category: { name: '혁신' },
       };
 
-      mockLumirStoryRepository.findOne.mockResolvedValue(
-        mockLumirStory as any,
+      const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockLumirStory],
+          raw: [{ category_name: '혁신' }],
+        }),
+      };
+
+      mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
       );
       mockLumirStoryRepository.softRemove.mockResolvedValue(
         mockLumirStory as any,
@@ -375,9 +419,7 @@ describe('LumirStoryService', () => {
       const result = await service.루미르스토리를_삭제한다(lumirStoryId);
 
       // Then
-      expect(lumirStoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: lumirStoryId },
-      });
+      expect(lumirStoryRepository.createQueryBuilder).toHaveBeenCalled();
       expect(lumirStoryRepository.softRemove).toHaveBeenCalledWith(
         mockLumirStory,
       );

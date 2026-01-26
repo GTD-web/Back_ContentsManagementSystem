@@ -44,6 +44,7 @@ describe('LumirStoryContextService', () => {
     it('CreateLumirStoryCommand를 실행해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId: 'category-1',
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
         createdBy: 'user-1',
@@ -74,6 +75,7 @@ describe('LumirStoryContextService', () => {
     it('첨부파일이 있는 루미르스토리를 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId: 'category-1',
         title: '루미르 스토리 제목',
         content: '루미르 스토리 내용',
         attachments: [

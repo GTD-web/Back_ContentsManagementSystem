@@ -126,21 +126,19 @@ describe('IRBusinessService', () => {
         id: irId,
         isPublic: true,
         translations: [],
+        category: { name: '재무제표' },
       } as any as IR;
 
-      const mockCategories = [{ id: 'category-1', name: '재무제표' }];
-
       mockIRContextService.IR_상세를_조회한다.mockResolvedValue(mockIR);
-      mockCategoryService.엔티티의_카테고리_매핑을_조회한다.mockResolvedValue(mockCategories);
 
       // When
       const result = await service.IR_상세를_조회한다(irId);
 
       // Then
       expect(irContextService.IR_상세를_조회한다).toHaveBeenCalledWith(irId);
-      expect(categoryService.엔티티의_카테고리_매핑을_조회한다).toHaveBeenCalledWith(irId);
-      expect(result).toHaveProperty('categories');
-      expect(result.categories).toEqual(mockCategories);
+      expect(result).toHaveProperty('categoryName');
+      expect(result.categoryName).toEqual('재무제표');
+      expect(result).not.toHaveProperty('category');
     });
   });
 
@@ -531,8 +529,6 @@ describe('IRBusinessService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].title).toBe('2024년 1분기 IR 자료');
       expect(result.items[0].categoryName).toBe('재무제표');
-      expect(result.items[0]).toHaveProperty('categories');
-      expect(result.items[0].categories).toEqual(mockCategories);
       expect(result.totalPages).toBe(1);
     });
 
