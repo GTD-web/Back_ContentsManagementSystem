@@ -710,7 +710,34 @@ export class AnnouncementController {
       createdBy: user.id,
     };
 
-    return await this.announcementBusinessService.공지사항을_생성한다(data);
+    const announcement = await this.announcementBusinessService.공지사항을_생성한다(data);
+    
+    return {
+      ...announcement,
+      categoryName: announcement.category?.name,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
+    };
   }
 
   /**
@@ -822,7 +849,34 @@ export class AnnouncementController {
       data.expiredAt = new Date(dto.expiredAt);
     }
 
-    return await this.announcementBusinessService.공지사항을_수정한다(id, data);
+    const announcement = await this.announcementBusinessService.공지사항을_수정한다(id, data);
+    
+    return {
+      ...announcement,
+      categoryName: announcement.category?.name,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
+    };
   }
 
   /**
@@ -855,11 +909,38 @@ export class AnnouncementController {
     @Body() dto: UpdateAnnouncementPublicDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
-    return await this.announcementBusinessService.공지사항_공개를_수정한다(
+    const announcement = await this.announcementBusinessService.공지사항_공개를_수정한다(
       id,
       dto.isPublic,
       user.id,
     );
+    
+    return {
+      ...announcement,
+      categoryName: announcement.category?.name,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
+    };
   }
 
   /**
@@ -892,11 +973,38 @@ export class AnnouncementController {
     @Body() dto: UpdateAnnouncementFixedDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
-    return await this.announcementBusinessService.공지사항_고정을_수정한다(
+    const announcement = await this.announcementBusinessService.공지사항_고정을_수정한다(
       id,
       dto.isFixed,
       user.id,
     );
+    
+    return {
+      ...announcement,
+      categoryName: announcement.category?.name,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
+    };
   }
 
   /**

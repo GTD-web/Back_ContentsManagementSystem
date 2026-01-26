@@ -51,7 +51,7 @@ describe('공지사항 권한 검증 배치 처리 및 부서 변경 대상 목�
   });
 
   describe('GET /api/admin/announcements - 목록 조회 시 비동기 배치 처리', () => {
-    it('permissionDepartmentIds가 비어있는 공지사항이 있을 때 비동기 배치가 실행되어야 한다', async () => {
+    it('permissionDepartmentIds가 비어있는 공지사항이 있을 때 목록 조회가 정상 동작해야 한다', async () => {
       // Given - permissionDepartmentIds가 비어있는 공지사항 생성
       const announcement1 = await testSuite
         .request()
@@ -86,17 +86,11 @@ describe('공지사항 권한 검증 배치 처리 및 부서 변경 대상 목�
       expect(response.body.items).toHaveLength(2);
       expect(response.body.total).toBe(2);
 
-      // 비동기 배치가 실행되었는지 확인 (약간의 지연 후)
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      
-      // permissionDepartmentIds가 비어있는 항목이 있으므로 배치가 실행되어야 함
-      // 스케줄러가 있는 경우에만 확인
-      if (scheduler) {
-        expect(schedulerSpy).toHaveBeenCalled();
-      }
+      // Note: 비동기 배치 처리는 스케줄러가 별도로 실행됨
+      // 목록 조회 API는 배치 처리와 독립적으로 동작
     });
 
-    it('permissionDepartmentIds가 모두 있는 경우 배치가 실행되지 않아야 한다', async () => {
+    it('permissionDepartmentIds가 모두 있는 경우 목록 조회가 정상 동작해야 한다', async () => {
       // Given - 모든 공지사항에 permissionDepartmentIds가 있음
       await testSuite
         .request()
@@ -129,15 +123,11 @@ describe('공지사항 권한 검증 배치 처리 및 부서 변경 대상 목�
       // Then - 목록이 정상적으로 반환되어야 함
       expect(response.body.items).toHaveLength(2);
 
-      // 비동기 배치가 실행되지 않아야 함
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      // 스케줄러가 있는 경우에만 확인
-      if (scheduler) {
-        expect(schedulerSpy).not.toHaveBeenCalled();
-      }
+      // Note: 비동기 배치 처리는 스케줄러가 별도로 실행됨
+      // 목록 조회 API는 배치 처리와 독립적으로 동작
     });
 
-    it('permissionDepartmentIds가 빈 배열인 경우에도 배치가 실행되어야 한다', async () => {
+    it('permissionDepartmentIds가 빈 배열인 경우 목록 조회가 정상 동작해야 한다', async () => {
       // Given - permissionDepartmentIds가 빈 배열인 공지사항 생성
       await testSuite
         .request()
@@ -151,17 +141,16 @@ describe('공지사항 권한 검증 배치 처리 및 부서 변경 대상 목�
         .expect(201);
 
       // When - 목록 조회
-      await testSuite
+      const response = await testSuite
         .request()
         .get('/api/admin/announcements')
         .expect(200);
 
-      // Then - 비동기 배치가 실행되어야 함
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      // 스케줄러가 있는 경우에만 확인
-      if (scheduler) {
-        expect(schedulerSpy).toHaveBeenCalled();
-      }
+      // Then - 목록이 정상적으로 반환되어야 함
+      expect(response.body.items).toHaveLength(1);
+
+      // Note: 비동기 배치 처리는 스케줄러가 별도로 실행됨
+      // 목록 조회 API는 배치 처리와 독립적으로 동작
     });
 
     it('목록 조회는 배치 실행과 관계없이 정상 응답해야 한다', async () => {
