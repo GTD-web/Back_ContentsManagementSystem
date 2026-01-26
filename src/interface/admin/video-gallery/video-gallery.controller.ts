@@ -270,7 +270,7 @@ export class VideoGalleryController {
       }
     }
 
-    return await this.videoGalleryBusinessService.비디오갤러리를_생성한다(
+    const videoGallery = await this.videoGalleryBusinessService.비디오갤러리를_생성한다(
       title,
       categoryId,
       description || null,
@@ -278,6 +278,12 @@ export class VideoGalleryController {
       user.id,
       files,
     );
+
+    const { category, ...result } = videoGallery;
+    return {
+      ...result,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -534,13 +540,19 @@ export class VideoGalleryController {
     @Param('id') id: string,
     @Body() updateDto: UpdateVideoGalleryPublicDto,
   ): Promise<VideoGalleryResponseDto> {
-    return await this.videoGalleryBusinessService.비디오갤러리_공개를_수정한다(
+    const videoGallery = await this.videoGalleryBusinessService.비디오갤러리_공개를_수정한다(
       id,
       {
         ...updateDto,
         updatedBy: user.id,
       },
     );
+
+    const { category, ...result } = videoGallery;
+    return {
+      ...result,
+      categoryName: category?.name,
+    };
   }
 
   /**
