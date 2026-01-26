@@ -83,7 +83,28 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
-    const [items, total] = await queryBuilder.getManyAndCount();
+    // getRawAndEntities를 사용하여 조인한 category 데이터도 함께 가져오기
+    const [rawAndEntities, total] = await Promise.all([
+      queryBuilder.getRawAndEntities(),
+      queryBuilder.getCount(),
+    ]);
+
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    this.logger.debug(`조회된 브로슈어 수: ${items.length}, raw 데이터 수: ${raw.length}`);
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    items.forEach((brochure, index) => {
+      if (raw[index] && raw[index].category_name) {
+        brochure.category = {
+          name: raw[index].category_name,
+        };
+        this.logger.debug(`브로슈어 ${brochure.id}: 카테고리명 = ${raw[index].category_name}`);
+      } else {
+        this.logger.warn(`브로슈어 ${brochure.id}: 카테고리명을 찾을 수 없음`);
+      }
+    });
 
     // 목록 조회에서는 기본 언어 번역만 반환
     items.forEach((brochure) => {

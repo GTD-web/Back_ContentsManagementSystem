@@ -61,7 +61,13 @@ describe('GetBrochureListHandler', () => {
       from: jest.fn().mockReturnThis(),
       innerJoin: jest.fn().mockReturnThis(),
       getQuery: jest.fn().mockReturnValue('subquery'),
-      getManyAndCount: jest.fn().mockResolvedValue([items, total]),
+      getRawAndEntities: jest.fn().mockResolvedValue({
+        entities: items,
+        raw: items.map((item) => ({
+          category_name: item.category?.name || '',
+        })),
+      }),
+      getCount: jest.fn().mockResolvedValue(total),
     };
     return mockQueryBuilder;
   };
