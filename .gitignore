@@ -76,6 +76,3 @@ scripts/backup/dumps/*.sql
 
 # test
 /test/coverage
-
-# 
-/src/migrations/hompage-admin-1
