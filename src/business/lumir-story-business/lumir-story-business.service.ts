@@ -7,6 +7,7 @@ import { Category } from '@domain/common/category/category.entity';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
 import { LumirStoryDetailResult } from '@context/lumir-story-context/interfaces/lumir-story-context.interface';
+import { LumirStoryListItemDto } from '@interface/common/dto/lumir-story/lumir-story-response.dto';
 
 /**
  * 루미르스토리 비즈니스 서비스
@@ -37,7 +38,7 @@ export class LumirStoryBusinessService {
     startDate?: Date,
     endDate?: Date,
   ): Promise<{
-    items: LumirStory[];
+    items: LumirStoryListItemDto[];
     total: number;
     page: number;
     limit: number;
@@ -58,12 +59,24 @@ export class LumirStoryBusinessService {
 
     const totalPages = Math.ceil(result.total / limit);
 
+    // 엔티티를 DTO로 변환
+    const items: LumirStoryListItemDto[] = result.items.map((story) => ({
+      id: story.id,
+      title: story.title,
+      imageUrl: story.imageUrl,
+      isPublic: story.isPublic,
+      order: story.order,
+      categoryName: story.category?.name || '',
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt,
+    }));
+
     this.logger.log(
       `루미르스토리 목록 조회 완료 - 총 ${result.total}개 (${page}/${totalPages} 페이지)`,
     );
 
     return {
-      items: result.items,
+      items,
       total: result.total,
       page: result.page,
       limit: result.limit,

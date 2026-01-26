@@ -78,6 +78,10 @@ describe('LumirStoryBusinessService', () => {
             title: '루미르 스토리 1',
             isPublic: true,
             order: 0,
+            category: { name: '혁신' },
+            imageUrl: null,
+            createdAt: new Date('2024-01-01'),
+            updatedAt: new Date('2024-01-02'),
           } as LumirStory,
         ],
         total: 1,
@@ -103,6 +107,7 @@ describe('LumirStoryBusinessService', () => {
       ).toHaveBeenCalledWith(true, 'order', 1, 10, undefined, undefined);
       expect(result.items).toHaveLength(1);
       expect(result.items[0].title).toBe('루미르 스토리 1');
+      expect(result.items[0].categoryName).toBe('혁신');
     });
 
     it('날짜 필터를 포함하여 조회해야 한다', async () => {

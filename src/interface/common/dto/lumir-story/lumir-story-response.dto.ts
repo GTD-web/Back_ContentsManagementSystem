@@ -93,6 +93,9 @@ export class LumirStoryListItemDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   order: number;
 
+  @ApiProperty({ description: '카테고리 이름', example: '혁신' })
+  categoryName: string;
+
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;
 
