@@ -193,17 +193,18 @@ export class BrochureBusinessService {
       isPublic: boolean;
       updatedBy?: string;
     },
-  ): Promise<Brochure> {
+  ): Promise<BrochureDetailResult> {
     this.logger.log(`브로슈어 공개 수정 시작 - ID: ${id}`);
 
-    const result = await this.brochureContextService.브로슈어_공개를_수정한다(
+    await this.brochureContextService.브로슈어_공개를_수정한다(
       id,
       data,
     );
 
     this.logger.log(`브로슈어 공개 수정 완료 - ID: ${id}`);
 
-    return result;
+    // 상세 정보 조회하여 categoryName 포함하여 반환
+    return await this.brochureContextService.브로슈어_상세_조회한다(id);
   }
 
   /**
@@ -235,17 +236,22 @@ export class BrochureBusinessService {
   /**
    * 기본 브로슈어들을 생성한다
    */
-  async 기본_브로슈어들을_생성한다(createdBy?: string): Promise<Brochure[]> {
+  async 기본_브로슈어들을_생성한다(createdBy?: string): Promise<BrochureDetailResult[]> {
     this.logger.log(
       `기본 브로슈어 생성 시작 - 생성자: ${createdBy || 'Unknown'}`,
     );
 
-    const result =
+    const brochures =
       await this.brochureContextService.기본_브로슈어들을_생성한다(createdBy);
 
-    this.logger.log(`기본 브로슈어 생성 완료 - 총 ${result.length}개`);
+    this.logger.log(`기본 브로슈어 생성 완료 - 총 ${brochures.length}개`);
 
-    return result;
+    // 각 브로슈어의 상세 정보 조회하여 categoryName 포함
+    const results = await Promise.all(
+      brochures.map(brochure => this.brochureContextService.브로슈어_상세_조회한다(brochure.id))
+    );
+
+    return results;
   }
 
   /**

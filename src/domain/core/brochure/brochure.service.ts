@@ -66,13 +66,31 @@ export class BrochureService {
   async ID로_브로슈어를_조회한다(id: string): Promise<Brochure> {
     this.logger.debug(`브로슈어 조회 - ID: ${id}`);
 
-    const brochure = await this.brochureRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.brochureRepository
+      .createQueryBuilder('brochure')
+      .leftJoinAndSelect('brochure.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'brochure.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('brochure.id = :id', { id });
 
-    if (!brochure) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`브로슈어를 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const brochure = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      brochure.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(`브로슈어 ${brochure.id}: 카테고리명 = ${raw.category_name}`);
+    } else {
+      this.logger.warn(`브로슈어 ${brochure.id}: 카테고리명을 찾을 수 없음. categoryId: ${brochure.categoryId}`);
     }
 
     return brochure;

@@ -164,7 +164,9 @@ describe('GET /api/admin/brochures/:id (브로슈어 상세 조회)', () => {
       expect(response.body).toMatchObject({
         id: brochureId,
         isPublic: true, // 기본값 확인
+        categoryId: categoryId,
       });
+      expect(response.body.categoryName).toBe('테스트 카테고리');
       // 정책: 입력한 언어(ko) + 자동 생성된 언어들(en, ja, zh) = 총 4개
       expect(response.body.translations).toHaveLength(4);
       

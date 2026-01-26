@@ -416,6 +416,8 @@ describe('BrochureBusinessService', () => {
       const mockBrochure = {
         id: brochureId,
         isPublic: true,
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
         translations: [],
       } as any;
 
@@ -431,6 +433,8 @@ describe('BrochureBusinessService', () => {
         brochureId,
       );
       expect(result).toEqual(mockBrochure);
+      expect(result.categoryId).toBe('category-1');
+      expect(result.categoryName).toBe('테스트 카테고리');
     });
   });
 

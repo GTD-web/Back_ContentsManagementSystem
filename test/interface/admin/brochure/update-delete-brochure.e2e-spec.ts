@@ -148,6 +148,8 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBe(categoryId);
+      expect(response.body.categoryName).toBe('테스트 카테고리');
     });
 
     it('브로슈어를 공개로 변경할 수 있어야 한다', async () => {
@@ -166,6 +168,8 @@ describe('브로슈어 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBe(categoryId);
+      expect(response.body.categoryName).toBe('테스트 카테고리');
     });
 
     it('존재하지 않는 브로슈어의 공개 상태를 변경하면 404 에러가 발생해야 한다', async () => {

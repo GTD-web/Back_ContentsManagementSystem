@@ -77,6 +77,7 @@ export interface BrochureListResult {
  */
 export interface BrochureDetailResult extends Brochure {
   translations: BrochureTranslation[];
+  categoryName?: string;
 }
 
 /**

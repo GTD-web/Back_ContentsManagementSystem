@@ -350,6 +350,8 @@ describe('BrochureContextService', () => {
         id: brochureId,
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
         translations: [],
         attachments: null,
         createdAt: new Date(),
@@ -369,6 +371,8 @@ describe('BrochureContextService', () => {
         }),
       );
       expect(result).toEqual(mockBrochure);
+      expect(result.categoryId).toBe('category-1');
+      expect(result.categoryName).toBe('테스트 카테고리');
     });
   });
 
