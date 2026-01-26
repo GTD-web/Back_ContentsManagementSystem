@@ -178,7 +178,7 @@ export class IRController {
   @ApiResponse({
     status: 200,
     description: 'IR 상세 조회 성공',
-    type: IR,
+    type: IRResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -188,7 +188,7 @@ export class IRController {
     status: 400,
     description: '잘못된 UUID 형식',
   })
-  async IR_상세를_조회한다(@Param('id', ParseUUIDPipe) id: string): Promise<IR> {
+  async IR_상세를_조회한다(@Param('id', ParseUUIDPipe) id: string): Promise<IRResponseDto> {
     return await this.irBusinessService.IR_상세를_조회한다(id);
   }
 

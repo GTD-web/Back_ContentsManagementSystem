@@ -94,13 +94,6 @@ export class IRResponseDto {
   })
   translations: IRTranslationResponseDto[];
 
-  @ApiProperty({
-    description: '카테고리 목록',
-    type: [IRCategoryResponseDto],
-    required: false,
-  })
-  categories?: IRCategoryResponseDto[];
-
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;
 
@@ -112,6 +105,12 @@ export class IRResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 ID' })
+  categoryId: string;
+
+  @ApiProperty({ description: '카테고리 이름', example: '재무정보', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -140,13 +139,6 @@ export class IRListItemDto {
 
   @ApiProperty({ description: '카테고리 이름', example: '재무정보' })
   categoryName: string;
-
-  @ApiProperty({
-    description: '카테고리 목록',
-    type: [IRCategoryResponseDto],
-    required: false,
-  })
-  categories?: IRCategoryResponseDto[];
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;

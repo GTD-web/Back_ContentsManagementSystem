@@ -58,14 +58,14 @@ export class IRBusinessService {
 
     const ir = await this.irContextService.IR_상세를_조회한다(id);
 
-    // 카테고리 매핑 조회
-    const categories = await this.categoryService.엔티티의_카테고리_매핑을_조회한다(id);
-
     this.logger.log(`IR 상세 조회 완료 - ID: ${id}`);
 
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = ir as any;
+
     return {
-      ...ir,
-      categories,
+      ...irData,
+      categoryName: category?.name,
     };
   }
 

@@ -113,13 +113,31 @@ export class IRService {
   async ID로_IR을_조회한다(id: string): Promise<IR> {
     this.logger.debug(`IR 조회 - ID: ${id}`);
 
-    const ir = await this.irRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.irRepository
+      .createQueryBuilder('ir')
+      .leftJoinAndSelect('ir.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'ir.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('ir.id = :id', { id });
 
-    if (!ir) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`IR을 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const ir = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      ir.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(`IR ${ir.id}: 카테고리명 = ${raw.category_name}`);
+    } else {
+      this.logger.warn(`IR ${ir.id}: 카테고리명을 찾을 수 없음. categoryId: ${ir.categoryId}`);
     }
 
     return ir;
