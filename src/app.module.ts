@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from '@libs/database/database.module';
+import { DomainModule } from './domain/domain.module';
 import { AuthInterfaceModule } from './interface/admin/auth/auth.module';
 import { LanguageInterfaceModule } from './interface/admin/language/language.module';
 import { BrochureInterfaceModule } from './interface/admin/brochure/brochure.module';
@@ -29,6 +30,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
  * 루미르 CMS 애플리케이션 모듈
  *
  * @description
+ * - Domain Layer 모듈을 등록하여 기본 카테고리 및 언어 데이터를 초기화합니다.
  * - 모든 Interface Layer 모듈을 등록합니다.
  * - Interface Layer는 Business Layer와 Context Layer를 자동으로 import합니다.
  * - TypeORM을 통해 PostgreSQL 데이터베이스와 연결합니다.
@@ -46,6 +48,9 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
 
     // 데이터베이스 모듈
     DatabaseModule,
+
+    // Domain Layer 모듈 (카테고리, 언어 등 기본 데이터 초기화)
+    DomainModule,
 
     // Context Layer 모듈
     AuthContextModule,
