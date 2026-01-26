@@ -377,7 +377,7 @@ describe('전자공시 CRUD API', () => {
       expect(response.body.id).toBe(disclosureId);
       expect(response.body.isPublic).toBe(true);
       expect(response.body.categoryId).toBe(categoryId);
-      expect(response.body.categoryName).toBe('재무 정보');
+      expect(response.body.categoryName).toBe('테스트 카테고리');
       expect(response.body.translations).toHaveLength(4);
 
       const koreanTranslation = response.body.translations.find(
