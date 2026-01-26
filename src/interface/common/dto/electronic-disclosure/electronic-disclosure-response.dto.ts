@@ -101,6 +101,9 @@ export class ElectronicDisclosureListItemDto {
   })
   description: string | null;
 
+  @ApiProperty({ description: '카테고리 이름', example: '실적 공시' })
+  categoryName: string;
+
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;
 

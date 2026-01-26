@@ -73,6 +73,10 @@ export class ElectronicDisclosureService {
     // translations와 language 관계 로드
     queryBuilder.leftJoinAndSelect('disclosure.translations', 'translations');
     queryBuilder.leftJoinAndSelect('translations.language', 'language');
+    
+    // category 조인
+    queryBuilder.leftJoin('categories', 'category', 'disclosure.categoryId = category.id');
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
@@ -108,7 +112,20 @@ export class ElectronicDisclosureService {
       queryBuilder.orderBy('disclosure.createdAt', 'DESC');
     }
 
-    return await queryBuilder.getMany();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    items.forEach((disclosure, index) => {
+      if (raw[index] && raw[index].category_name) {
+        disclosure.category = {
+          name: raw[index].category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**

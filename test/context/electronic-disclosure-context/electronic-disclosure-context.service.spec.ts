@@ -636,6 +636,9 @@ describe('ElectronicDisclosureContextService', () => {
               title: '전자공시 제목',
             },
           ],
+          category: {
+            name: '실적 공시',
+          },
         } as any,
       ];
 
@@ -697,6 +700,7 @@ describe('ElectronicDisclosureContextService', () => {
         id: `disclosure-${i}`,
         isPublic: true,
         translations: [{ language: { code: 'ko' }, title: `제목 ${i}` }],
+        category: { name: '실적 공시' },
       })) as any;
 
       mockElectronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue(

@@ -510,6 +510,9 @@ describe('ElectronicDisclosureBusinessService', () => {
                 language: { code: 'ko' },
               },
             ],
+            category: {
+              name: '실적 공시',
+            },
             createdAt: new Date('2024-01-01'),
             updatedAt: new Date('2024-01-02'),
           } as any,
@@ -532,6 +535,7 @@ describe('ElectronicDisclosureBusinessService', () => {
       ).toHaveBeenCalledWith(true, 'order', 1, 10, undefined, undefined);
       expect(result.items).toHaveLength(1);
       expect(result.items[0].title).toBe('2024년 1분기 실적 공시');
+      expect(result.items[0].categoryName).toBe('실적 공시');
       expect(result.totalPages).toBe(1);
     });
 

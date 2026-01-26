@@ -305,6 +305,7 @@ export class ElectronicDisclosureBusinessService {
           order: disclosure.order,
           title: defaultTranslation?.title || '',
           description: defaultTranslation?.description || null,
+          categoryName: disclosure.category?.name || '',
           createdAt: disclosure.createdAt,
           updatedAt: disclosure.updatedAt,
         };
