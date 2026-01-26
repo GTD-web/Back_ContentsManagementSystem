@@ -226,7 +226,7 @@ export class VideoGalleryBusinessService {
    */
   async 비디오갤러리_상세_조회한다(
     id: string,
-  ): Promise<VideoGalleryDetailResult> {
+  ): Promise<any> {
     this.logger.log(`비디오갤러리 상세 조회 시작 - ID: ${id}`);
 
     const result = await this.videoGalleryContextService.비디오갤러리_상세_조회한다(
@@ -235,7 +235,13 @@ export class VideoGalleryBusinessService {
 
     this.logger.log(`비디오갤러리 상세 조회 완료 - ID: ${id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...galleryData } = result as any;
+
+    return {
+      ...galleryData,
+      categoryName: category?.name,
+    };
   }
 
   /**

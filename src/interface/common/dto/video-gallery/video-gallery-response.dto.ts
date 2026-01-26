@@ -83,12 +83,6 @@ export class VideoGalleryResponseDto {
   @ApiProperty({ description: '카테고리 ID' })
   categoryId: string;
 
-  @ApiProperty({ 
-    description: '카테고리 정보',
-    type: VideoGalleryCategoryResponseDto,
-  })
-  category: VideoGalleryCategoryResponseDto;
-
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
 
@@ -114,6 +108,9 @@ export class VideoGalleryResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '제품 소개', required: false })
+  categoryName?: string;
 }
 
 /**

@@ -48,15 +48,14 @@ describe('POST /api/admin/video-galleries (비디오갤러리 생성)', () => {
         id: expect.any(String),
         title: '회사 소개 영상',
         categoryId,
-        category: expect.objectContaining({
-          id: categoryId,
-          name: '테스트 카테고리',
-        }),
         isPublic: true, // 기본값 확인
         order: expect.any(Number),
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
       });
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.categoryName).toBe('테스트 카테고리');
+      expect(response.body.category).toBeUndefined();
     });
 
     it('설명을 포함한 비디오갤러리를 생성해야 한다', async () => {

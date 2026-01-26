@@ -193,6 +193,9 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.category).toBeUndefined();
     });
 
     it('비디오갤러리를 공개로 변경해야 한다', async () => {
@@ -215,6 +218,9 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.category).toBeUndefined();
     });
   });
 

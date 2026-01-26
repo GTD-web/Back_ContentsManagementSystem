@@ -217,7 +217,11 @@ describe('GET /api/admin/video-galleries/:id (비디오갤러리 상세 조회)'
         title: '상세 조회 테스트',
         description: '상세 조회 내용',
         isPublic: true,
+        categoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.categoryName).toBe('테스트 카테고리');
+      expect(response.body.category).toBeUndefined();
     });
   });
 

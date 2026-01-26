@@ -48,6 +48,11 @@ describe('GetVideoGalleryDetailHandler', () => {
         description: '설명',
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
+        category: {
+          id: 'category-1',
+          name: '제품 소개',
+        },
         videoSources: [
           {
             url: 'https://www.youtube.com/watch?v=abc123',
@@ -75,7 +80,9 @@ describe('GetVideoGalleryDetailHandler', () => {
         description: '설명',
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
       });
+      expect(result.category?.name).toBe('제품 소개');
     });
 
     it('비디오 소스 정보를 포함해야 한다', async () => {
