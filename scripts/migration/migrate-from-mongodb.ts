@@ -8,7 +8,7 @@ import {
 } from './bson-parser';
 import {
   mapCategory,
-  mapNews,
+  mapLumirStory,
   mapPressReleaseToNews,
   mapVideoGallery,
   mapIR,
@@ -111,6 +111,7 @@ async function bootstrap() {
     console.log('🔍 기본 카테고리 조회 중...\n');
     const defaultCategoryMap = new Map<string, string>();
     
+    // news는 pressreleases용, lumir_story/video_gallery는 복제 카테고리 사용
     const entityTypes = [
       'news',
       'ir',
@@ -180,32 +181,33 @@ async function bootstrap() {
     // 다른 모듈들은 빈 Map 사용 (기본 카테고리 사용)
     const emptyCategoryIdMap = new Map<string, string>();
 
-    // 5.3 News 매핑 (news + pressreleases) - 기본 카테고리 사용
-    const newsFromNews = collections.news.map((doc) =>
-      mapNews(doc, emptyCategoryIdMap, defaultCategoryMap.get('news')),
+    // 5.3 LumirStory 매핑 (MongoDB news → PostgreSQL lumir_stories) - 복제 카테고리 사용
+    const lumirStoryCategoryIdMap = categoryIdMapByEntityType.get('lumir_story') || new Map();
+    const lumirStories = collections.news.map((doc) =>
+      mapLumirStory(doc, lumirStoryCategoryIdMap, defaultCategoryMap.get('lumir_story')),
     );
-    const newsFromPressReleases = collections.pressreleases.map((doc) =>
+    console.log(`✅ LumirStories: ${lumirStories.length}개 매핑 완료 (MongoDB news → PostgreSQL lumir_stories)`);
+
+    // 5.4 News 매핑 (MongoDB pressreleases → PostgreSQL news) - 기본 카테고리 사용
+    const news = collections.pressreleases.map((doc) =>
       mapPressReleaseToNews(doc, emptyCategoryIdMap, defaultCategoryMap.get('news')),
     );
-    const allNews = [...newsFromNews, ...newsFromPressReleases];
-    console.log(
-      `✅ News: ${newsFromNews.length}개 + PressReleases: ${newsFromPressReleases.length}개 = 총 ${allNews.length}개 매핑 완료`,
-    );
+    console.log(`✅ News: ${news.length}개 매핑 완료 (MongoDB pressreleases → PostgreSQL news)`);
 
-    // 5.4 VideoGallery 매핑
+    // 5.5 VideoGallery 매핑 - 복제 카테고리 사용
     const videoGalleryCategoryIdMap = categoryIdMapByEntityType.get('video_gallery') || new Map();
     const videoGalleries = collections.videos.map((doc) =>
       mapVideoGallery(doc, videoGalleryCategoryIdMap, defaultCategoryMap.get('video_gallery')),
     );
     console.log(`✅ VideoGalleries: ${videoGalleries.length}개 매핑 완료`);
 
-    // 5.5 IR 매핑 - 기본 카테고리 사용
+    // 5.6 IR 매핑 - 기본 카테고리 사용
     const irs = collections.irmaterials.map((doc) => 
       mapIR(doc, emptyCategoryIdMap, defaultCategoryMap.get('ir'))
     );
     console.log(`✅ IRs: ${irs.length}개 매핑 완료`);
 
-    // 5.6 ElectronicDisclosure 매핑 - 기본 카테고리 사용
+    // 5.7 ElectronicDisclosure 매핑 - 기본 카테고리 사용
     const electronicDisclosures = collections.managementdisclosures.map(
       (doc) => mapElectronicDisclosure(doc, emptyCategoryIdMap, defaultCategoryMap.get('electronic_disclosure')),
     );
@@ -213,7 +215,7 @@ async function bootstrap() {
       `✅ ElectronicDisclosures: ${electronicDisclosures.length}개 매핑 완료`,
     );
 
-    // 5.7 ShareholdersMeeting 매핑 - 기본 카테고리 사용
+    // 5.8 ShareholdersMeeting 매핑 - 기본 카테고리 사용
     const shareholdersMeetings = collections.shareholdermeetings.map((doc) =>
       mapShareholdersMeeting(doc, emptyCategoryIdMap, defaultCategoryMap.get('shareholders_meeting')),
     );
@@ -221,13 +223,13 @@ async function bootstrap() {
       `✅ ShareholdersMeetings: ${shareholdersMeetings.length}개 매핑 완료`,
     );
 
-    // 4.8 MainPopup 매핑 (notifications) - 기본 카테고리 사용
+    // 5.9 MainPopup 매핑 (notifications) - 기본 카테고리 사용
     const mainPopups = collections.notifications.map((doc) =>
       mapNotificationToMainPopup(doc, emptyCategoryIdMap, defaultCategoryMap.get('main_popup')),
     );
     console.log(`✅ MainPopups: ${mainPopups.length}개 매핑 완료`);
 
-    // 4.9 PageView 매핑
+    // 5.10 PageView 매핑
     const pageViews = collections.pageviews.map(mapPageView);
     console.log(`✅ PageViews: ${pageViews.length}개 매핑 완료`);
 
@@ -254,15 +256,23 @@ async function bootstrap() {
     printValidationResult(categoryValidation, 'Categories');
     validationResults.push(categoryValidation);
 
-    // 5.2 News 검증 (전체 카테고리 목록 사용)
+    // 5.2 LumirStory 검증
+    const lumirStoryValidation = mergeValidationResults([
+      validateUniqueIds(lumirStories, 'LumirStories'),
+      ...lumirStories.map((ls) => validateNews(ls, allCategories)),
+    ]);
+    printValidationResult(lumirStoryValidation, 'LumirStories');
+    validationResults.push(lumirStoryValidation);
+
+    // 5.3 News 검증 (전체 카테고리 목록 사용)
     const newsValidation = mergeValidationResults([
-      validateUniqueIds(allNews, 'News'),
-      ...allNews.map((news) => validateNews(news, allCategories)),
+      validateUniqueIds(news, 'News'),
+      ...news.map((n) => validateNews(n, allCategories)),
     ]);
     printValidationResult(newsValidation, 'News');
     validationResults.push(newsValidation);
 
-    // 5.3 VideoGallery 검증 (전체 카테고리 목록 사용)
+    // 5.4 VideoGallery 검증 (전체 카테고리 목록 사용)
     const videoValidation = mergeValidationResults([
       validateUniqueIds(videoGalleries, 'VideoGalleries'),
       ...videoGalleries.map((vg) => validateVideoGallery(vg, allCategories)),
@@ -270,7 +280,7 @@ async function bootstrap() {
     printValidationResult(videoValidation, 'VideoGalleries');
     validationResults.push(videoValidation);
 
-    // 5.4 MainPopup 검증 (전체 카테고리 목록 사용)
+    // 5.5 MainPopup 검증 (전체 카테고리 목록 사용)
     const popupValidation = mergeValidationResults([
       validateUniqueIds(mainPopups, 'MainPopups'),
       ...mainPopups.map((mp) => validateMainPopup(mp, allCategories)),
@@ -278,7 +288,7 @@ async function bootstrap() {
     printValidationResult(popupValidation, 'MainPopups');
     validationResults.push(popupValidation);
 
-    // 5.5 PageView 검증
+    // 5.6 PageView 검증
     const pageViewValidation = mergeValidationResults([
       validateUniqueIds(pageViews, 'PageViews'),
       ...pageViews.slice(0, 100).map(validatePageView), // 샘플만 검증 (대용량)
@@ -296,7 +306,7 @@ async function bootstrap() {
 
     // 6. 데이터 삽입 확인
     const proceed = await confirm(
-      `총 ${categories.length + allNews.length + videoGalleries.length + irs.length + electronicDisclosures.length + shareholdersMeetings.length + mainPopups.length + pageViews.length}개의 레코드를 삽입하시겠습니까?`,
+      `총 ${categories.length + lumirStories.length + news.length + videoGalleries.length + irs.length + electronicDisclosures.length + shareholdersMeetings.length + mainPopups.length + pageViews.length}개의 레코드를 삽입하시겠습니까?`,
     );
 
     if (!proceed) {
@@ -307,6 +317,7 @@ async function bootstrap() {
     // 6.5 기존 마이그레이션 데이터 정리
     console.log('\n🧹 기존 마이그레이션 데이터 정리 중...');
     await dataSource.query(`TRUNCATE TABLE page_views CASCADE`);
+    await dataSource.query(`TRUNCATE TABLE lumir_stories CASCADE`);
     await dataSource.query(`TRUNCATE TABLE news CASCADE`);
     await dataSource.query(`TRUNCATE TABLE video_galleries CASCADE`);
     await dataSource.query(`TRUNCATE TABLE irs CASCADE`);
@@ -331,13 +342,19 @@ async function bootstrap() {
         console.log(`✅ Categories: ${categories.length}개 삽입 완료`);
       }
 
-      // 7.2 News 삽입
-      if (allNews.length > 0) {
-        await insertInBatches(manager, 'news', allNews, 1000);
-        console.log(`✅ News: ${allNews.length}개 삽입 완료`);
+      // 7.2 LumirStory 삽입 (MongoDB news → PostgreSQL lumir_stories)
+      if (lumirStories.length > 0) {
+        await insertInBatches(manager, 'lumir_stories', lumirStories, 1000);
+        console.log(`✅ LumirStories: ${lumirStories.length}개 삽입 완료`);
       }
 
-      // 7.3 VideoGallery 삽입
+      // 7.3 News 삽입 (MongoDB pressreleases → PostgreSQL news)
+      if (news.length > 0) {
+        await insertInBatches(manager, 'news', news, 1000);
+        console.log(`✅ News: ${news.length}개 삽입 완료`);
+      }
+
+      // 7.4 VideoGallery 삽입
       if (videoGalleries.length > 0) {
         await manager
           .createQueryBuilder()
@@ -348,7 +365,7 @@ async function bootstrap() {
         console.log(`✅ VideoGalleries: ${videoGalleries.length}개 삽입 완료`);
       }
 
-      // 7.4 IR 삽입
+      // 7.5 IR 삽입
       if (irs.length > 0) {
         await manager
           .createQueryBuilder()
@@ -359,7 +376,7 @@ async function bootstrap() {
         console.log(`✅ IRs: ${irs.length}개 삽입 완료`);
       }
 
-      // 7.5 ElectronicDisclosure 삽입
+      // 7.6 ElectronicDisclosure 삽입
       if (electronicDisclosures.length > 0) {
         await manager
           .createQueryBuilder()
@@ -372,7 +389,7 @@ async function bootstrap() {
         );
       }
 
-      // 7.6 ShareholdersMeeting 삽입
+      // 7.7 ShareholdersMeeting 삽입
       if (shareholdersMeetings.length > 0) {
         await manager
           .createQueryBuilder()
@@ -410,6 +427,7 @@ async function bootstrap() {
       categories: await dataSource
         .getRepository('categories')
         .count(),
+      lumirStories: await dataSource.getRepository('lumir_stories').count(),
       news: await dataSource.getRepository('news').count(),
       videoGalleries: await dataSource
         .getRepository('video_galleries')
@@ -431,7 +449,8 @@ async function bootstrap() {
 
     console.log('데이터베이스 레코드 수:');
     console.log(`  Categories: ${counts.categories} (예상: ${categories.length})`);
-    console.log(`  News: ${counts.news} (예상: ${allNews.length})`);
+    console.log(`  LumirStories: ${counts.lumirStories} (예상: ${lumirStories.length})`);
+    console.log(`  News: ${counts.news} (예상: ${news.length})`);
     console.log(
       `  VideoGalleries: ${counts.videoGalleries} (예상: ${videoGalleries.length})`,
     );
@@ -451,7 +470,8 @@ async function bootstrap() {
 
     const allMatch =
       counts.categories === categories.length &&
-      counts.news === allNews.length &&
+      counts.lumirStories === lumirStories.length &&
+      counts.news === news.length &&
       counts.videoGalleries === videoGalleries.length &&
       counts.irs === irs.length &&
       counts.electronicDisclosures === electronicDisclosures.length &&

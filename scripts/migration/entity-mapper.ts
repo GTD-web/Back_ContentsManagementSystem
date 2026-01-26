@@ -46,9 +46,9 @@ export function mapCategory(mongoDoc: any): any {
 }
 
 /**
- * news 컬렉션 매핑
+ * news 컬렉션을 lumir_stories로 매핑
  */
-export function mapNews(
+export function mapLumirStory(
   mongoDoc: any, 
   categoryIdMap: Map<string, string>,
   defaultCategoryId?: string,
@@ -63,12 +63,10 @@ export function mapNews(
     // category 객체에서 _id 추출
     const mongoCategoryId = objectIdToUuid(mongoDoc.category._id);
     const mappedId = categoryIdMap.get(mongoCategoryId);
-    // 매핑이 있으면 사용, 없으면 undefined (나중에 기본 카테고리 사용)
     categoryId = mappedId || null;
   } else if (doc.categoryId) {
     // 직접 categoryId가 있는 경우
     const mappedId = categoryIdMap.get(doc.categoryId);
-    // 매핑이 있으면 사용, 없으면 undefined (나중에 기본 카테고리 사용)
     categoryId = mappedId || null;
   }
 
@@ -81,12 +79,12 @@ export function mapNews(
     {
       id: doc.id,
       title: doc.title,
-      description: doc.description || null,
-      url: doc.url || null,
+      content: doc.content || doc.description || '',
+      categoryId: categoryId || defaultCategoryId,
+      imageUrl: doc.imageUrl || doc.thumbnailUrl || null,
       isPublic: doc.isPublic !== false,
       attachments: doc.attachments || null,
       order: doc.order || 0,
-      categoryId: categoryId || null,
     },
     mongoDoc,
   );
@@ -129,9 +127,15 @@ export function mapVideoGallery(
 
   // categoryId 매핑 (MongoDB ObjectId → PostgreSQL UUID)
   let categoryId: string | null = null;
-  if (doc.categoryId) {
+  
+  // category 객체에서 _id 추출 (news와 동일한 로직)
+  if (mongoDoc.category && mongoDoc.category._id) {
+    const mongoCategoryId = objectIdToUuid(mongoDoc.category._id);
+    const mappedId = categoryIdMap.get(mongoCategoryId);
+    categoryId = mappedId || null;
+  } else if (doc.categoryId) {
+    // 직접 categoryId가 있는 경우
     const mappedId = categoryIdMap.get(doc.categoryId);
-    // 매핑이 있으면 사용, 없으면 null (나중에 기본 카테고리 사용)
     categoryId = mappedId || null;
   }
 
@@ -149,7 +153,7 @@ export function mapVideoGallery(
       thumbnailUrl: doc.thumbnailUrl || doc.thumbnail || null,
       isPublic: doc.isPublic !== false,
       order: doc.order || 0,
-      categoryId: categoryId || null,
+      categoryId: categoryId || defaultCategoryId,
     },
     mongoDoc,
   );
