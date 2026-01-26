@@ -250,7 +250,7 @@ export class LumirStoryController {
       throw new BadRequestException('categoryId 필드는 필수입니다.');
     }
 
-    return await this.lumirStoryBusinessService.루미르스토리를_생성한다(
+    const lumirStory = await this.lumirStoryBusinessService.루미르스토리를_생성한다(
       title,
       content,
       categoryId,
@@ -258,6 +258,11 @@ export class LumirStoryController {
       user.id,
       files,
     );
+
+    return {
+      ...lumirStory,
+      categoryName: lumirStory.category?.name,
+    };
   }
 
   /**
@@ -494,13 +499,18 @@ export class LumirStoryController {
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryPublicDto,
   ): Promise<LumirStoryResponseDto> {
-    return await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(
+    const lumirStory = await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(
       id,
       {
         ...updateDto,
         updatedBy: user.id,
       },
     );
+
+    return {
+      ...lumirStory,
+      categoryName: lumirStory.category?.name,
+    };
   }
 
   /**

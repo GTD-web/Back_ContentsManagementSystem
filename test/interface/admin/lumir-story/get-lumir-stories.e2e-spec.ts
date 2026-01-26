@@ -68,7 +68,8 @@ describe('GET /api/admin/lumir-stories (루미르스토리 목록 조회)', () =
       expect(response.body.items.length).toBeGreaterThanOrEqual(1);
       expect(response.body.items[0]).toHaveProperty('id');
       expect(response.body.items[0]).toHaveProperty('title');
-      expect(response.body.items[0]).toHaveProperty('content');
+      expect(response.body.items[0]).toHaveProperty('categoryName');
+      // 목록 조회에서는 content 필드가 포함되지 않음 (상세 조회에서만 포함)
     });
 
     it('공개된 루미르스토리만 조회해야 한다', async () => {
