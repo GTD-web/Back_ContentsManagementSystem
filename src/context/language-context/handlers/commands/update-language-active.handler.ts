@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Language } from '@domain/common/language/language.entity';
 import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { TranslationSyncTriggerService } from '../../translation-sync-trigger.service';
 
 /**
  * 언어 활성 상태 수정 커맨드
@@ -28,6 +29,7 @@ export class UpdateLanguageActiveHandler
     @InjectRepository(Language)
     private readonly languageRepository: Repository<Language>,
     private readonly configService: ConfigService,
+    private readonly translationSyncService: TranslationSyncTriggerService,
   ) {}
 
   async execute(command: UpdateLanguageActiveCommand): Promise<Language> {
@@ -68,6 +70,22 @@ export class UpdateLanguageActiveHandler
     this.logger.log(
       `언어 활성 상태 수정 완료 - ID: ${id}, 이름: ${language.name}, 활성: ${data.isActive}`,
     );
+
+    // 활성화된 경우 번역 동기화 트리거
+    if (data.isActive) {
+      this.logger.log(
+        `언어 활성화로 인한 번역 동기화 트리거 - 언어 코드: ${updated.code}`,
+      );
+      // 비동기로 실행하여 응답 지연 방지
+      this.translationSyncService
+        .언어_활성화_시_번역_동기화(updated.code)
+        .catch((error) => {
+          this.logger.error(
+            `번역 동기화 트리거 실패 - 언어: ${updated.code}`,
+            error.stack || error.message,
+          );
+        });
+    }
 
     return updated;
   }

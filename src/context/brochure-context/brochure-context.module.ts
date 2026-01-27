@@ -52,6 +52,6 @@ import { BrochureSyncScheduler } from './brochure-sync.scheduler';
     BrochureTranslationUpdatedHandler,
     BrochureSyncScheduler,
   ],
-  exports: [BrochureContextService],
+  exports: [BrochureContextService, SyncBrochureTranslationsHandler],
 })
 export class BrochureContextModule {}

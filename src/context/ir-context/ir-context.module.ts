@@ -27,6 +27,6 @@ import { IRSyncScheduler } from './ir-sync.scheduler';
     IRTranslationUpdatedHandler,
     IRSyncScheduler,
   ],
-  exports: [IRContextService],
+  exports: [IRContextService, SyncIRTranslationsHandler],
 })
 export class IRContextModule {}

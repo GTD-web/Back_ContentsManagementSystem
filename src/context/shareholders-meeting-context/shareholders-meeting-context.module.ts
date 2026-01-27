@@ -35,6 +35,9 @@ import { ShareholdersMeetingSyncScheduler } from './shareholders-meeting-sync.sc
     ShareholdersMeetingTranslationUpdatedHandler,
     ShareholdersMeetingSyncScheduler,
   ],
-  exports: [ShareholdersMeetingContextService],
+  exports: [
+    ShareholdersMeetingContextService,
+    SyncShareholdersMeetingTranslationsHandler,
+  ],
 })
 export class ShareholdersMeetingContextModule {}

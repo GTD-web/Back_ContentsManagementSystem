@@ -25,6 +25,6 @@ import { MainPopupSyncScheduler } from './main-popup-sync.scheduler';
     MainPopupTranslationUpdatedHandler,
     MainPopupSyncScheduler,
   ],
-  exports: [MainPopupContextService],
+  exports: [MainPopupContextService, SyncMainPopupTranslationsHandler],
 })
 export class MainPopupContextModule {}

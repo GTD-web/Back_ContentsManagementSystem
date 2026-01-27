@@ -30,6 +30,9 @@ import { ElectronicDisclosureSyncScheduler } from './electronic-disclosure-sync.
     ElectronicDisclosureTranslationUpdatedHandler,
     ElectronicDisclosureSyncScheduler,
   ],
-  exports: [ElectronicDisclosureContextService],
+  exports: [
+    ElectronicDisclosureContextService,
+    SyncElectronicDisclosureTranslationsHandler,
+  ],
 })
 export class ElectronicDisclosureContextModule {}

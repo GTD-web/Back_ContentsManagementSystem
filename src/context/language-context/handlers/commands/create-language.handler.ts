@@ -7,6 +7,7 @@ import {
   CreateLanguageResult,
 } from '../../interfaces/language-context.interface';
 import { Logger, ConflictException } from '@nestjs/common';
+import { TranslationSyncTriggerService } from '../../translation-sync-trigger.service';
 
 /**
  * 언어 생성 커맨드
@@ -25,6 +26,7 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
   constructor(
     @InjectRepository(Language)
     private readonly languageRepository: Repository<Language>,
+    private readonly translationSyncService: TranslationSyncTriggerService,
   ) {}
 
   async execute(command: CreateLanguageCommand): Promise<CreateLanguageResult> {
@@ -53,6 +55,22 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
     const saved = await this.languageRepository.save(language);
 
     this.logger.log(`언어 생성 완료 - ID: ${saved.id}`);
+
+    // 활성화된 언어로 추가된 경우 번역 동기화 트리거
+    if (saved.isActive) {
+      this.logger.log(
+        `새 언어 추가로 인한 번역 동기화 트리거 - 언어 코드: ${saved.code}`,
+      );
+      // 비동기로 실행하여 응답 지연 방지
+      this.translationSyncService
+        .언어_활성화_시_번역_동기화(saved.code)
+        .catch((error) => {
+          this.logger.error(
+            `번역 동기화 트리거 실패 - 언어: ${saved.code}`,
+            error.stack || error.message,
+          );
+        });
+    }
 
     return {
       id: saved.id,
