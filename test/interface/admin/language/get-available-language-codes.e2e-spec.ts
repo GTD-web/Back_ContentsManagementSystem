@@ -51,7 +51,7 @@ describe('GET /api/admin/languages/available-codes (추가 가능한 언어 코�
       });
     });
 
-    it('이미 추가된 언어(ko, en, ja, zh)는 목록에 포함되지 않아야 한다', async () => {
+    it('이미 추가된 활성 언어(ko, en, ja, zh)는 목록에 포함되지 않아야 한다', async () => {
       // When
       const response = await testSuite
         .request()
@@ -119,6 +119,46 @@ describe('GET /api/admin/languages/available-codes (추가 가능한 언어 코�
       const afterCodes = afterResponse.body.codes.map((c: any) => c.code);
       expect(afterCodes).not.toContain('fr'); // 프랑스어가 없어야 함
       expect(afterResponse.body.total).toBe(beforeResponse.body.total - 1);
+    });
+
+    it('언어를 제외하면 해당 언어는 다시 사용 가능 목록에 포함되어야 한다', async () => {
+      // Given - 프랑스어 추가
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({
+          code: 'fr',
+          name: 'Français',
+          isActive: true,
+        })
+        .expect(201);
+
+      const languageId = createResponse.body.id;
+
+      // 프랑스어가 사용 가능 목록에 없음 확인
+      const beforeExcludeResponse = await testSuite
+        .request()
+        .get('/api/admin/languages/available-codes')
+        .expect(200);
+
+      const beforeExcludeCodes = beforeExcludeResponse.body.codes.map((c: any) => c.code);
+      expect(beforeExcludeCodes).not.toContain('fr');
+
+      // When - 프랑스어 제외
+      await testSuite
+        .request()
+        .delete(`/api/admin/languages/${languageId}`)
+        .expect(200);
+
+      // Then - 프랑스어가 다시 사용 가능 목록에 포함됨
+      const afterExcludeResponse = await testSuite
+        .request()
+        .get('/api/admin/languages/available-codes')
+        .expect(200);
+
+      const afterExcludeCodes = afterExcludeResponse.body.codes.map((c: any) => c.code);
+      expect(afterExcludeCodes).toContain('fr'); // 프랑스어가 다시 나타나야 함
+      expect(afterExcludeResponse.body.total).toBe(beforeExcludeResponse.body.total + 1);
     });
   });
 });

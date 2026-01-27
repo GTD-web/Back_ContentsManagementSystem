@@ -30,20 +30,47 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
   async execute(command: CreateLanguageCommand): Promise<CreateLanguageResult> {
     const { data } = command;
 
-    this.logger.log(`언어 생성 시작 - 코드: ${data.code}, 이름: ${data.name}`);
+    this.logger.log(`언어 추가 시작 - 코드: ${data.code}, 이름: ${data.name}`);
 
-    // 중복 체크
+    // 제외된 언어 포함하여 중복 체크
     const existing = await this.languageRepository.findOne({
       where: { code: data.code },
+      withDeleted: true, // soft deleted 언어도 조회
     });
 
     if (existing) {
+      // 제외된 언어라면 복원
+      if (existing.deletedAt) {
+        this.logger.log(
+          `제외된 언어를 복원합니다 - 코드: ${data.code}, ID: ${existing.id}`,
+        );
+
+        // 복원 및 데이터 업데이트
+        existing.name = data.name;
+        existing.isActive = data.isActive ?? true;
+        existing.deletedAt = undefined;
+        existing.updatedBy = data.createdBy ?? null;
+
+        const restored = await this.languageRepository.save(existing);
+
+        this.logger.log(`언어 복원 완료 - ID: ${restored.id}`);
+
+        return {
+          id: restored.id,
+          code: restored.code,
+          name: restored.name,
+          isActive: restored.isActive,
+          createdAt: restored.createdAt,
+        };
+      }
+
+      // 이미 활성 상태인 언어라면 오류
       throw new ConflictException(
         `이미 존재하는 언어 코드입니다: ${data.code}`,
       );
     }
 
-    // 언어 생성
+    // 새 언어 생성
     const language = this.languageRepository.create({
       ...data,
       isActive: data.isActive ?? true, // 기본값 true 설정

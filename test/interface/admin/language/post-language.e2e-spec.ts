@@ -85,6 +85,43 @@ describe('POST /api/admin/languages (언어 추가)', () => {
       // Then
       expect(response.body.isActive).toBe(true);
     });
+
+    it('제외된 언어를 다시 추가하면 복원되어야 한다', async () => {
+      // Given - 언어 추가
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({
+          code: 'ko',
+          name: '한국어',
+          isActive: true,
+        })
+        .expect(201);
+
+      const languageId = createResponse.body.id;
+
+      // 언어 제외
+      await testSuite
+        .request()
+        .delete(`/api/admin/languages/${languageId}`)
+        .expect(200);
+
+      // When - 같은 코드로 다시 추가
+      const restoreResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({
+          code: 'ko',
+          name: '한국어 (복원)',
+          isActive: true,
+        })
+        .expect(201);
+
+      // Then - 같은 ID로 복원되어야 함
+      expect(restoreResponse.body.id).toBe(languageId);
+      expect(restoreResponse.body.name).toBe('한국어 (복원)');
+      expect(restoreResponse.body.isActive).toBe(true);
+    });
   });
 
   describe('실패 케이스 - 필수 필드 누락', () => {
@@ -154,7 +191,7 @@ describe('POST /api/admin/languages (언어 추가)', () => {
   });
 
   describe('실패 케이스 - 중복 데이터', () => {
-    it('이미 존재하는 code로 추가 시 409 에러가 발생해야 한다', async () => {
+    it('이미 활성 상태인 code로 추가 시 409 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
         code: 'ko',
@@ -164,7 +201,7 @@ describe('POST /api/admin/languages (언어 추가)', () => {
 
       await testSuite.request().post('/api/admin/languages').send(createDto);
 
-      // When & Then
+      // When & Then - 같은 코드로 다시 추가 시도
       await testSuite
         .request()
         .post('/api/admin/languages')

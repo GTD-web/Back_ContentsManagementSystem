@@ -76,7 +76,7 @@ export class LanguageController {
     summary: '추가 가능한 언어 코드 목록 조회',
     description:
       'ISO 639-1 표준에 따른 추가 가능한 언어 코드 목록을 조회합니다.\n\n' +
-      '이미 시스템에 추가된 언어는 제외됩니다.\n' +
+      '활성 상태인 언어만 제외되며, 제외된 언어는 다시 추가할 수 있습니다.\n' +
       '언어 추가 시 참고할 수 있는 표준 언어 코드 목록입니다.',
   })
   @ApiResponse({
@@ -102,6 +102,7 @@ export class LanguageController {
     summary: '언어 추가',
     description:
       '새로운 언어를 시스템에 추가합니다.\n\n' +
+      '이미 제외된 언어 코드를 사용하면 해당 언어가 복원됩니다.\n\n' +
       '**필수 필드:**\n' +
       '- `code`: 언어 코드 (ISO 639-1 표준, 예: ko, en, ja, zh, fr, de 등)\n' +
       '- `name`: 언어 이름\n\n' +
@@ -111,12 +112,12 @@ export class LanguageController {
   })
   @ApiResponse({
     status: 201,
-    description: '언어 추가 성공',
+    description: '언어 추가 성공 (새 언어 생성 또는 제외된 언어 복원)',
     type: LanguageResponseDto,
   })
   @ApiResponse({
     status: 409,
-    description: '이미 존재하는 언어 코드',
+    description: '이미 활성 상태인 언어 코드',
   })
   async 언어를_추가한다(
     @CurrentUser() user: AuthenticatedUser,
