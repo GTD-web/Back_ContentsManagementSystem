@@ -20,6 +20,7 @@ import { WikiModule } from './interface/admin/wiki/wiki.module';
 import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
 import { PermissionValidationModule } from './interface/admin/permission-validation/permission-validation.module';
 import { BackupModule } from './interface/admin/backup/backup.module';
+import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
 import { HealthModule } from './interface/common/health/health.module';
 import { CompanyModule } from './interface/common/company/company.module';
 import { AuthContextModule } from '@context/auth-context';
@@ -74,6 +75,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     SeedDataModule,
     PermissionValidationModule,
     BackupModule,
+    AnalyticsModule,
     CompanyModule,
   ],
   providers: [
