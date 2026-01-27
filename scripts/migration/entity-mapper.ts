@@ -10,6 +10,106 @@ import {
  */
 
 /**
+ * 언어 코드 매핑 (MongoDB → PostgreSQL)
+ */
+const LANGUAGE_CODE_MAP: Record<string, string> = {
+  ko: 'ko',
+  en: 'en',
+  kr: 'ko', // 한국어 대체
+  korean: 'ko',
+  english: 'en',
+};
+
+/**
+ * 언어 ID를 가져옵니다 (하드코딩된 UUID 사용)
+ * 실제 환경에서는 DB에서 조회해야 하지만, 마이그레이션 시에는 고정값 사용
+ */
+const LANGUAGE_IDS: Record<string, string> = {
+  ko: '31e6bbc6-2839-4477-9672-bb4b381e8914', // 한국어 (실제 DB의 언어 ID)
+  en: 'a1234567-89ab-cdef-0123-456789abcdef', // 영어 (필요시)
+};
+
+/**
+ * MongoDB의 단일 언어 데이터를 PostgreSQL translations 배열로 변환
+ * MongoDB에는 translations 배열이 없고 title, content 등이 직접 저장되어 있음
+ */
+function createTranslationsFromSingleLanguage(
+  title: string,
+  description?: string | null,
+  content?: string | null,
+): any[] {
+  return [
+    {
+      languageId: LANGUAGE_IDS.ko, // 한국어로 저장
+      title: title || '',
+      description: description || null,
+      content: content || null,
+      isSynced: false, // 사용자가 직접 입력한 데이터
+    },
+  ];
+}
+
+/**
+ * MongoDB files 배열을 PostgreSQL attachments 배열로 변환
+ */
+function mapFiles(mongoFiles: any[]): any[] | null {
+  if (!mongoFiles || !Array.isArray(mongoFiles) || mongoFiles.length === 0) {
+    return null;
+  }
+
+  return mongoFiles.map((file) => ({
+    fileName: file.fileName || '',
+    fileUrl: file.filePath || file.url || '',
+    fileSize: file.fileSize || 0,
+    mimeType: file.mimeType || getMimeTypeFromFileName(file.fileName),
+  }));
+}
+
+/**
+ * 파일명에서 MIME 타입 추정
+ */
+function getMimeTypeFromFileName(fileName: string): string {
+  const ext = fileName?.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    pdf: 'application/pdf',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
+}
+
+/**
+ * MongoDB translations를 PostgreSQL translations로 변환
+ * (이 함수는 실제로 translations 배열이 있는 경우를 위해 남겨둠)
+ */
+function mapTranslations(mongoTranslations: any[], parentId: string): any[] {
+  if (!mongoTranslations || !Array.isArray(mongoTranslations)) {
+    return [];
+  }
+
+  return mongoTranslations
+    .filter((t) => t && (t.title || t.description || t.content))
+    .map((t) => {
+      const langCode = LANGUAGE_CODE_MAP[t.lang?.toLowerCase()] || 'ko';
+      const languageId = LANGUAGE_IDS[langCode] || LANGUAGE_IDS.ko;
+
+      return {
+        languageId,
+        title: t.title || '',
+        description: t.description || null,
+        content: t.content || null,
+        isSynced: false,
+      };
+    });
+}
+
+/**
  * BaseEntity 공통 필드를 추가합니다.
  */
 function addBaseEntityFields(doc: any, mongoDoc: any): any {
@@ -179,16 +279,30 @@ export function mapIR(
     categoryId = defaultCategoryId;
   }
 
-  return addBaseEntityFields(
+  // files 배열을 attachments로 변환
+  const attachments = mapFiles(mongoDoc.files);
+
+  const baseEntity = addBaseEntityFields(
     {
       id: doc.id,
       isPublic: doc.isPublic !== false,
-      attachments: doc.attachments || null,
+      attachments: attachments,
       order: doc.order || 0,
       categoryId: categoryId || null,
     },
     mongoDoc,
   );
+
+  // MongoDB의 title, content를 한국어 translation으로 변환
+  if (mongoDoc.title) {
+    baseEntity.translations = createTranslationsFromSingleLanguage(
+      mongoDoc.title,
+      mongoDoc.description,
+      mongoDoc.content,
+    );
+  }
+
+  return baseEntity;
 }
 
 /**
@@ -211,16 +325,30 @@ export function mapElectronicDisclosure(
     categoryId = defaultCategoryId;
   }
 
-  return addBaseEntityFields(
+  // files 배열을 attachments로 변환
+  const attachments = mapFiles(mongoDoc.files);
+
+  const baseEntity = addBaseEntityFields(
     {
       id: doc.id,
       isPublic: doc.isPublic !== false,
-      attachments: doc.attachments || null,
+      attachments: attachments,
       order: doc.order || 0,
       categoryId: categoryId || null,
     },
     mongoDoc,
   );
+
+  // MongoDB의 title, content를 한국어 translation으로 변환
+  if (mongoDoc.title) {
+    baseEntity.translations = createTranslationsFromSingleLanguage(
+      mongoDoc.title,
+      mongoDoc.description,
+      mongoDoc.content,
+    );
+  }
+
+  return baseEntity;
 }
 
 /**
@@ -243,16 +371,28 @@ export function mapShareholdersMeeting(
     categoryId = defaultCategoryId;
   }
 
-  return addBaseEntityFields(
+  const baseEntity = addBaseEntityFields(
     {
       id: doc.id,
       categoryId: categoryId || null,
-      meetingDate: doc.meetingDate || null,
+      meetingDate: mongoDoc.date || mongoDoc.meetingDate || null,
+      location: mongoDoc.location || null,
       isPublic: doc.isPublic !== false,
       order: doc.order || 0,
     },
     mongoDoc,
   );
+
+  // MongoDB의 title을 한국어 translation으로 변환
+  if (mongoDoc.title) {
+    baseEntity.translations = createTranslationsFromSingleLanguage(
+      mongoDoc.title,
+      mongoDoc.description,
+      mongoDoc.content,
+    );
+  }
+
+  return baseEntity;
 }
 
 /**
@@ -275,19 +415,37 @@ export function mapNotificationToMainPopup(
     categoryId = defaultCategoryId;
   }
 
-  return addBaseEntityFields(
+  // pcFiles와 mobileFiles를 attachments로 통합
+  const allFiles = [
+    ...(mongoDoc.pcFiles || []),
+    ...(mongoDoc.mobileFiles || []),
+  ];
+  const attachments = mapFiles(allFiles);
+
+  const baseEntity = addBaseEntityFields(
     {
       id: doc.id,
       isPublic: doc.isPublic !== false,
-      displayStartDate: doc.startDate || doc.displayStartDate || new Date(),
-      displayEndDate: doc.endDate || doc.displayEndDate || null,
-      imageUrl: doc.imageUrl || doc.image || null,
-      linkUrl: doc.linkUrl || doc.link || null,
+      releasedAt: mongoDoc.date || mongoDoc.startDate || mongoDoc.releasedAt || new Date(),
+      imageUrl: mongoDoc.imageUrl || mongoDoc.image || null,
+      linkUrl: mongoDoc.linkUrl || mongoDoc.link || null,
       order: doc.order || 0,
       categoryId: categoryId || null,
+      attachments: attachments,
     },
     mongoDoc,
   );
+
+  // MongoDB의 title을 한국어 translation으로 변환
+  if (mongoDoc.title) {
+    baseEntity.translations = createTranslationsFromSingleLanguage(
+      mongoDoc.title,
+      mongoDoc.description,
+      mongoDoc.content,
+    );
+  }
+
+  return baseEntity;
 }
 
 /**
