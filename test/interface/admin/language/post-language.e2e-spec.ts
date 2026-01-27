@@ -87,20 +87,20 @@ describe('POST /api/admin/languages (언어 추가)', () => {
     });
 
     it('제외된 언어를 다시 추가하면 복원되어야 한다', async () => {
-      // Given - 언어 추가
+      // Given - 프랑스어 추가
       const createResponse = await testSuite
         .request()
         .post('/api/admin/languages')
         .send({
-          code: 'ko',
-          name: '한국어',
+          code: 'fr',
+          name: 'Français',
           isActive: true,
         })
         .expect(201);
 
       const languageId = createResponse.body.id;
 
-      // 언어 제외
+      // 프랑스어 제외
       await testSuite
         .request()
         .delete(`/api/admin/languages/${languageId}`)
@@ -111,15 +111,15 @@ describe('POST /api/admin/languages (언어 추가)', () => {
         .request()
         .post('/api/admin/languages')
         .send({
-          code: 'ko',
-          name: '한국어 (복원)',
+          code: 'fr',
+          name: 'Français (복원)',
           isActive: true,
         })
         .expect(201);
 
       // Then - 같은 ID로 복원되어야 함
       expect(restoreResponse.body.id).toBe(languageId);
-      expect(restoreResponse.body.name).toBe('한국어 (복원)');
+      expect(restoreResponse.body.name).toBe('Français (복원)');
       expect(restoreResponse.body.isActive).toBe(true);
     });
   });

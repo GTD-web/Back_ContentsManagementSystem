@@ -103,89 +103,6 @@ describe('언어 추가/제외/복원 통합 시나리오', () => {
     });
 
     it('여러 언어를 추가/제외/복원 반복해도 정상 작동해야 한다', async () => {
-      // 한국어 추가
-      const koResponse = await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어', isActive: true })
-        .expect(201);
-
-      const koId = koResponse.body.id;
-
-      // 영어 추가
-      const enResponse = await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'en', name: 'English', isActive: true })
-        .expect(201);
-
-      const enId = enResponse.body.id;
-
-      // 활성 언어 2개 확인
-      let listResponse = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-      expect(listResponse.body.items).toHaveLength(2);
-
-      // 한국어 제외
-      await testSuite.request().delete(`/api/admin/languages/${koId}`).expect(200);
-
-      listResponse = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-      expect(listResponse.body.items).toHaveLength(1);
-      expect(listResponse.body.items[0].code).toBe('en');
-
-      // 한국어 복원
-      const koRestoreResponse = await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어 (복원)', isActive: true })
-        .expect(201);
-
-      expect(koRestoreResponse.body.id).toBe(koId);
-
-      // 활성 언어 2개 복구 확인
-      listResponse = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-      expect(listResponse.body.items).toHaveLength(2);
-
-      // 영어 제외
-      await testSuite.request().delete(`/api/admin/languages/${enId}`).expect(200);
-
-      listResponse = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-      expect(listResponse.body.items).toHaveLength(1);
-      expect(listResponse.body.items[0].code).toBe('ko');
-
-      // 영어 복원
-      const enRestoreResponse = await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'en', name: 'English (Restored)', isActive: true })
-        .expect(201);
-
-      expect(enRestoreResponse.body.id).toBe(enId);
-
-      // 최종 확인
-      listResponse = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-      expect(listResponse.body.items).toHaveLength(2);
-
-      const codes = listResponse.body.items.map((item: any) => item.code);
-      expect(codes).toContain('ko');
-      expect(codes).toContain('en');
-    });
-
-    it('제외된 언어는 includeInactive=true로 조회할 수 있어야 한다', async () => {
       // 프랑스어 추가
       const frResponse = await testSuite
         .request()
@@ -195,6 +112,89 @@ describe('언어 추가/제외/복원 통합 시나리오', () => {
 
       const frId = frResponse.body.id;
 
+      // 독일어 추가
+      const deResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({ code: 'de', name: 'Deutsch', isActive: true })
+        .expect(201);
+
+      const deId = deResponse.body.id;
+
+      // 활성 언어 2개 확인
+      let listResponse = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+      expect(listResponse.body.items).toHaveLength(2);
+
+      // 프랑스어 제외
+      await testSuite.request().delete(`/api/admin/languages/${frId}`).expect(200);
+
+      listResponse = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+      expect(listResponse.body.items).toHaveLength(1);
+      expect(listResponse.body.items[0].code).toBe('de');
+
+      // 프랑스어 복원
+      const frRestoreResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({ code: 'fr', name: 'Français (복원)', isActive: true })
+        .expect(201);
+
+      expect(frRestoreResponse.body.id).toBe(frId);
+
+      // 활성 언어 2개 복구 확인
+      listResponse = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+      expect(listResponse.body.items).toHaveLength(2);
+
+      // 독일어 제외
+      await testSuite.request().delete(`/api/admin/languages/${deId}`).expect(200);
+
+      listResponse = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+      expect(listResponse.body.items).toHaveLength(1);
+      expect(listResponse.body.items[0].code).toBe('fr');
+
+      // 독일어 복원
+      const deRestoreResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({ code: 'de', name: 'Deutsch (Wiederhergestellt)', isActive: true })
+        .expect(201);
+
+      expect(deRestoreResponse.body.id).toBe(deId);
+
+      // 최종 확인
+      listResponse = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+      expect(listResponse.body.items).toHaveLength(2);
+
+      const codes = listResponse.body.items.map((item: any) => item.code);
+      expect(codes).toContain('fr');
+      expect(codes).toContain('de');
+    });
+
+    it('제외된 언어는 includeInactive=true로 조회할 수 있어야 한다', async () => {
+      // 스페인어 추가
+      const esResponse = await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({ code: 'es', name: 'Español', isActive: true })
+        .expect(201);
+
+      const esId = esResponse.body.id;
+
       // 활성 언어 목록 확인
       let activeResponse = await testSuite
         .request()
@@ -202,8 +202,8 @@ describe('언어 추가/제외/복원 통합 시나리오', () => {
         .expect(200);
       expect(activeResponse.body.items).toHaveLength(1);
 
-      // 프랑스어 제외
-      await testSuite.request().delete(`/api/admin/languages/${frId}`).expect(200);
+      // 스페인어 제외
+      await testSuite.request().delete(`/api/admin/languages/${esId}`).expect(200);
 
       // 활성 언어 목록 (제외됨)
       activeResponse = await testSuite
@@ -219,8 +219,8 @@ describe('언어 추가/제외/복원 통합 시나리오', () => {
         .expect(200);
 
       expect(inactiveResponse.body.items).toHaveLength(1);
-      expect(inactiveResponse.body.items[0].id).toBe(frId);
-      expect(inactiveResponse.body.items[0].code).toBe('fr');
+      expect(inactiveResponse.body.items[0].id).toBe(esId);
+      expect(inactiveResponse.body.items[0].code).toBe('es');
       expect(inactiveResponse.body.items[0].isActive).toBe(false);
     });
   });

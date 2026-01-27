@@ -29,10 +29,15 @@ export class GetLanguageListHandler implements IQueryHandler<GetLanguageListQuer
 
     this.logger.debug(`언어 목록 조회 - 비활성 포함: ${includeInactive}`);
 
-    const queryBuilder = this.languageRepository.createQueryBuilder('language');
+    const queryBuilder = this.languageRepository
+      .createQueryBuilder('language')
+      .withDeleted(); // soft deleted 언어도 조회 가능
 
     if (!includeInactive) {
-      queryBuilder.where('language.isActive = :isActive', { isActive: true });
+      // 활성 언어만 조회 (isActive=true AND deletedAt IS NULL)
+      queryBuilder
+        .where('language.isActive = :isActive', { isActive: true })
+        .andWhere('language.deletedAt IS NULL');
     }
 
     const [items, total] = await queryBuilder

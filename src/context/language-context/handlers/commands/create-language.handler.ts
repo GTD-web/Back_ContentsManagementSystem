@@ -45,13 +45,15 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
           `제외된 언어를 복원합니다 - 코드: ${data.code}, ID: ${existing.id}`,
         );
 
-        // 복원 및 데이터 업데이트
-        existing.name = data.name;
-        existing.isActive = data.isActive ?? true;
-        existing.updatedBy = data.createdBy ?? null;
+        // TypeORM의 recover 메서드로 soft delete 복원
+        const recovered = await this.languageRepository.recover(existing);
 
-        // TypeORM의 recover 메서드 사용하여 soft delete 복원
-        const restored = await this.languageRepository.recover(existing);
+        // 복원 후 데이터 업데이트
+        recovered.name = data.name;
+        recovered.isActive = data.isActive ?? true;
+        recovered.updatedBy = data.createdBy ?? null;
+
+        const restored = await this.languageRepository.save(recovered);
 
         this.logger.log(`언어 복원 완료 - ID: ${restored.id}`);
 

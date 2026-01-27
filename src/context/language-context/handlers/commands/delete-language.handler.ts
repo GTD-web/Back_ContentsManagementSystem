@@ -28,7 +28,7 @@ export class DeleteLanguageHandler implements ICommandHandler<DeleteLanguageComm
   async execute(command: DeleteLanguageCommand): Promise<boolean> {
     const { id } = command;
 
-    this.logger.log(`언어 삭제 시작 - ID: ${id}`);
+    this.logger.log(`언어 제외 시작 - ID: ${id}`);
 
     // 언어 조회
     const language = await this.languageRepository.findOne({ where: { id } });
@@ -41,17 +41,19 @@ export class DeleteLanguageHandler implements ICommandHandler<DeleteLanguageComm
     const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
     if (language.code === defaultLanguageCode) {
       this.logger.warn(
-        `기본 언어 삭제 시도 차단 - ${language.name} (${language.code})`,
+        `기본 언어 제외 시도 차단 - ${language.name} (${language.code})`,
       );
       throw new BadRequestException(
-        `기본 언어(${language.name})는 삭제할 수 없습니다. 시스템 운영에 필수적인 언어입니다.`,
+        `기본 언어(${language.name})는 제외할 수 없습니다. 시스템 운영에 필수적인 언어입니다.`,
       );
     }
 
-    // Soft Delete
-    await this.languageRepository.softRemove(language);
+    // isActive를 false로 변경 후 Soft Delete
+    language.isActive = false;
+    await this.languageRepository.save(language); // isActive 변경 저장
+    await this.languageRepository.softDelete({ id }); // soft delete 수행
 
-    this.logger.log(`언어 삭제 완료 - ID: ${id}, 이름: ${language.name}`);
+    this.logger.log(`언어 제외 완료 - ID: ${id}, 이름: ${language.name}`);
 
     return true;
   }
