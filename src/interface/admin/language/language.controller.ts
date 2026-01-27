@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Delete,
   Body,
   Param,
@@ -21,7 +20,6 @@ import { Roles, CurrentUser } from '@interface/common/decorators';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { LanguageBusinessService } from '@business/language-business/language-business.service';
 import { CreateLanguageDto } from '@interface/common/dto/language/create-language.dto';
-import { UpdateLanguageDto } from '@interface/common/dto/language/update-language.dto';
 import {
   LanguageResponseDto,
   LanguageListResponseDto,
@@ -177,41 +175,6 @@ export class LanguageController {
     @Param('id') id: string,
   ): Promise<LanguageResponseDto> {
     return await this.languageBusinessService.언어_상세를_조회한다(id);
-  }
-
-  /**
-   * 언어를 수정한다
-   */
-  @Patch(':id')
-  @ApiOperation({
-    summary: '언어 수정',
-    description:
-      '언어 정보를 수정합니다. 전체 또는 일부 필드만 수정 가능합니다.\n\n' +
-      '**선택 필드 (모두 선택):**\n' +
-      '- `name`: 언어 이름\n' +
-      '- `isActive`: 활성화 여부 (boolean)\n\n' +
-      '**파라미터:**\n' +
-      '- `id`: 언어 ID (UUID, 필수)\n\n' +
-      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '언어 수정 성공',
-    type: LanguageResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '언어를 찾을 수 없음',
-  })
-  async 언어를_수정한다(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-    @Body() updateDto: UpdateLanguageDto,
-  ): Promise<LanguageResponseDto> {
-    return await this.languageBusinessService.언어를_수정한다(id, {
-      ...updateDto,
-      updatedBy: user.id,
-    });
   }
 
   /**

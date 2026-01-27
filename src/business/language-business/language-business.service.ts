@@ -67,26 +67,6 @@ export class LanguageBusinessService {
   }
 
   /**
-   * 언어를 수정한다
-   */
-  async 언어를_수정한다(
-    id: string,
-    data: {
-      name?: string;
-      isActive?: boolean;
-      updatedBy?: string;
-    },
-  ): Promise<Language> {
-    this.logger.log(`언어 수정 시작 - ID: ${id}`);
-
-    const result = await this.languageContextService.언어를_수정한다(id, data);
-
-    this.logger.log(`언어 수정 완료 - ID: ${id}`);
-
-    return result;
-  }
-
-  /**
    * 언어를 제외한다 (Soft Delete)
    */
   async 언어를_제외한다(id: string): Promise<boolean> {
