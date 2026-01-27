@@ -344,14 +344,44 @@ async function bootstrap() {
 
       // 7.2 LumirStory 삽입 (MongoDB news → PostgreSQL lumir_stories)
       if (lumirStories.length > 0) {
-        await insertInBatches(manager, 'lumir_stories', lumirStories, 1000);
+        const lumirStoryEntities = lumirStories.map(({ translations, ...entity }) => entity);
+        await insertInBatches(manager, 'lumir_stories', lumirStoryEntities, 1000);
         console.log(`✅ LumirStories: ${lumirStories.length}개 삽입 완료`);
+        
+        // translations 삽입
+        const lumirStoryTranslations = lumirStories
+          .filter(ls => ls.translations && ls.translations.length > 0)
+          .flatMap(ls => 
+            ls.translations.map(t => ({
+              ...t,
+              lumirStoryId: ls.id,
+            }))
+          );
+        if (lumirStoryTranslations.length > 0) {
+          await insertInBatches(manager, 'lumir_story_translations', lumirStoryTranslations, 1000);
+          console.log(`✅ LumirStory Translations: ${lumirStoryTranslations.length}개 삽입 완료`);
+        }
       }
 
       // 7.3 News 삽입 (MongoDB pressreleases → PostgreSQL news)
       if (news.length > 0) {
-        await insertInBatches(manager, 'news', news, 1000);
+        const newsEntities = news.map(({ translations, ...entity }) => entity);
+        await insertInBatches(manager, 'news', newsEntities, 1000);
         console.log(`✅ News: ${news.length}개 삽입 완료`);
+        
+        // translations 삽입
+        const newsTranslations = news
+          .filter(n => n.translations && n.translations.length > 0)
+          .flatMap(n => 
+            n.translations.map(t => ({
+              ...t,
+              newsId: n.id,
+            }))
+          );
+        if (newsTranslations.length > 0) {
+          await insertInBatches(manager, 'news_translations', newsTranslations, 1000);
+          console.log(`✅ News Translations: ${newsTranslations.length}개 삽입 완료`);
+        }
       }
 
       // 7.4 VideoGallery 삽입
@@ -367,53 +397,133 @@ async function bootstrap() {
 
       // 7.5 IR 삽입
       if (irs.length > 0) {
+        const irEntities = irs.map(({ translations, ...entity }) => entity);
         await manager
           .createQueryBuilder()
           .insert()
           .into('irs')
-          .values(irs)
+          .values(irEntities)
           .execute();
         console.log(`✅ IRs: ${irs.length}개 삽입 완료`);
+        
+        // translations 삽입
+        const irTranslations = irs
+          .filter(ir => ir.translations && ir.translations.length > 0)
+          .flatMap(ir => 
+            ir.translations.map(t => ({
+              ...t,
+              irId: ir.id,
+            }))
+          );
+        if (irTranslations.length > 0) {
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('ir_translations')
+            .values(irTranslations)
+            .execute();
+          console.log(`✅ IR Translations: ${irTranslations.length}개 삽입 완료`);
+        }
       }
 
       // 7.6 ElectronicDisclosure 삽입
       if (electronicDisclosures.length > 0) {
+        const edEntities = electronicDisclosures.map(({ translations, ...entity }) => entity);
         await manager
           .createQueryBuilder()
           .insert()
           .into('electronic_disclosures')
-          .values(electronicDisclosures)
+          .values(edEntities)
           .execute();
         console.log(
           `✅ ElectronicDisclosures: ${electronicDisclosures.length}개 삽입 완료`,
         );
+        
+        // translations 삽입
+        const edTranslations = electronicDisclosures
+          .filter(ed => ed.translations && ed.translations.length > 0)
+          .flatMap(ed => 
+            ed.translations.map(t => ({
+              ...t,
+              electronicDisclosureId: ed.id,
+            }))
+          );
+        if (edTranslations.length > 0) {
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('electronic_disclosure_translations')
+            .values(edTranslations)
+            .execute();
+          console.log(`✅ ElectronicDisclosure Translations: ${edTranslations.length}개 삽입 완료`);
+        }
       }
 
       // 7.7 ShareholdersMeeting 삽입
       if (shareholdersMeetings.length > 0) {
+        const smEntities = shareholdersMeetings.map(({ translations, ...entity }) => entity);
         await manager
           .createQueryBuilder()
           .insert()
           .into('shareholders_meetings')
-          .values(shareholdersMeetings)
+          .values(smEntities)
           .execute();
         console.log(
           `✅ ShareholdersMeetings: ${shareholdersMeetings.length}개 삽입 완료`,
         );
+        
+        // translations 삽입
+        const smTranslations = shareholdersMeetings
+          .filter(sm => sm.translations && sm.translations.length > 0)
+          .flatMap(sm => 
+            sm.translations.map(t => ({
+              ...t,
+              shareholdersMeetingId: sm.id,
+            }))
+          );
+        if (smTranslations.length > 0) {
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('shareholders_meeting_translations')
+            .values(smTranslations)
+            .execute();
+          console.log(`✅ ShareholdersMeeting Translations: ${smTranslations.length}개 삽입 완료`);
+        }
       }
 
-      // 7.7 MainPopup 삽입
+      // 7.8 MainPopup 삽입
       if (mainPopups.length > 0) {
+        const mpEntities = mainPopups.map(({ translations, ...entity }) => entity);
         await manager
           .createQueryBuilder()
           .insert()
           .into('main_popups')
-          .values(mainPopups)
+          .values(mpEntities)
           .execute();
         console.log(`✅ MainPopups: ${mainPopups.length}개 삽입 완료`);
+        
+        // translations 삽입
+        const mpTranslations = mainPopups
+          .filter(mp => mp.translations && mp.translations.length > 0)
+          .flatMap(mp => 
+            mp.translations.map(t => ({
+              ...t,
+              mainPopupId: mp.id,
+            }))
+          );
+        if (mpTranslations.length > 0) {
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into('main_popup_translations')
+            .values(mpTranslations)
+            .execute();
+          console.log(`✅ MainPopup Translations: ${mpTranslations.length}개 삽입 완료`);
+        }
       }
 
-      // 7.8 PageView 삽입 (대용량 - 배치 처리)
+      // 7.9 PageView 삽입 (대용량 - 배치 처리)
       if (pageViews.length > 0) {
         await insertInBatches(manager, 'page_views', pageViews, 5000);
         console.log(`✅ PageViews: ${pageViews.length}개 삽입 완료`);

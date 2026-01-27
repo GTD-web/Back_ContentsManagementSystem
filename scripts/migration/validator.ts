@@ -244,7 +244,7 @@ export function validateMainPopup(
   results.push(
     validateRequiredFields(
       mainPopup,
-      ['id', 'isPublic', 'displayStartDate', 'order'],
+      ['id', 'isPublic', 'releasedAt', 'order'],
       'MainPopup',
     ),
   );

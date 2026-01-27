@@ -21,32 +21,57 @@ const LANGUAGE_CODE_MAP: Record<string, string> = {
 };
 
 /**
- * 언어 ID를 가져옵니다 (하드코딩된 UUID 사용)
- * 실제 환경에서는 DB에서 조회해야 하지만, 마이그레이션 시에는 고정값 사용
+ * 언어 ID를 가져옵니다
+ * 실제 DB의 언어 ID (languages 테이블 기준)
  */
 const LANGUAGE_IDS: Record<string, string> = {
-  ko: '31e6bbc6-2839-4477-9672-bb4b381e8914', // 한국어 (실제 DB의 언어 ID)
-  en: 'a1234567-89ab-cdef-0123-456789abcdef', // 영어 (필요시)
+  ko: 'ff065879-4f32-472c-9cd3-bd4d15601fd0', // 한국어 (실제 DB의 언어 ID)
+  en: 'ce34e780-1244-41d2-8b54-630d72553e8b', // 영어 (실제 DB의 언어 ID)
+  ja: '1c3232f0-b6f4-4739-87dc-42a211fbb660', // 일본어 (실제 DB의 언어 ID)
+  zh: '17bb8818-8c28-4b95-82d4-dab68d10f092', // 중문 (실제 DB의 언어 ID)
 };
+
+/**
+ * .env에서 기본 언어 코드 가져오기
+ */
+function getDefaultLanguageCode(): string {
+  const envLanguage = process.env.DEFAULT_LANGUAGE_CODE?.toLowerCase() || 'ko';
+  return LANGUAGE_CODE_MAP[envLanguage] || 'ko';
+}
+
+/**
+ * 기본 언어 ID 가져오기
+ */
+function getDefaultLanguageId(): string {
+  const languageCode = getDefaultLanguageCode();
+  return LANGUAGE_IDS[languageCode] || LANGUAGE_IDS.ko;
+}
 
 /**
  * MongoDB의 단일 언어 데이터를 PostgreSQL translations 배열로 변환
  * MongoDB에는 translations 배열이 없고 title, content 등이 직접 저장되어 있음
+ * .env의 DEFAULT_LANGUAGE_CODE 설정을 기본 언어로 사용하고,
+ * 나머지 언어들은 자동 번역 대상으로 표시 (isSynced: true)
  */
 function createTranslationsFromSingleLanguage(
   title: string,
   description?: string | null,
   content?: string | null,
 ): any[] {
-  return [
-    {
-      languageId: LANGUAGE_IDS.ko, // 한국어로 저장
-      title: title || '',
-      description: description || null,
-      content: content || null,
-      isSynced: false, // 사용자가 직접 입력한 데이터
-    },
-  ];
+  const defaultLanguageCode = getDefaultLanguageCode();
+  const allLanguageCodes = ['ko', 'en', 'ja', 'zh']; // 지원하는 모든 언어
+  
+  return allLanguageCodes.map(langCode => {
+    const isDefaultLanguage = langCode === defaultLanguageCode;
+    
+    return {
+      languageId: LANGUAGE_IDS[langCode],
+      title: isDefaultLanguage ? (title || '') : (title || ''), // 모든 언어에 동일한 원본 텍스트
+      description: isDefaultLanguage ? (description || null) : (description || null),
+      content: isDefaultLanguage ? (content || null) : (content || null),
+      isSynced: !isDefaultLanguage, // 기본 언어는 false(원본), 나머지는 true(자동 번역 대상)
+    };
+  });
 }
 
 /**
