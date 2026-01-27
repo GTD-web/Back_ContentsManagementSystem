@@ -72,73 +72,33 @@ describe('GET /api/admin/languages (언어 목록 조회)', () => {
       expect(response.body.items[0]).toHaveProperty('isActive');
       expect(typeof response.body.items[0].isActive).toBe('boolean');
     });
-  });
-});
 
-describe('GET /api/admin/languages/:id (언어 상세 조회)', () => {
-  const testSuite = new BaseE2ETest();
-
-  beforeAll(async () => {
-    await testSuite.beforeAll();
-  });
-
-  afterAll(async () => {
-    await testSuite.afterAll();
-  });
-
-  beforeEach(async () => {
-    await testSuite.cleanupBeforeTest();
-    await testSuite.initializeDefaultLanguages();
-  });
-
-  describe('성공 케이스', () => {
-    it('ID로 언어를 조회해야 한다', async () => {
-      // Given
-      const languages = await testSuite
+    it('isDefault 필드가 포함되어야 하고 기본 언어가 표시되어야 한다', async () => {
+      // When
+      const response = await testSuite
         .request()
         .get('/api/admin/languages')
         .expect(200);
 
-      const languageId = languages.body.items[0].id;
-
-      // When
-      const response = await testSuite
-        .request()
-        .get(`/api/admin/languages/${languageId}`)
-        .expect(200);
-
       // Then
-      expect(response.body).toMatchObject({
-        id: languageId,
-        isActive: true,
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
+      // 모든 언어에 isDefault 필드가 있어야 함
+      response.body.items.forEach((lang: any) => {
+        expect(lang).toHaveProperty('isDefault');
+        expect(typeof lang.isDefault).toBe('boolean');
       });
-    });
-  });
 
-  describe('실패 케이스', () => {
-    it('존재하지 않는 ID로 조회 시 404 에러가 발생해야 한다', async () => {
-      // Given
-      const nonExistentId = '00000000-0000-0000-0000-000000000001';
+      // 기본 언어(테스트 환경: ko) 확인
+      const defaultLanguage = response.body.items.find(
+        (lang: any) => lang.isDefault === true,
+      );
+      expect(defaultLanguage).toBeDefined();
+      expect(defaultLanguage.code).toBe('ko'); // 테스트 환경의 기본 언어
 
-      // When & Then
-      await testSuite
-        .request()
-        .get(`/api/admin/languages/${nonExistentId}`)
-        .expect(404);
-    });
-
-    it('잘못된 UUID 형식으로 조회 시 400 에러가 발생해야 한다', async () => {
-      // Given
-      const invalidId = 'invalid-uuid';
-
-      // When & Then
-      const response = await testSuite
-        .request()
-        .get(`/api/admin/languages/${invalidId}`);
-
-      expect([400, 500]).toContain(response.status);
+      // 나머지 언어는 isDefault가 false여야 함
+      const nonDefaultLanguages = response.body.items.filter(
+        (lang: any) => lang.isDefault === false,
+      );
+      expect(nonDefaultLanguages).toHaveLength(3); // en, ja, zh
     });
   });
 });

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { CreateLanguageCommand } from './handlers/commands/create-language.handler';
 import { UpdateLanguageCommand } from './handlers/commands/update-language.handler';
 import { UpdateLanguageActiveCommand } from './handlers/commands/update-language-active.handler';
@@ -9,7 +10,6 @@ import { UpdateLanguageOrderCommand } from './handlers/commands/update-language-
 import { DeleteLanguageCommand } from './handlers/commands/delete-language.handler';
 import { InitializeDefaultLanguagesCommand } from './handlers/commands/initialize-default-languages.handler';
 import { GetLanguageListQuery } from './handlers/queries/get-language-list.handler';
-import { GetLanguageDetailQuery } from './handlers/queries/get-language-detail.handler';
 import {
   CreateLanguageDto,
   CreateLanguageResult,
@@ -32,6 +32,7 @@ export class LanguageContextService implements OnModuleInit {
     private readonly queryBus: QueryBus,
     @InjectRepository(Language)
     private readonly languageRepository: Repository<Language>,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -42,9 +43,15 @@ export class LanguageContextService implements OnModuleInit {
     try {
       this.logger.log('🌐 서버 시작 시 기본 언어 초기화 시작...');
       
-      // 기본 언어 목록 (English를 첫 번째로 설정)
+      // 기본 언어 코드 가져오기
+      const defaultLanguageCode = this.configService.get<string>(
+        'DEFAULT_LANGUAGE_CODE',
+        'en',
+      );
+      
+      // 기본 언어 목록
       const defaultLanguages = [
-        { code: 'en', name: 'English' }, // 기본 언어
+        { code: 'en', name: 'English' },
         { code: 'ko', name: '한국어' },
         { code: 'ja', name: '日本語' },
         { code: 'zh', name: '中文' },
@@ -59,23 +66,33 @@ export class LanguageContextService implements OnModuleInit {
         });
 
         if (!existing) {
+          const isDefaultLang = lang.code === defaultLanguageCode;
           const language = this.languageRepository.create({
             code: lang.code,
             name: lang.name,
             isActive: true,
+            isDefault: isDefaultLang,
             createdBy: 'system',
           });
           const saved = await this.languageRepository.save(language);
           createdLanguages.push(saved);
           
-          if (lang.code === 'en') {
-            this.logger.log(`✅ 기본 언어 추가 완료 - ${lang.name} (${lang.code}) [기본]`);
+          if (isDefaultLang) {
+            this.logger.log(`✅ 기본 언어 추가 완료 - ${lang.name} (${lang.code}) [시스템 기본 언어]`);
           } else {
             this.logger.log(`   - ${lang.name} (${lang.code})`);
           }
         } else {
-          if (lang.code === 'en') {
-            this.logger.log(`✅ 기본 언어 확인 완료 - ${lang.name} (${lang.code}) [기본, 이미 존재]`);
+          // 기존 언어의 isDefault 값 업데이트 (마이그레이션 후 첫 실행 시)
+          const isDefaultLang = lang.code === defaultLanguageCode;
+          if (existing.isDefault !== isDefaultLang) {
+            existing.isDefault = isDefaultLang;
+            await this.languageRepository.save(existing);
+            this.logger.log(`   - ${lang.name} (${lang.code}) isDefault 업데이트됨`);
+          }
+          
+          if (isDefaultLang) {
+            this.logger.log(`✅ 기본 언어 확인 완료 - ${lang.name} (${lang.code}) [시스템 기본 언어, 이미 존재]`);
           }
         }
       }
@@ -149,14 +166,6 @@ export class LanguageContextService implements OnModuleInit {
     includeInactive: boolean = false,
   ): Promise<LanguageListResult> {
     const query = new GetLanguageListQuery(includeInactive);
-    return await this.queryBus.execute(query);
-  }
-
-  /**
-   * 언어 상세를 조회한다
-   */
-  async 언어_상세를_조회한다(id: string): Promise<Language> {
-    const query = new GetLanguageDetailQuery(id);
     return await this.queryBus.execute(query);
   }
 

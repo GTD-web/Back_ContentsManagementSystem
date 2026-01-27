@@ -32,54 +32,23 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
 
     this.logger.log(`언어 추가 시작 - 코드: ${data.code}, 이름: ${data.name}`);
 
-    // 제외된 언어 포함하여 중복 체크
+    // 중복 체크
     const existing = await this.languageRepository.findOne({
       where: { code: data.code },
-      withDeleted: true, // soft deleted 언어도 조회
     });
 
     if (existing) {
-      // 제외된 언어라면 복원
-      if (existing.deletedAt) {
-        this.logger.log(
-          `제외된 언어를 복원합니다 - 코드: ${data.code}, ID: ${existing.id}`,
-        );
-
-        // TypeORM의 recover 메서드로 soft delete 복원
-        const recovered = await this.languageRepository.recover(existing);
-
-        // 복원 후 데이터 업데이트
-        recovered.name = data.name;
-        recovered.isActive = data.isActive ?? true;
-        recovered.updatedBy = data.createdBy ?? null;
-
-        const restored = await this.languageRepository.save(recovered);
-
-        this.logger.log(`언어 복원 완료 - ID: ${restored.id}`);
-
-        return {
-          id: restored.id,
-          code: restored.code,
-          name: restored.name,
-          isActive: restored.isActive,
-          createdAt: restored.createdAt,
-          updatedAt: restored.updatedAt,
-          createdBy: restored.createdBy,
-          updatedBy: restored.updatedBy,
-          deletedAt: restored.deletedAt,
-        };
-      }
-
-      // 이미 활성 상태인 언어라면 오류
+      // 이미 존재하는 언어라면 오류
       throw new ConflictException(
         `이미 존재하는 언어 코드입니다: ${data.code}`,
       );
     }
 
-    // 새 언어 생성
+    // 새 언어 생성 (새로 추가되는 언어는 기본 언어가 아님)
     const language = this.languageRepository.create({
       ...data,
       isActive: data.isActive ?? true, // 기본값 true 설정
+      isDefault: false, // 새로 추가되는 언어는 기본 언어가 아님
     });
     const saved = await this.languageRepository.save(language);
 
@@ -90,6 +59,7 @@ export class CreateLanguageHandler implements ICommandHandler<CreateLanguageComm
       code: saved.code,
       name: saved.name,
       isActive: saved.isActive,
+      isDefault: saved.isDefault,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
       createdBy: saved.createdBy,

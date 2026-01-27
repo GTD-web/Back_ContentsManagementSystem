@@ -34,6 +34,13 @@ export class Language extends BaseEntity<Language> {
   isActive: boolean;
 
   @Column({
+    type: 'boolean',
+    default: false,
+    comment: '기본 언어 여부 (시스템 기본 언어)',
+  })
+  isDefault: boolean;
+
+  @Column({
     type: 'int',
     default: 0,
     comment: '정렬 순서',

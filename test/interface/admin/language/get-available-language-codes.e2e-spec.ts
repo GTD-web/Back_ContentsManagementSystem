@@ -90,6 +90,38 @@ describe('GET /api/admin/languages/available-codes (추가 가능한 언어 코�
       expect(codes).toContain('hi'); // 힌디어
     });
 
+    it('언어를 추가하면 해당 언어는 사용 가능 목록에서 제외되어야 한다', async () => {
+      // Given - 사용 가능한 코드 조회
+      const beforeResponse = await testSuite
+        .request()
+        .get('/api/admin/languages/available-codes')
+        .expect(200);
+
+      const beforeCodes = beforeResponse.body.codes.map((c: any) => c.code);
+      expect(beforeCodes).toContain('fr'); // 프랑스어가 있어야 함
+
+      // When - 프랑스어 추가
+      await testSuite
+        .request()
+        .post('/api/admin/languages')
+        .send({
+          code: 'fr',
+          name: 'Français',
+          isActive: true,
+        })
+        .expect(201);
+
+      // Then - 프랑스어가 사용 가능 목록에서 제외됨
+      const afterResponse = await testSuite
+        .request()
+        .get('/api/admin/languages/available-codes')
+        .expect(200);
+
+      const afterCodes = afterResponse.body.codes.map((c: any) => c.code);
+      expect(afterCodes).not.toContain('fr'); // 프랑스어가 없어야 함
+      expect(afterResponse.body.total).toBe(beforeResponse.body.total - 1);
+    });
+
     it('언어를 비활성화하면 해당 언어는 다시 사용 가능 목록에 포함되어야 한다', async () => {
       // Given - 일본어 ID 찾기
       const languages = await testSuite

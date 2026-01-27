@@ -35,10 +35,9 @@ export class UpdateLanguageActiveHandler
 
     this.logger.log(`언어 활성 상태 수정 시작 - ID: ${id}, 활성: ${data.isActive}`);
 
-    // 언어 조회 (soft deleted 포함)
+    // 언어 조회 (등록된 언어만 활성 상태 수정 가능)
     const language = await this.languageRepository.findOne({
       where: { id },
-      withDeleted: true,
     });
 
     if (!language) {
@@ -59,35 +58,17 @@ export class UpdateLanguageActiveHandler
           `기본 언어(${language.name})는 비활성화할 수 없습니다. 시스템 운영에 필수적인 언어입니다.`,
         );
       }
-
-      // 비활성화: isActive=false, soft delete
-      language.isActive = false;
-      language.updatedBy = data.updatedBy;
-      await this.languageRepository.save(language);
-      await this.languageRepository.softDelete({ id });
-
-      this.logger.log(`언어 비활성화 완료 - ID: ${id}, 이름: ${language.name}`);
-    } else {
-      // 활성화: soft delete 복원 + isActive=true
-      if (language.deletedAt) {
-        const recovered = await this.languageRepository.recover(language);
-        recovered.isActive = true;
-        recovered.updatedBy = data.updatedBy;
-        const restored = await this.languageRepository.save(recovered);
-
-        this.logger.log(`언어 활성화 (복원) 완료 - ID: ${id}, 이름: ${language.name}`);
-        return restored;
-      } else {
-        // 이미 활성 상태인 경우
-        language.isActive = true;
-        language.updatedBy = data.updatedBy;
-        const updated = await this.languageRepository.save(language);
-
-        this.logger.log(`언어 활성화 완료 - ID: ${id}, 이름: ${language.name}`);
-        return updated;
-      }
     }
 
-    return language;
+    // 활성 상태 변경
+    language.isActive = data.isActive;
+    language.updatedBy = data.updatedBy;
+    const updated = await this.languageRepository.save(language);
+
+    this.logger.log(
+      `언어 활성 상태 수정 완료 - ID: ${id}, 이름: ${language.name}, 활성: ${data.isActive}`,
+    );
+
+    return updated;
   }
 }

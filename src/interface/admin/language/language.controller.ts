@@ -73,6 +73,38 @@ export class LanguageController {
   }
 
   /**
+   * 언어를 추가한다
+   */
+  @Post()
+  @ApiOperation({
+    summary: '언어 추가',
+    description:
+      '새로운 언어를 시스템에 추가합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `code`: 언어 코드 (ISO 639-1)\n' +
+      '- `name`: 언어 이름\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '언어 추가 성공',
+    type: LanguageResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 존재하는 언어 코드',
+  })
+  async 언어를_추가한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() createDto: CreateLanguageDto,
+  ): Promise<LanguageResponseDto> {
+    return await this.languageBusinessService.언어를_추가한다({
+      ...createDto,
+      createdBy: user.id,
+    });
+  }
+
+  /**
    * 사용 가능한 언어 코드 목록을 조회한다
    */
   @Get('available-codes')
@@ -192,28 +224,5 @@ export class LanguageController {
       items,
       total: items.length,
     };
-  }
-
-  /**
-   * 언어 상세를 조회한다
-   */
-  @Get(':id')
-  @ApiOperation({
-    summary: '언어 상세 조회',
-    description: 'ID로 언어 상세 정보를 조회합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '언어 상세 조회 성공',
-    type: LanguageResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '언어를 찾을 수 없음',
-  })
-  async 언어_상세를_조회한다(
-    @Param('id') id: string,
-  ): Promise<LanguageResponseDto> {
-    return await this.languageBusinessService.언어_상세를_조회한다(id);
   }
 }

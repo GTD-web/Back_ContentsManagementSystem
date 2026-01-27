@@ -18,7 +18,7 @@ describe('PATCH /api/admin/languages/:id/active (언어 활성 상태 수정)', 
 
   describe('성공 케이스', () => {
     it('활성 언어를 비활성화할 수 있어야 한다', async () => {
-      // Given - 일본어 추가
+      // Given - 일본어
       const languages = await testSuite
         .request()
         .get('/api/admin/languages')
@@ -42,16 +42,28 @@ describe('PATCH /api/admin/languages/:id/active (언어 활성 상태 수정)', 
         isActive: false,
       });
 
-      // 언어 목록에서 사라졌는지 확인
-      const listResponse = await testSuite
+      // 비활성화된 언어도 목록에 여전히 존재해야 함 (includeInactive=true)
+      const listWithInactive = await testSuite
+        .request()
+        .get('/api/admin/languages?includeInactive=true')
+        .expect(200);
+
+      const jaInList = listWithInactive.body.items.find(
+        (lang: any) => lang.code === 'ja',
+      );
+      expect(jaInList).toBeDefined();
+      expect(jaInList.isActive).toBe(false);
+
+      // 기본 목록(활성만)에서는 제외되어야 함
+      const activeOnlyList = await testSuite
         .request()
         .get('/api/admin/languages')
         .expect(200);
 
-      const jaInList = listResponse.body.items.find(
+      const jaInActiveList = activeOnlyList.body.items.find(
         (lang: any) => lang.code === 'ja',
       );
-      expect(jaInList).toBeUndefined();
+      expect(jaInActiveList).toBeUndefined();
     });
 
     it('비활성화된 언어를 다시 활성화할 수 있어야 한다', async () => {

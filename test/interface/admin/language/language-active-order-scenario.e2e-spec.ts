@@ -45,6 +45,7 @@ describe('언어 활성화/비활성화 통합 시나리오', () => {
         (lang: any) => lang.code === 'ja',
       );
       expect(jaInActiveList).toBeUndefined();
+      expect(activeResponse.body.items).toHaveLength(3); // en, ko, zh만
 
       // When - 비활성 포함 조회
       const allResponse = await testSuite
@@ -58,6 +59,7 @@ describe('언어 활성화/비활성화 통합 시나리오', () => {
       );
       expect(jaInAllList).toBeDefined();
       expect(jaInAllList.isActive).toBe(false);
+      expect(allResponse.body.items).toHaveLength(4); // 모든 언어
     });
 
     it('비활성화된 언어를 다시 활성화하면 같은 ID로 복원되어야 한다', async () => {
@@ -153,7 +155,7 @@ describe('언어 활성화/비활성화 통합 시나리오', () => {
   });
 
   describe('언어 순서와 활성 상태 통합 시나리오', () => {
-    it('비활성화된 언어의 순서 변경은 404 에러가 발생해야 한다', async () => {
+    it('비활성화된 언어의 순서도 변경할 수 있어야 한다', async () => {
       // Given - 일본어 비활성화
       const languages = await testSuite
         .request()
@@ -170,12 +172,15 @@ describe('언어 활성화/비활성화 통합 시나리오', () => {
         .send({ isActive: false })
         .expect(200);
 
-      // When & Then - 비활성화된 일본어의 순서 변경 시도 시 404 발생
-      await testSuite
+      // When - 비활성화된 일본어의 순서 변경 (등록된 언어는 비활성화되어도 순서 변경 가능)
+      const orderResponse = await testSuite
         .request()
         .patch(`/api/admin/languages/${japaneseLanguage.id}/order`)
         .send({ order: 10 })
-        .expect(404);
+        .expect(200);
+
+      // Then - 순서가 변경되어야 함
+      expect(orderResponse.body.order).toBe(10);
     });
 
     it('언어를 활성화/비활성화해도 순서는 유지되어야 한다', async () => {

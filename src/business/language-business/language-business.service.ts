@@ -35,25 +35,12 @@ export class LanguageBusinessService {
   }
 
   /**
-   * 언어 상세를 조회한다
-   */
-  async 언어_상세를_조회한다(id: string): Promise<Language> {
-    this.logger.log(`언어 상세 조회 시작 - ID: ${id}`);
-
-    const result = await this.languageContextService.언어_상세를_조회한다(id);
-
-    this.logger.log(`언어 상세 조회 완료 - ID: ${id}`);
-
-    return result;
-  }
-
-  /**
    * 언어를 추가한다
    */
   async 언어를_추가한다(data: {
     code: string;
     name: string;
-    isActive: boolean;
+    isActive?: boolean;
     createdBy?: string;
   }): Promise<Language> {
     this.logger.log(`언어 추가 시작 - 코드: ${data.code}`);
@@ -63,7 +50,6 @@ export class LanguageBusinessService {
     this.logger.log(`언어 추가 완료 - ID: ${result.id}`);
 
     // CreateLanguageResult를 Language로 변환하여 반환
-    // 복원된 경우에도 핸들러에서 직접 반환하므로 상세 조회 불필요
     return result as Language;
   }
 
@@ -134,14 +120,14 @@ export class LanguageBusinessService {
 
   /**
    * 사용 가능한 언어 코드 목록을 조회한다 (ISO 639-1)
-   * 활성 상태인 언어만 제외하고, 제외된 언어는 포함한다
+   * 활성 상태인 언어만 제외하고, 비활성 언어는 포함한다
    */
   async 사용_가능한_언어_코드_목록을_조회한다(): Promise<
     Array<{ code: string; name: string; nativeName: string }>
   > {
     this.logger.log('언어 코드 목록 조회 시작');
 
-    // 활성 언어만 조회 (제외된 언어는 다시 추가 가능)
+    // 활성 언어만 조회 (비활성 언어는 다시 추가 가능하도록 제외 대상에서 제외)
     const activeLanguages =
       await this.languageContextService.언어_목록을_조회한다(false); // 활성만
     const activeCodes = new Set(

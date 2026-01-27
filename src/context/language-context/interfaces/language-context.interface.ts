@@ -6,7 +6,7 @@ import { Language } from '@domain/common/language/language.entity';
 export interface CreateLanguageDto {
   code: string;
   name: string;
-  isActive: boolean;
+  isActive?: boolean;
   createdBy?: string;
 }
 
@@ -27,6 +27,7 @@ export interface CreateLanguageResult {
   code: string;
   name: string;
   isActive: boolean;
+  isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string | null;

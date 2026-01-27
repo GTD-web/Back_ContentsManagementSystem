@@ -16,6 +16,9 @@ export class LanguageResponseDto {
   @ApiProperty({ description: '활성화 여부', example: true })
   isActive: boolean;
 
+  @ApiProperty({ description: '기본 언어 여부', example: false })
+  isDefault: boolean;
+
   @ApiProperty({ description: '정렬 순서', example: 0 })
   order: number;
 
