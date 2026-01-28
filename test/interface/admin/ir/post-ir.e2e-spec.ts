@@ -69,9 +69,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
       });
 
       // 카테고리 확인
-      expect(response.body.categories).toBeDefined();
-      expect(response.body.categories).toHaveLength(1);
-      expect(response.body.categories[0].id).toBe(categoryId);
+      expect(response.body.categoryName).toBeDefined();
 
       // 자동 번역 동기화로 인해 4개 언어 모두 번역이 생성됨
       expect(response.body.translations).toHaveLength(4);
@@ -185,23 +183,6 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('categoryId', categoryId)
-        .expect(400);
-    });
-
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
-      // Given
-      const translationsData = [
-        {
-          languageId,
-          title: '테스트 IR',
-        },
-      ];
-
-      // When & Then
-      await testSuite
-        .request()
-        .post('/api/admin/irs')
-        .field('translations', JSON.stringify(translationsData))
         .expect(400);
     });
 

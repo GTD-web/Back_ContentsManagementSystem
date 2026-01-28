@@ -34,20 +34,18 @@ export class IRBusinessService {
 
     const irs = await this.irContextService.IR_전체_목록을_조회한다();
 
-    // 모든 IR의 카테고리 매핑 조회
-    const irsWithCategories = await Promise.all(
-      irs.map(async (ir) => {
-        const categories = await this.categoryService.엔티티의_카테고리_매핑을_조회한다(ir.id);
-        return {
-          ...ir,
-          categories,
-        };
-      })
-    );
+    // 모든 IR의 category 객체를 categoryName으로 변환
+    const irsWithCategoryName = irs.map((ir) => {
+      const { category, ...irData } = ir as any;
+      return {
+        ...irData,
+        categoryName: category?.name || null,
+      };
+    });
 
     this.logger.log(`IR 전체 목록 조회 완료 - 총 ${irs.length}개`);
 
-    return irsWithCategories;
+    return irsWithCategoryName;
   }
 
   /**
@@ -98,14 +96,14 @@ export class IRBusinessService {
       updatedBy,
     );
 
-    // 카테고리 매핑 조회
-    const categories = await this.categoryService.엔티티의_카테고리_매핑을_조회한다(id);
-
     this.logger.log(`IR 공개 수정 완료 - ID: ${id}`);
 
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = ir as any;
+
     return {
-      ...ir,
-      categories,
+      ...irData,
+      categoryName: category?.name || null,
     };
   }
 
@@ -154,14 +152,14 @@ export class IRBusinessService {
       categoryId,
     );
 
-    // 카테고리 매핑 조회
-    const categories = await this.categoryService.엔티티의_카테고리_매핑을_조회한다(result.id);
-
     this.logger.log(`IR 생성 완료 - ID: ${result.id}`);
 
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = result as any;
+
     return {
-      ...result,
-      categories,
+      ...irData,
+      categoryName: category?.name || null,
     } as any;
   }
 
@@ -237,14 +235,14 @@ export class IRBusinessService {
       updatedBy,
     });
 
-    // 7. 카테고리 매핑 조회
-    const categories = await this.categoryService.엔티티의_카테고리_매핑을_조회한다(id);
-
     this.logger.log(`IR 수정 완료 - ID: ${id}`);
 
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = result as any;
+
     return {
-      ...result,
-      categories,
+      ...irData,
+      categoryName: category?.name || null,
     };
   }
 
@@ -301,21 +299,8 @@ export class IRBusinessService {
 
     const totalPages = Math.ceil(result.total / limit);
 
-    // IR 엔티티를 IRListItemDto로 변환 (카테고리 포함)
+    // IR 엔티티를 IRListItemDto로 변환
     const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
-    
-    // 모든 IR의 카테고리 매핑 조회
-    const irIds = result.items.map(ir => ir.id);
-    const categoryPromises = irIds.map(id => 
-      this.categoryService.엔티티의_카테고리_매핑을_조회한다(id)
-    );
-    const categoriesResults = await Promise.all(categoryPromises);
-    
-    // IR ID별 카테고리 맵 생성
-    const categoryMap = new Map<string, any[]>();
-    irIds.forEach((id, index) => {
-      categoryMap.set(id, categoriesResults[index]);
-    });
     
     const items: IRListItemDto[] = result.items.map((ir) => {
       const defaultTranslation =
@@ -328,8 +313,7 @@ export class IRBusinessService {
         order: ir.order,
         title: defaultTranslation?.title || '',
         description: defaultTranslation?.description || null,
-        categoryName: ir.category?.name || '',
-        categories: categoryMap.get(ir.id) || [],
+        categoryName: ir.category?.name || null,
         createdAt: ir.createdAt,
         updatedAt: ir.updatedAt,
       };
