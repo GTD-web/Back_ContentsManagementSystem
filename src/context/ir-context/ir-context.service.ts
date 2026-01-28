@@ -28,16 +28,34 @@ export class IRContextService {
    * IR 전체 목록을 조회한다
    */
   async IR_전체_목록을_조회한다(): Promise<IR[]> {
-    return await this.irService.모든_IR을_조회한다({
+    const irs = await this.irService.모든_IR을_조회한다({
       orderBy: 'order',
     });
+    
+    // 각 IR에서 deletedAt이 null인 파일만 반환
+    irs.forEach(ir => {
+      if (ir.attachments) {
+        ir.attachments = ir.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+    
+    return irs;
   }
 
   /**
    * IR 상세를 조회한다
    */
   async IR_상세를_조회한다(id: string): Promise<IR> {
-    return await this.irService.ID로_IR을_조회한다(id);
+    const ir = await this.irService.ID로_IR을_조회한다(id);
+    
+    // deletedAt이 null인 파일만 반환
+    if (ir.attachments) {
+      ir.attachments = ir.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+    
+    return ir;
   }
 
   /**
@@ -179,8 +197,8 @@ export class IRContextService {
       `IR 생성 완료 - ID: ${ir.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})${categoryId ? `, 카테고리 ID: ${categoryId}` : ''}`,
     );
 
-    // 10. 번역 포함하여 재조회
-    return await this.irService.ID로_IR을_조회한다(ir.id);
+    // 10. 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.IR_상세를_조회한다(ir.id);
   }
 
   /**
@@ -296,8 +314,8 @@ export class IRContextService {
       }
     }
 
-    // 번역 포함하여 재조회
-    return await this.irService.ID로_IR을_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.IR_상세를_조회한다(id);
   }
 
   /**
@@ -348,6 +366,13 @@ export class IRContextService {
       orderBy,
       startDate,
       endDate,
+    });
+
+    // deletedAt이 null인 파일만 필터링
+    allIRs.forEach(ir => {
+      if (ir.attachments) {
+        ir.attachments = ir.attachments.filter((att: any) => !att.deletedAt);
+      }
     });
 
     // 페이징 적용

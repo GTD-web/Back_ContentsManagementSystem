@@ -365,25 +365,24 @@ export class MainPopupController {
       }
     }
 
-    // categoryId 검증 (필수)
+    // categoryId 검증 (선택적)
     const categoryId = body?.categoryId;
-    if (!categoryId) {
-      throw new BadRequestException('categoryId는 필수입니다.');
-    }
     
-    if (typeof categoryId !== 'string') {
-      throw new BadRequestException('categoryId는 문자열이어야 합니다.');
-    }
+    if (categoryId) {
+      if (typeof categoryId !== 'string') {
+        throw new BadRequestException('categoryId는 문자열이어야 합니다.');
+      }
 
-    // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(categoryId)) {
-      throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
+      // UUID 형식 검증
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(categoryId)) {
+        throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
+      }
     }
 
     const mainPopup = await this.mainPopupBusinessService.메인_팝업을_생성한다(
       translations,
-      categoryId,
+      categoryId || null,
       user.id,
       files,
     );
@@ -580,26 +579,25 @@ export class MainPopupController {
       }
     }
 
-    // categoryId 검증 (필수)
+    // categoryId 검증 (선택적)
     const categoryId = body?.categoryId;
-    if (!categoryId) {
-      throw new BadRequestException('categoryId는 필수입니다.');
-    }
     
-    if (typeof categoryId !== 'string') {
-      throw new BadRequestException('categoryId는 문자열이어야 합니다.');
-    }
+    if (categoryId !== undefined && categoryId !== null) {
+      if (typeof categoryId !== 'string') {
+        throw new BadRequestException('categoryId는 문자열이어야 합니다.');
+      }
 
-    // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(categoryId)) {
-      throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
+      // UUID 형식 검증
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(categoryId)) {
+        throw new BadRequestException('categoryId는 유효한 UUID 형식이어야 합니다.');
+      }
     }
 
     return await this.mainPopupBusinessService.메인_팝업을_수정한다(
       id,
       translations,
-      categoryId,
+      categoryId !== undefined ? categoryId : null,
       user.id,
       files,
     );

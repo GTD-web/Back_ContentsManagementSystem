@@ -287,9 +287,9 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
         .expect(400);
     });
 
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
+    it('categoryId가 누락되어도 메인 팝업을 생성할 수 있어야 한다', async () => {
       // When & Then
-      await testSuite
+      const response = await testSuite
         .request()
         .post('/api/admin/main-popups')
         .field('translations', JSON.stringify([
@@ -299,7 +299,10 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             description: '설명',
           },
         ]))
-        .expect(400);
+        .expect(201);
+
+      expect(response.body.id).toBeDefined();
+      expect(response.body.categoryId).toBeNull();
     });
   });
 

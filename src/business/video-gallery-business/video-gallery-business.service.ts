@@ -388,20 +388,19 @@ export class VideoGalleryBusinessService {
         videoGalleryId,
       );
 
-    // 2. 기존 업로드 파일 전부 삭제 (S3에서만 삭제, YouTube URL은 유지 안 함)
+    // 2. 기존 업로드 파일에 deletedAt 설정 (소프트 삭제, YouTube URL은 유지)
     const currentVideoSources = videoGallery.videoSources || [];
     const uploadedVideos = currentVideoSources.filter(
-      (source) => source.type === 'upload',
+      (source: any) => source.type === 'upload',
     );
 
-    if (uploadedVideos.length > 0) {
-      const filesToDelete = uploadedVideos.map((video) => video.url);
-      this.logger.log(
-        `스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`,
-      );
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = uploadedVideos.map((video: any) => ({
+      ...video,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${uploadedVideos.length}개의 업로드 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새로운 비디오 소스 배열 구성
     const newVideoSources: Array<{
@@ -409,6 +408,7 @@ export class VideoGalleryBusinessService {
       type: 'upload' | 'youtube';
       title?: string;
       thumbnailUrl?: string;
+      deletedAt?: Date | null;
     }> = [];
 
     // 3-1. 새 파일 업로드 처리 → S3 URL 생성
@@ -424,9 +424,13 @@ export class VideoGalleryBusinessService {
           url: file.url,
           type: 'upload',
           title: file.fileName,
+          deletedAt: null,
         });
       });
       this.logger.log(`파일 업로드 완료: ${uploadedFiles.length}개`);
+    } else {
+      // files가 없으면 기존 업로드 파일만 소프트 삭제된 상태로 유지
+      newVideoSources.push(...markedForDeletion);
     }
 
     // 3-2. YouTube URL 추가
@@ -436,6 +440,7 @@ export class VideoGalleryBusinessService {
           newVideoSources.push({
             url: url.trim(),
             type: 'youtube',
+            deletedAt: null,
           });
         }
       });

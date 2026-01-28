@@ -26,16 +26,34 @@ export class MainPopupContextService {
    * 메인 팝업 전체 목록을 조회한다
    */
   async 메인_팝업_전체_목록을_조회한다(): Promise<MainPopup[]> {
-    return await this.mainPopupService.모든_메인_팝업을_조회한다({
+    const popups = await this.mainPopupService.모든_메인_팝업을_조회한다({
       orderBy: 'order',
     });
+    
+    // 각 메인 팝업에서 deletedAt이 null인 파일만 반환
+    popups.forEach(popup => {
+      if (popup.attachments) {
+        popup.attachments = popup.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+    
+    return popups;
   }
 
   /**
    * 메인 팝업 상세를 조회한다
    */
   async 메인_팝업_상세를_조회한다(id: string): Promise<MainPopup> {
-    return await this.mainPopupService.ID로_메인_팝업을_조회한다(id);
+    const popup = await this.mainPopupService.ID로_메인_팝업을_조회한다(id);
+    
+    // deletedAt이 null인 파일만 반환
+    if (popup.attachments) {
+      popup.attachments = popup.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+    
+    return popup;
   }
 
   /**
@@ -172,8 +190,8 @@ export class MainPopupContextService {
       `메인 팝업 생성 완료 - ID: ${popup.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})`,
     );
 
-    // 9. 번역 포함하여 재조회
-    return await this.mainPopupService.ID로_메인_팝업을_조회한다(popup.id);
+    // 9. 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.메인_팝업_상세를_조회한다(popup.id);
   }
 
   /**
@@ -269,8 +287,8 @@ export class MainPopupContextService {
       }
     }
 
-    // 번역 포함하여 재조회
-    return await this.mainPopupService.ID로_메인_팝업을_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.메인_팝업_상세를_조회한다(id);
   }
 
   /**
@@ -324,6 +342,13 @@ export class MainPopupContextService {
       orderBy,
       startDate,
       endDate,
+    });
+
+    // deletedAt이 null인 파일만 필터링
+    allPopups.forEach(popup => {
+      if (popup.attachments) {
+        popup.attachments = popup.attachments.filter((att: any) => !att.deletedAt);
+      }
     });
 
     // 페이징 적용

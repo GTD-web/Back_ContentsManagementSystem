@@ -4,6 +4,7 @@ import { EventBus } from '@nestjs/cqrs';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { ElectronicDisclosureService } from '@domain/core/electronic-disclosure/electronic-disclosure.service';
 import { LanguageService } from '@domain/common/language/language.service';
+import { CategoryService } from '@domain/common/category/category.service';
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import { ElectronicDisclosureTranslation } from '@domain/core/electronic-disclosure/electronic-disclosure-translation.entity';
 import { Language } from '@domain/common/language/language.entity';
@@ -35,6 +36,11 @@ describe('ElectronicDisclosureContextService', () => {
     기본_언어를_조회한다: jest.fn(),
   };
 
+  const mockCategoryService = {
+    카테고리를_조회한다: jest.fn(),
+    엔티티_타입별_카테고리를_조회한다: jest.fn(),
+  };
+
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
       if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
@@ -58,6 +64,10 @@ describe('ElectronicDisclosureContextService', () => {
         {
           provide: LanguageService,
           useValue: mockLanguageService,
+        },
+        {
+          provide: CategoryService,
+          useValue: mockCategoryService,
         },
         {
           provide: ConfigService,

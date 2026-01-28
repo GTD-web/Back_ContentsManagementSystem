@@ -174,14 +174,15 @@ export class ElectronicDisclosureBusinessService {
     const disclosure =
       await this.electronicDisclosureContextService.전자공시_상세를_조회한다(id);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = disclosure.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -189,6 +190,7 @@ export class ElectronicDisclosureBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -202,8 +204,12 @@ export class ElectronicDisclosureBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트

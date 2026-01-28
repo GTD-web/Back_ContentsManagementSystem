@@ -118,6 +118,7 @@ export class Announcement extends BaseEntity<Announcement> {
     fileUrl: string;
     fileSize: number;
     mimeType: string;
+    deletedAt?: Date | null;
   }> | null;
 
   @Column({

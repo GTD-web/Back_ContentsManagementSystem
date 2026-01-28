@@ -93,6 +93,13 @@ export class GetNewsListHandler implements IQueryHandler<GetNewsListQuery> {
       }
     });
 
+    // deletedAt이 null인 파일만 필터링
+    items.forEach(item => {
+      if (item.attachments) {
+        item.attachments = item.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
     return { items, total, page, limit };
   }
 }

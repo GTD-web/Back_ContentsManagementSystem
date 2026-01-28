@@ -28,16 +28,34 @@ export class ElectronicDisclosureContextService {
    * 전자공시 전체 목록을 조회한다
    */
   async 전자공시_전체_목록을_조회한다(): Promise<ElectronicDisclosure[]> {
-    return await this.electronicDisclosureService.모든_전자공시를_조회한다({
+    const disclosures = await this.electronicDisclosureService.모든_전자공시를_조회한다({
       orderBy: 'order',
     });
+    
+    // 각 전자공시에서 deletedAt이 null인 파일만 반환
+    disclosures.forEach(disclosure => {
+      if (disclosure.attachments) {
+        disclosure.attachments = disclosure.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+    
+    return disclosures;
   }
 
   /**
    * 전자공시 상세를 조회한다
    */
   async 전자공시_상세를_조회한다(id: string): Promise<ElectronicDisclosure> {
-    return await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+    const disclosure = await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+    
+    // deletedAt이 null인 파일만 반환
+    if (disclosure.attachments) {
+      disclosure.attachments = disclosure.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+    
+    return disclosure;
   }
 
   /**
@@ -301,8 +319,8 @@ export class ElectronicDisclosureContextService {
       }
     }
 
-    // 번역 포함하여 재조회
-    return await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.전자공시_상세를_조회한다(id);
   }
 
   /**
@@ -358,6 +376,13 @@ export class ElectronicDisclosureContextService {
         startDate,
         endDate,
       });
+
+    // deletedAt이 null인 파일만 필터링
+    allDisclosures.forEach(disclosure => {
+      if (disclosure.attachments) {
+        disclosure.attachments = disclosure.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
 
     // 페이징 적용
     const total = allDisclosures.length;

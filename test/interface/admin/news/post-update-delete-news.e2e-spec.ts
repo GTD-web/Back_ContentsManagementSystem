@@ -184,14 +184,19 @@ describe('POST/PUT/DELETE /api/admin/news (뉴스 생성/수정/삭제)', () => 
           .expect(400);
       });
 
-      it('categoryId 없이 생성 시 400을 반환해야 한다', async () => {
-        // When & Then
-        await testSuite
+      it('categoryId 없이도 뉴스를 생성할 수 있어야 한다', async () => {
+        // When
+        const response = await testSuite
           .request()
           .post('/api/admin/news')
           .field('title', '카테고리가 없는 뉴스')
           .field('description', '카테고리 ID가 없습니다')
-          .expect(400);
+          .expect(201);
+
+        // Then
+        expect(response.body.id).toBeDefined();
+        expect(response.body.title).toBe('카테고리가 없는 뉴스');
+        expect(response.body.categoryId).toBeNull();
       });
     });
   });
@@ -358,7 +363,7 @@ describe('POST/PUT/DELETE /api/admin/news (뉴스 생성/수정/삭제)', () => 
           .expect(400);
       });
 
-      it('categoryId 없이 수정 시 400을 반환해야 한다', async () => {
+      it('categoryId 없이도 뉴스를 수정할 수 있어야 한다', async () => {
         // Given
         const createResponse = await testSuite
           .request()
@@ -369,13 +374,18 @@ describe('POST/PUT/DELETE /api/admin/news (뉴스 생성/수정/삭제)', () => 
 
         const newsId = createResponse.body.id;
 
-        // When & Then
-        await testSuite
+        // When
+        const response = await testSuite
           .request()
           .put(`/api/admin/news/${newsId}`)
           .field('title', '수정된 제목')
           .field('description', '수정된 설명')
-          .expect(400);
+          .expect(200);
+
+        // Then
+        expect(response.body.id).toBe(newsId);
+        expect(response.body.title).toBe('수정된 제목');
+        expect(response.body.description).toBe('수정된 설명');
       });
     });
   });

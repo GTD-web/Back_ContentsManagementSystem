@@ -111,6 +111,13 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
       brochure.translations = brochure.translations.filter(
         (translation) => translation.language.code === defaultLanguageCode,
       );
+      
+      // deletedAt이 null인 파일만 반환
+      if (brochure.attachments) {
+        brochure.attachments = brochure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
+      }
     });
 
     return { items, total, page, limit };

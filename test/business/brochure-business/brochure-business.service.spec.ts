@@ -766,7 +766,6 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(
         mockExistingBrochure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
         {} as any,
@@ -791,9 +790,8 @@ describe('BrochureBusinessService', () => {
       expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledWith(
         brochureId,
       );
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-brochure.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         files,
         'brochures',
@@ -804,6 +802,7 @@ describe('BrochureBusinessService', () => {
           attachments: expect.arrayContaining([
             expect.objectContaining({
               fileName: 'new-brochure.pdf',
+              deletedAt: null,
             }),
           ]),
           updatedBy,
@@ -860,7 +859,6 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(
         mockExistingBrochure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
@@ -881,14 +879,18 @@ describe('BrochureBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-brochure.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(brochureContextService.브로슈어_파일을_수정한다).toHaveBeenCalledWith(
         brochureId,
         expect.objectContaining({
-          attachments: [],
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
+              fileName: 'old-brochure.pdf',
+              deletedAt: expect.any(Date),
+            }),
+          ]),
           updatedBy,
         }),
       );

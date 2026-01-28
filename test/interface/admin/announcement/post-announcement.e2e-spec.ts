@@ -166,8 +166,8 @@ describe('POST /api/admin/announcements (공지사항 생성)', () => {
     });
   });
 
-  describe('실패 케이스 - 필수 필드 누락', () => {
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
+  describe('선택적 필드 - categoryId', () => {
+    it('categoryId가 누락되어도 공지사항을 생성할 수 있어야 한다', async () => {
       // Given
       const createDto = {
         title: '제목',
@@ -175,14 +175,20 @@ describe('POST /api/admin/announcements (공지사항 생성)', () => {
       };
 
       // When & Then
-      await testSuite
+      const response = await testSuite
         .request()
         .post('/api/admin/announcements')
         .send(createDto)
-        .expect(400);
-    });
+        .expect(201);
 
-    it('title이 누락된 경우 400 에러가 발생해야 한다', async () => {
+      expect(response.body.id).toBeDefined();
+      expect(response.body.title).toBe('제목');
+      expect(response.body.content).toBe('내용');
+      expect(response.body.categoryId).toBeNull();
+    });
+  });
+
+  describe('실패 케이스 - 필수 필드 누락', () => {    it('title이 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
         categoryId: testCategoryId,

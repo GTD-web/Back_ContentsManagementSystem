@@ -119,7 +119,7 @@ describe('POST /api/admin/lumir-stories (루미르스토리 생성)', () => {
         .expect(400);
     });
 
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
+    it('categoryId가 누락되어도 루미르 스토리를 생성할 수 있어야 한다', async () => {
       // Given
       const createDto = {
         title: '제목',
@@ -127,11 +127,16 @@ describe('POST /api/admin/lumir-stories (루미르스토리 생성)', () => {
       };
 
       // When & Then
-      await testSuite
+      const response = await testSuite
         .request()
         .post('/api/admin/lumir-stories')
         .send(createDto)
-        .expect(400);
+        .expect(201);
+
+      expect(response.body.id).toBeDefined();
+      expect(response.body.title).toBe('제목');
+      expect(response.body.content).toBe('내용');
+      expect(response.body.categoryId).toBeNull();
     });
   });
 });

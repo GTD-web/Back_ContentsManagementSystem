@@ -329,12 +329,19 @@ describe('IRBusinessService', () => {
 
       const mockUpdatedIR = {
         id: irId,
-        attachments: mockUploadedFiles,
+        attachments: [
+          {
+            fileName: 'new-ir.pdf',
+            fileUrl: 'https://s3.aws.com/new-ir.pdf',
+            fileSize: 4096,
+            mimeType: 'application/pdf',
+            deletedAt: null,
+          },
+        ],
         category: { name: '재무제표' },
       } as any as IR;
 
       mockIRContextService.IR_상세를_조회한다.mockResolvedValue(mockExistingIR);
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockIRContextService.IR_파일을_수정한다.mockResolvedValue({} as any);
       mockIRContextService.IR을_수정한다.mockResolvedValue(mockUpdatedIR);
@@ -350,15 +357,15 @@ describe('IRBusinessService', () => {
 
       // Then
       expect(irContextService.IR_상세를_조회한다).toHaveBeenCalledWith(irId);
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-ir.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(files, 'irs');
       expect(irContextService.IR_파일을_수정한다).toHaveBeenCalledWith(
         irId,
         expect.arrayContaining([
           expect.objectContaining({
             fileName: 'new-ir.pdf',
+            deletedAt: null,
           }),
         ]),
         updatedBy,
@@ -375,7 +382,7 @@ describe('IRBusinessService', () => {
       expect(result).not.toHaveProperty('category');
     });
 
-    it('파일 없이 IR을 수정하고 categoryName을 포함해야 한다 (기존 파일 삭제)', async () => {
+    it('파일 없이 IR을 수정하고 categoryName을 포함해야 한다 (기존 파일 소프트 삭제)', async () => {
       // Given
       const irId = 'ir-1';
       const translations = [
@@ -401,12 +408,19 @@ describe('IRBusinessService', () => {
 
       const mockUpdatedIR = {
         id: irId,
-        attachments: [],
+        attachments: [
+          {
+            fileName: 'old-ir.pdf',
+            fileUrl: 'https://s3.aws.com/old-ir.pdf',
+            fileSize: 2048,
+            mimeType: 'application/pdf',
+            deletedAt: expect.any(Date),
+          },
+        ],
         category: null,
       } as any as IR;
 
       mockIRContextService.IR_상세를_조회한다.mockResolvedValue(mockExistingIR);
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockIRContextService.IR_파일을_수정한다.mockResolvedValue({} as any);
       mockIRContextService.IR을_수정한다.mockResolvedValue(mockUpdatedIR);
 
@@ -420,13 +434,17 @@ describe('IRBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-ir.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(irContextService.IR_파일을_수정한다).toHaveBeenCalledWith(
         irId,
-        [],
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-ir.pdf',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
         updatedBy,
       );
       expect(irContextService.IR을_수정한다).toHaveBeenCalledWith(irId, expect.objectContaining({

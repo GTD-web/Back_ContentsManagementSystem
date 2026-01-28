@@ -28,6 +28,13 @@ export class GetNewsDetailHandler
 
     const news = await this.newsService.ID로_뉴스를_조회한다(id);
 
+    // deletedAt이 null인 파일만 반환
+    if (news.attachments) {
+      news.attachments = news.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+
     return news;
   }
 }

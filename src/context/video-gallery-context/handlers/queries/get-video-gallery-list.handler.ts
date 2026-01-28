@@ -79,8 +79,15 @@ export class GetVideoGalleryListHandler
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
-    const [items, total] = await queryBuilder.getManyAndCount();
+    const [rawItems, total] = await queryBuilder.getManyAndCount();
 
-    return { items, total, page, limit };
+    // deletedAt이 null인 파일만 필터링 (videoSources)
+    rawItems.forEach(item => {
+      if (item.videoSources) {
+        item.videoSources = item.videoSources.filter((source: any) => source.type === 'youtube' || !source.deletedAt);
+      }
+    });
+
+    return { items: rawItems, total, page, limit };
   }
 }

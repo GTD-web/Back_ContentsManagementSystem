@@ -335,13 +335,20 @@ describe('ElectronicDisclosureBusinessService', () => {
 
       const mockUpdatedDisclosure = {
         id: disclosureId,
-        attachments: mockUploadedFiles,
+        attachments: [
+          {
+            fileName: 'new-disclosure.pdf',
+            fileUrl: 'https://s3.aws.com/new-disclosure.pdf',
+            fileSize: 4096,
+            mimeType: 'application/pdf',
+            deletedAt: null,
+          },
+        ],
       } as any as ElectronicDisclosure;
 
       mockElectronicDisclosureContextService.전자공시_상세를_조회한다.mockResolvedValue(
         mockExistingDisclosure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
         {} as any,
@@ -363,12 +370,23 @@ describe('ElectronicDisclosureBusinessService', () => {
       expect(
         electronicDisclosureContextService.전자공시_상세를_조회한다,
       ).toHaveBeenCalledWith(disclosureId);
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-disclosure.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         files,
         'electronic-disclosures',
+      );
+      expect(
+        electronicDisclosureContextService.전자공시_파일을_수정한다,
+      ).toHaveBeenCalledWith(
+        disclosureId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'new-disclosure.pdf',
+            deletedAt: null,
+          }),
+        ]),
+        updatedBy,
       );
       expect(
         electronicDisclosureContextService.전자공시_파일을_수정한다,
@@ -398,7 +416,7 @@ describe('ElectronicDisclosureBusinessService', () => {
       expect(result).toEqual(mockUpdatedDisclosure);
     });
 
-    it('파일 없이 전자공시를 수정해야 한다 (기존 파일 삭제)', async () => {
+    it('파일 없이 전자공시를 수정해야 한다 (기존 파일 소프트 삭제)', async () => {
       // Given
       const disclosureId = 'disclosure-1';
       const translations = [
@@ -424,13 +442,20 @@ describe('ElectronicDisclosureBusinessService', () => {
 
       const mockUpdatedDisclosure = {
         id: disclosureId,
-        attachments: [],
+        attachments: [
+          {
+            fileName: 'old-disclosure.pdf',
+            fileUrl: 'https://s3.aws.com/old-disclosure.pdf',
+            fileSize: 2048,
+            mimeType: 'application/pdf',
+            deletedAt: expect.any(Date),
+          },
+        ],
       } as any as ElectronicDisclosure;
 
       mockElectronicDisclosureContextService.전자공시_상세를_조회한다.mockResolvedValue(
         mockExistingDisclosure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
@@ -448,13 +473,24 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-disclosure.pdf',
-      ]);
+      expect(
+        electronicDisclosureContextService.전자공시_상세를_조회한다,
+      ).toHaveBeenCalledWith(disclosureId);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(
         electronicDisclosureContextService.전자공시_파일을_수정한다,
-      ).toHaveBeenCalledWith(disclosureId, [], updatedBy);
+      ).toHaveBeenCalledWith(
+        disclosureId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-disclosure.pdf',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
+        updatedBy,
+      );
       expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
         disclosureId,
         expect.objectContaining({
@@ -462,7 +498,14 @@ describe('ElectronicDisclosureBusinessService', () => {
           updatedBy,
         }),
       );
-      expect(result.attachments).toEqual([]);
+      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+        disclosureId,
+        {
+          translations,
+          updatedBy,
+        },
+      );
+      expect(result).toEqual(mockUpdatedDisclosure);
     });
 
     it('전자공시의 카테고리를 개별적으로 수정해야 한다', async () => {

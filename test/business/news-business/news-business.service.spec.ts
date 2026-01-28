@@ -709,6 +709,7 @@ describe('NewsBusinessService', () => {
             fileUrl: 'https://s3.aws.com/new-news.pdf',
             fileSize: 3048000,
             mimeType: 'application/pdf',
+            deletedAt: null,
           },
         ],
         category: {
@@ -719,7 +720,6 @@ describe('NewsBusinessService', () => {
       mockNewsContextService.뉴스_상세_조회한다
         .mockResolvedValueOnce(existingNews)
         .mockResolvedValueOnce(updatedNews);
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockNewsContextService.뉴스_파일을_수정한다.mockResolvedValue(
         updatedNews,
@@ -738,9 +738,8 @@ describe('NewsBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-news.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         newFiles,
         'news',
@@ -748,14 +747,12 @@ describe('NewsBusinessService', () => {
       expect(newsContextService.뉴스_파일을_수정한다).toHaveBeenCalledWith(
         newsId,
         {
-          attachments: [
-            {
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
               fileName: 'new-news.pdf',
-              fileUrl: 'https://s3.aws.com/new-news.pdf',
-              fileSize: 3048000,
-              mimeType: 'application/pdf',
-            },
-          ],
+              deletedAt: null,
+            }),
+          ]),
           updatedBy,
         },
       );
@@ -789,7 +786,15 @@ describe('NewsBusinessService', () => {
       const updatedNews = {
         ...existingNews,
         title,
-        attachments: [],
+        attachments: [
+          {
+            fileName: 'old-news.pdf',
+            fileUrl: 'https://s3.aws.com/old-news.pdf',
+            fileSize: 2048000,
+            mimeType: 'application/pdf',
+            deletedAt: expect.any(Date),
+          },
+        ],
         category: {
           name: '카테고리명',
         },
@@ -798,7 +803,6 @@ describe('NewsBusinessService', () => {
       mockNewsContextService.뉴스_상세_조회한다
         .mockResolvedValueOnce(existingNews)
         .mockResolvedValueOnce(updatedNews);
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockNewsContextService.뉴스_파일을_수정한다.mockResolvedValue(
         updatedNews,
       );
@@ -815,14 +819,18 @@ describe('NewsBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-news.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(newsContextService.뉴스_파일을_수정한다).toHaveBeenCalledWith(
         newsId,
         {
-          attachments: [],
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
+              fileName: 'old-news.pdf',
+              deletedAt: expect.any(Date),
+            }),
+          ]),
           updatedBy,
         },
       );

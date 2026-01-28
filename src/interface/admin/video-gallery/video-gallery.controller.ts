@@ -250,10 +250,6 @@ export class VideoGalleryController {
       throw new BadRequestException('title 필드는 필수입니다.');
     }
 
-    if (!categoryId) {
-      throw new BadRequestException('categoryId 필드는 필수입니다.');
-    }
-
     // youtubeUrls가 JSON 문자열로 전달될 수 있으므로 파싱
     let parsedYoutubeUrls: string[] = [];
     if (youtubeUrls) {

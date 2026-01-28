@@ -118,7 +118,7 @@ describe('POST /api/admin/video-galleries (비디오갤러리 생성)', () => {
         .expect(400);
     });
 
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
+    it('categoryId가 누락되어도 비디오 갤러리를 생성할 수 있어야 한다', async () => {
       // Given
       const createDto = {
         title: '회사 소개 영상',
@@ -126,11 +126,16 @@ describe('POST /api/admin/video-galleries (비디오갤러리 생성)', () => {
       };
 
       // When & Then
-      await testSuite
+      const response = await testSuite
         .request()
         .post('/api/admin/video-galleries')
         .send(createDto)
-        .expect(400);
+        .expect(201);
+
+      expect(response.body.id).toBeDefined();
+      expect(response.body.title).toBe('회사 소개 영상');
+      expect(response.body.description).toBe('카테고리 없음');
+      expect(response.body.categoryId).toBeNull();
     });
   });
 

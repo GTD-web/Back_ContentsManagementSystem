@@ -31,16 +31,34 @@ export class ShareholdersMeetingContextService {
    * 주주총회 전체 목록을 조회한다
    */
   async 주주총회_전체_목록을_조회한다(): Promise<ShareholdersMeeting[]> {
-    return await this.shareholdersMeetingService.모든_주주총회를_조회한다({
+    const meetings = await this.shareholdersMeetingService.모든_주주총회를_조회한다({
       orderBy: 'order',
     });
+    
+    // 각 주주총회에서 deletedAt이 null인 파일만 반환
+    meetings.forEach(meeting => {
+      if (meeting.attachments) {
+        meeting.attachments = meeting.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+    
+    return meetings;
   }
 
   /**
    * 주주총회 상세를 조회한다
    */
   async 주주총회_상세를_조회한다(id: string): Promise<ShareholdersMeeting> {
-    return await this.shareholdersMeetingService.ID로_주주총회를_조회한다(id);
+    const meeting = await this.shareholdersMeetingService.ID로_주주총회를_조회한다(id);
+    
+    // deletedAt이 null인 파일만 반환
+    if (meeting.attachments) {
+      meeting.attachments = meeting.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+    
+    return meeting;
   }
 
   /**
@@ -567,8 +585,8 @@ export class ShareholdersMeetingContextService {
       );
     }
 
-    // 번역 포함하여 재조회
-    return await this.shareholdersMeetingService.ID로_주주총회를_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.주주총회_상세를_조회한다(id);
   }
 
   /**
@@ -624,6 +642,13 @@ export class ShareholdersMeetingContextService {
         startDate,
         endDate,
       });
+
+    // deletedAt이 null인 파일만 필터링
+    allMeetings.forEach(meeting => {
+      if (meeting.attachments) {
+        meeting.attachments = meeting.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
 
     // 각 주주총회에 대해 번역 정보 로드
     for (const meeting of allMeetings) {

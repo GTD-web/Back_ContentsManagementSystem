@@ -269,8 +269,8 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     });
   });
 
-  describe('실패 케이스 - 필수 필드 누락', () => {
-    it('categoryId가 누락된 경우 400 에러가 발생해야 한다', async () => {
+  describe('선택적 필드 - categoryId', () => {
+    it('categoryId가 누락되어도 주주총회를 생성할 수 있어야 한다', async () => {
       // Given
       const createDto = {
         translations: [
@@ -284,14 +284,19 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
       };
 
       // When & Then
-      await testSuite
+      const response = await testSuite
         .request()
         .post('/api/admin/shareholders-meetings')
         .send(createDto)
-        .expect(400);
-    });
+        .expect(201);
 
-    it('translations가 누락된 경우 400 에러가 발생해야 한다', async () => {
+      expect(response.body.id).toBeDefined();
+      expect(response.body.location).toBe('서울 강남구');
+      expect(response.body.categoryId).toBeNull();
+    });
+  });
+
+  describe('실패 케이스 - 필수 필드 누락', () => {    it('translations가 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
         categoryId,

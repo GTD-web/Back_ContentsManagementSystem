@@ -411,7 +411,6 @@ describe('ShareholdersMeetingBusinessService', () => {
       mockShareholdersMeetingContextService.주주총회_상세를_조회한다.mockResolvedValue(
         mockExistingMeeting,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockShareholdersMeetingContextService.주주총회_파일을_수정한다.mockResolvedValue(
         {} as any,
@@ -435,9 +434,8 @@ describe('ShareholdersMeetingBusinessService', () => {
       expect(
         shareholdersMeetingContextService.주주총회_상세를_조회한다,
       ).toHaveBeenCalledWith(meetingId);
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-minutes.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         files,
         'shareholders-meetings',
@@ -449,6 +447,7 @@ describe('ShareholdersMeetingBusinessService', () => {
         expect.arrayContaining([
           expect.objectContaining({
             fileName: 'new-minutes.pdf',
+            deletedAt: null,
           }),
         ]),
         updatedBy,
@@ -501,7 +500,6 @@ describe('ShareholdersMeetingBusinessService', () => {
       mockShareholdersMeetingContextService.주주총회_상세를_조회한다.mockResolvedValue(
         mockExistingMeeting,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockShareholdersMeetingContextService.주주총회_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
@@ -521,13 +519,21 @@ describe('ShareholdersMeetingBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-minutes.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(
         shareholdersMeetingContextService.주주총회_파일을_수정한다,
-      ).toHaveBeenCalledWith(meetingId, [], updatedBy);
+      ).toHaveBeenCalledWith(
+        meetingId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-minutes.pdf',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
+        updatedBy,
+      );
       expect(result).toEqual(mockUpdatedMeeting);
     });
   });

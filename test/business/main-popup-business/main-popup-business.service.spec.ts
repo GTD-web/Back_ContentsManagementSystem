@@ -474,7 +474,6 @@ describe('MainPopupBusinessService', () => {
       mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
         existingPopup,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
         updatedPopup,
@@ -493,9 +492,8 @@ describe('MainPopupBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-popup.jpg',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         newFiles,
         'main-popups',
@@ -504,14 +502,12 @@ describe('MainPopupBusinessService', () => {
         mainPopupContextService.메인_팝업_파일을_수정한다,
       ).toHaveBeenCalledWith(
         popupId,
-        [
-          {
+        expect.arrayContaining([
+          expect.objectContaining({
             fileName: 'new-popup.jpg',
-            fileUrl: 'https://s3.aws.com/new-popup.jpg',
-            fileSize: 2048000,
-            mimeType: 'image/jpeg',
-          },
-        ],
+            deletedAt: null,
+          }),
+        ]),
         updatedBy,
       );
       expect(result).toEqual(updatedPopup);
@@ -549,7 +545,6 @@ describe('MainPopupBusinessService', () => {
       mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
         existingPopup,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
         updatedPopup,
       );
@@ -567,13 +562,21 @@ describe('MainPopupBusinessService', () => {
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-popup.jpg',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(
         mainPopupContextService.메인_팝업_파일을_수정한다,
-      ).toHaveBeenCalledWith(popupId, [], updatedBy);
+      ).toHaveBeenCalledWith(
+        popupId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-popup.jpg',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
+        updatedBy,
+      );
       expect(result).toEqual(updatedPopup);
     });
 
