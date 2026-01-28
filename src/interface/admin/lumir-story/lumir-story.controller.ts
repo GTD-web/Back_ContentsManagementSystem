@@ -25,8 +25,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { LumirStoryBusinessService } from '@business/lumir-story-business/lumir-story-business.service';
 import {
   UpdateLumirStoryPublicDto,
@@ -44,8 +42,6 @@ import {
 
 @ApiTags('A-6. 관리자 - 루미르스토리')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/lumir-stories')
 export class LumirStoryController {
   constructor(

@@ -27,8 +27,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { VideoGalleryBusinessService } from '@business/video-gallery-business/video-gallery-business.service';
 import {
   UpdateVideoGalleryPublicDto,
@@ -46,8 +44,6 @@ import {
 
 @ApiTags('A-7. 관리자 - 비디오갤러리')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/video-galleries')
 export class VideoGalleryController {
   constructor(

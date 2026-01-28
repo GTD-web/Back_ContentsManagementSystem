@@ -19,6 +19,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
+import { Public } from '@interface/common/decorators/public.decorator';
 import { JwtAuthGuard } from '@interface/common/guards';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
@@ -29,6 +30,7 @@ import {
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
+@Public()
 @UseGuards(JwtAuthGuard)
 @Controller('user/announcements')
 export class UserAnnouncementController {

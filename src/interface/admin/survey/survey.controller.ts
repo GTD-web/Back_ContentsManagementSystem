@@ -18,8 +18,6 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { SurveyBusinessService } from '@business/survey-business/survey-business.service';
 import {
   SurveyResponseDto,
@@ -30,8 +28,6 @@ import {
 @ApiTags('공통. 관리자 - 설문조사 (조회)')
 @ApiExcludeController()
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/surveys')
 export class SurveyController {
   constructor(

@@ -1,6 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import {
   VerifyTokenCommand,
   VerifyTokenResult,
@@ -9,47 +11,74 @@ import {
 /**
  * 토큰 검증 핸들러
  *
- * JWT 토큰을 검증하고 사용자 정보를 추출합니다.
+ * SSO 서버의 /api/auth/verify 엔드포인트를 통해 토큰을 검증합니다.
  */
 @Injectable()
 @CommandHandler(VerifyTokenCommand)
 export class VerifyTokenHandler implements ICommandHandler<VerifyTokenCommand> {
   private readonly logger = new Logger(VerifyTokenHandler.name);
+  private readonly ssoBaseUrl: string;
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    const baseUrl = this.configService.get<string>('SSO_BASE_URL') || '';
+    this.ssoBaseUrl = baseUrl.replace(/\/$/, '');
+
+    if (!this.ssoBaseUrl) {
+      this.logger.warn('SSO_BASE_URL이 설정되지 않았습니다.');
+    }
+  }
 
   async execute(command: VerifyTokenCommand): Promise<VerifyTokenResult> {
     const { accessToken } = command;
 
-    this.logger.debug('토큰 검증 시작');
+    this.logger.debug('SSO 토큰 검증 시작');
 
     try {
-      // JWT 토큰 검증 및 디코딩
-      const payload = this.jwtService.verify(accessToken) as {
-        sub: string;
-        email: string;
-        name: string;
-        employeeNumber: string;
-        roles: string[];
-        status: string;
-        iat: number;
-        exp: number;
+      // SSO 서버에 토큰 검증 요청
+      const response = await firstValueFrom(
+        this.httpService.post(
+          `${this.ssoBaseUrl}/api/auth/verify`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        ),
+      );
+
+      const data = response.data as {
+        valid: boolean;
+        user_info: {
+          id: string;
+          name: string;
+          email: string;
+          employee_number: string;
+        };
+        expires_in: number;
       };
 
-      if (!payload || !payload.sub) {
+      if (!data.valid || !data.user_info) {
         throw new UnauthorizedException('유효하지 않은 토큰입니다.');
       }
 
-      this.logger.debug(`토큰 검증 성공: ${payload.sub} (${payload.email})`);
+      const userInfo = data.user_info;
+
+      this.logger.debug(
+        `토큰 검증 성공: ${userInfo.id} (${userInfo.email}), 사번: ${userInfo.employee_number}`,
+      );
 
       return {
         user: {
-          id: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          employeeNumber: payload.employeeNumber,
-          roles: payload.roles,
-          status: payload.status,
+          id: userInfo.id,
+          email: userInfo.email,
+          name: userInfo.name,
+          employeeNumber: userInfo.employee_number,
+          roles: [], // SSO verify 응답에 roles 정보가 없으므로 빈 배열
+          status: 'ACTIVE',
         },
       };
     } catch (error) {
@@ -57,18 +86,18 @@ export class VerifyTokenHandler implements ICommandHandler<VerifyTokenCommand> {
         throw error;
       }
 
-      // JWT 검증 실패 (만료, 서명 오류 등)
-      if (error.name === 'TokenExpiredError') {
-        this.logger.error('만료된 토큰입니다.');
-        throw new UnauthorizedException('만료된 토큰입니다.');
-      }
-
-      if (error.name === 'JsonWebTokenError') {
+      // SSO API 호출 실패
+      if (error.response?.status === 401) {
         this.logger.error('유효하지 않은 토큰입니다.');
         throw new UnauthorizedException('유효하지 않은 토큰입니다.');
       }
 
-      this.logger.error('토큰 검증 실패', error);
+      if (error.response?.status === 400) {
+        this.logger.error('잘못된 토큰 형식입니다.');
+        throw new UnauthorizedException('잘못된 토큰 형식입니다.');
+      }
+
+      this.logger.error('토큰 검증 실패', error.message || error);
       throw new UnauthorizedException('토큰 검증에 실패했습니다.');
     }
   }

@@ -14,8 +14,6 @@ import {
   ApiBearerAuth,
   ApiExcludeController,
 } from '@nestjs/swagger';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { BackupService } from '@context/backup-context/backup.service';
 import { BackupRetentionService } from '@context/backup-context/backup-retention.service';
 import { BackupType } from '@context/backup-context/backup.types';
@@ -27,8 +25,6 @@ import { BackupType } from '@context/backup-context/backup.types';
  */
 @ApiExcludeController()
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/backup')
 export class BackupController {
   private readonly logger = new Logger(BackupController.name);

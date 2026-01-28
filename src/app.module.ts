@@ -21,6 +21,7 @@ import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
 import { PermissionValidationModule } from './interface/admin/permission-validation/permission-validation.module';
 import { BackupModule } from './interface/admin/backup/backup.module';
 import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
+import { AdminManagementModule } from './interface/admin/admin-management/admin-management.module';
 import { UserAnnouncementModule } from './interface/user/announcement/announcement.module';
 import { UserWikiModule } from './interface/user/wiki/wiki.module';
 import { HealthModule } from './interface/common/health/health.module';
@@ -28,6 +29,7 @@ import { CompanyModule } from './interface/common/company/company.module';
 import { AuthContextModule } from '@context/auth-context';
 import { BackupContextModule } from '@context/backup-context';
 import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
+import { AdminGuard } from '@interface/common/guards/admin.guard';
 
 /**
  * 루미르 CMS 애플리케이션 모듈
@@ -78,6 +80,7 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     PermissionValidationModule,
     BackupModule,
     AnalyticsModule,
+    AdminManagementModule,
     CompanyModule,
 
     // User Interface Layer 모듈
@@ -89,6 +92,11 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // 전역 Admin 가드 설정
+    {
+      provide: APP_GUARD,
+      useClass: AdminGuard,
     },
   ],
 })

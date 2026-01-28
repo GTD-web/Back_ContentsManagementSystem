@@ -26,8 +26,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { IRBusinessService } from '@business/ir-business/ir-business.service';
 import { IR } from '@domain/core/ir/ir.entity';
 import {
@@ -42,8 +40,6 @@ import { UpdateIRCategoryDto, UpdateIRCategoryOrderDto } from '@interface/common
 
 @ApiTags('A-3. 관리자 - IR')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/irs')
 export class IRController {
   constructor(private readonly irBusinessService: IRBusinessService) {}

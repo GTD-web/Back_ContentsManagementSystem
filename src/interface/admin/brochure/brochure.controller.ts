@@ -26,8 +26,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { BrochureBusinessService } from '@business/brochure-business/brochure-business.service';
 import {
   UpdateBrochurePublicDto,
@@ -45,8 +43,6 @@ import {
 
 @ApiTags('A-1. 관리자 - 브로슈어')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/brochures')
 export class BrochureController {
   constructor(

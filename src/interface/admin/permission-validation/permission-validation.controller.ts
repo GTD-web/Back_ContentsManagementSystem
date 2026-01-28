@@ -1,7 +1,5 @@
 import { Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { WikiPermissionScheduler } from '@context/wiki-context/wiki-permission.scheduler';
 
@@ -12,8 +10,6 @@ import { WikiPermissionScheduler } from '@context/wiki-context/wiki-permission.s
  */
 @ApiTags('공통. 관리자 - 권한 검증')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/permission-validation')
 export class PermissionValidationController {
   constructor(

@@ -28,8 +28,6 @@ import type { AuthenticatedUser } from '@interface/common/decorators/current-use
 import { NewsBusinessService } from '@business/news-business/news-business.service';
 import { StrictBooleanValidationGuard } from '@interface/common/guards/strict-boolean-validation.guard';
 import { StrictBooleanFields } from '@interface/common/decorators/strict-boolean-fields.decorator';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import {
   UpdateNewsPublicDto,
   CreateNewsCategoryDto,
@@ -46,8 +44,6 @@ import {
 
 @ApiTags('A-8. 관리자 - 뉴스')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/news')
 export class NewsController {
   constructor(private readonly newsBusinessService: NewsBusinessService) {}

@@ -15,8 +15,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles, CurrentUser } from '@interface/common/decorators';
+import { CurrentUser } from '@interface/common/decorators';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { LanguageBusinessService } from '@business/language-business/language-business.service';
 import { CreateLanguageDto } from '@interface/common/dto/language/create-language.dto';
@@ -32,8 +31,6 @@ import { LanguageCodeListResponseDto } from '@interface/common/dto/language/lang
 
 @ApiTags('공통. 관리자 - 언어')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/languages')
 export class LanguageController {
   constructor(

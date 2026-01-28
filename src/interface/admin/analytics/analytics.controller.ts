@@ -15,8 +15,6 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AnalyticsBusinessService } from '@business/analytics-business/analytics-business.service';
-import { JwtAuthGuard, RolesGuard } from '@interface/common/guards';
-import { Roles } from '@interface/common/decorators';
 import { CreatePageViewDto } from '@interface/common/dto/analytics/create-page-view.dto';
 import { UpdatePageViewDto } from '@interface/common/dto/analytics/update-page-view.dto';
 import {
@@ -26,8 +24,6 @@ import {
 
 @ApiTags('A-0. 관리자 - 분석')
 @ApiBearerAuth('Bearer')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 @Controller('admin/analytics')
 export class AnalyticsController {
   constructor(

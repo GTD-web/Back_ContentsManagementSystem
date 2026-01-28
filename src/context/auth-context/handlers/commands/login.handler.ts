@@ -2,7 +2,6 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
 import {
   LoginCommand,
@@ -12,7 +11,7 @@ import {
 /**
  * SSO 로그인 핸들러
  *
- * SSO 서버를 통해 사용자를 인증하고 토큰을 발급받습니다.
+ * SSO 서버를 통해 사용자를 인증하고 SSO 토큰을 받습니다.
  */
 @Injectable()
 @CommandHandler(LoginCommand)
@@ -23,7 +22,6 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-    private readonly jwtService: JwtService,
   ) {
     const baseUrl = this.configService.get<string>('SSO_BASE_URL') || '';
     // trailing slash 제거
@@ -64,40 +62,19 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
         systemRoles: Record<string, string[]>;
       };
 
-      // NODE_ENV에 따라 CMS 시스템 선택
-      const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
-      const cmsSystemName = nodeEnv === 'production' ? 'CMS-PROD' : 'CMS-DEV';
-      
-      // 해당 CMS 시스템의 역할 추출
-      const cmsRoles = data.systemRoles[cmsSystemName] || [];
-
-      // 자체 JWT 생성 (email, name 포함)
-      const payload = {
-        sub: data.id, // 사용자 ID
-        email: data.email,
-        name: data.name,
-        employeeNumber: data.employeeNumber,
-        roles: cmsRoles,
-        status: data.status,
-      };
-
-      const accessToken = this.jwtService.sign(payload);
-      const refreshToken = this.jwtService.sign(payload, {
-        expiresIn: '7d', // 리프레시 토큰은 7일
-      });
-
-      this.logger.log(`로그인 성공: ${email} (시스템: ${cmsSystemName}, 역할: ${cmsRoles.join(', ')})`);
+      // SSO에서 받은 토큰을 그대로 사용
+      this.logger.log(`로그인 성공: ${email}, 사번: ${data.employeeNumber}`);
 
       return {
-        accessToken,
-        refreshToken,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
         user: {
           id: data.id,
           externalId: data.id, // SSO의 id를 externalId로 사용
           email: data.email,
           name: data.name,
           employeeNumber: data.employeeNumber,
-          roles: cmsRoles, // CMS 시스템의 역할
+          roles: [], // Admin 테이블로 권한 관리하므로 roles는 사용하지 않음
           status: data.status,
         },
       };

@@ -26,6 +26,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
+import { Public } from '@interface/common/decorators/public.decorator';
 import { JwtAuthGuard } from '@interface/common/guards';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
 import {
@@ -43,6 +44,7 @@ import {
 
 @ApiTags('U-2. 사용자 - Wiki')
 @ApiBearerAuth('Bearer')
+@Public()
 @UseGuards(JwtAuthGuard)
 @Controller('user/wiki')
 export class UserWikiController {
