@@ -6,6 +6,26 @@ import { setupSwagger } from '@libs/config/swagger.config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { QueryFailedExceptionFilter } from '@interface/common/filters/query-failed-exception.filter';
+import { AuthInterfaceModule } from './interface/admin/auth/auth.module';
+import { LanguageInterfaceModule } from './interface/admin/language/language.module';
+import { BrochureInterfaceModule } from './interface/admin/brochure/brochure.module';
+import { ElectronicDisclosureInterfaceModule } from './interface/admin/electronic-disclosure/electronic-disclosure.module';
+import { IRInterfaceModule } from './interface/admin/ir/ir.module';
+import { MainPopupInterfaceModule } from './interface/admin/main-popup/main-popup.module';
+import { ShareholdersMeetingAdminModule } from './interface/admin/shareholders-meeting/shareholders-meeting.module';
+import { AdminLumirStoryModule } from './interface/admin/lumir-story/lumir-story.module';
+import { AdminVideoGalleryModule } from './interface/admin/video-gallery/video-gallery.module';
+import { AdminNewsModule } from './interface/admin/news/news.module';
+import { AnnouncementModule } from './interface/admin/announcement/announcement.module';
+import { SurveyAdminModule } from './interface/admin/survey/survey.module';
+import { WikiModule } from './interface/admin/wiki/wiki.module';
+import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
+import { PermissionValidationModule } from './interface/admin/permission-validation/permission-validation.module';
+import { BackupModule } from './interface/admin/backup/backup.module';
+import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
+import { CompanyModule } from './interface/common/company/company.module';
+import { UserAnnouncementModule } from './interface/user/announcement/announcement.module';
+import { UserWikiModule } from './interface/user/wiki/wiki.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -52,12 +72,32 @@ async function bootstrap() {
     credentials: false,
   });
 
-  // Swagger 문서 설정
+  // Admin Swagger 문서 설정
   setupSwagger(app, {
-    title: 'Lumir CMS API',
-    description: '루미르 CMS 백엔드 API 문서',
+    title: 'Lumir CMS Admin API',
+    description: '루미르 CMS 관리자 백엔드 API 문서',
     version: '1.0',
     path: 'admin/api-docs',
+    includeModules: [
+      AuthInterfaceModule,
+      LanguageInterfaceModule,
+      CompanyModule,
+      BrochureInterfaceModule,
+      ElectronicDisclosureInterfaceModule,
+      IRInterfaceModule,
+      MainPopupInterfaceModule,
+      ShareholdersMeetingAdminModule,
+      AdminLumirStoryModule,
+      AdminVideoGalleryModule,
+      AdminNewsModule,
+      AnnouncementModule,
+      SurveyAdminModule,
+      WikiModule,
+      SeedDataModule,
+      PermissionValidationModule,
+      BackupModule,
+      AnalyticsModule,
+    ],
     tags: [
       { name: '공통. 인증', description: 'SSO 로그인 및 인증 API' },
       { name: '공통. 관리자 - 언어', description: '언어 관리 API' },
@@ -85,12 +125,28 @@ async function bootstrap() {
     ],
   });
 
+  // User Swagger 문서 설정
+  setupSwagger(app, {
+    title: 'Lumir CMS User API',
+    description: '루미르 CMS 사용자 백엔드 API 문서',
+    version: '1.0',
+    path: 'user/api-docs',
+    includeModules: [UserAnnouncementModule, UserWikiModule],
+    tags: [
+      { name: 'U-1. 사용자 - 공지사항', description: '공지사항 조회 및 응답 API' },
+      { name: 'U-2. 사용자 - Wiki', description: 'Wiki 파일 및 폴더 관리 API' },
+    ],
+  });
+
   const port = configService.get<number>('PORT', 4001);
   await app.listen(port);
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);
   console.log(
-    `📚 API Documentation: http://localhost:${port}/api/admin/api-docs`,
+    `📚 Admin API Documentation: http://localhost:${port}/api/admin/api-docs`,
+  );
+  console.log(
+    `📚 User API Documentation: http://localhost:${port}/api/user/api-docs`,
   );
 }
 
