@@ -15,10 +15,13 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '@interface/common/guards';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
+import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
 import {
   AnnouncementResponseDto,
   AnnouncementListResponseDto,
@@ -31,6 +34,8 @@ import {
 export class UserAnnouncementController {
   constructor(
     private readonly announcementBusinessService: AnnouncementBusinessService,
+    @InjectRepository(AnnouncementRead)
+    private readonly announcementReadRepository: Repository<AnnouncementRead>,
   ) {}
 
   /**
@@ -101,12 +106,14 @@ export class UserAnnouncementController {
 
   /**
    * 공지사항 상세를 조회한다 (사용자용)
+   * 조회 시 자동으로 읽음 처리 (AnnouncementRead 레코드 생성)
    */
   @Get(':id')
   @ApiOperation({
     summary: '공지사항 상세 조회 (사용자용)',
     description:
       '특정 공지사항의 상세 정보를 조회합니다. ' +
+      '조회 시 자동으로 열람 기록이 생성됩니다. ' +
       '사용자에게 접근 권한이 없는 경우 404를 반환합니다.',
   })
   @ApiParam({
@@ -116,7 +123,7 @@ export class UserAnnouncementController {
   })
   @ApiResponse({
     status: 200,
-    description: '공지사항 조회 성공',
+    description: '공지사항 조회 성공 (자동 읽음 처리 완료)',
     type: AnnouncementResponseDto,
   })
   @ApiResponse({
@@ -130,9 +137,27 @@ export class UserAnnouncementController {
     // TODO: 사용자 권한 확인 로직 구현 필요
     // - 전사공개가 아닌 경우, 사용자가 접근 권한이 있는지 확인
 
+    // 1. 공지사항 조회
     const announcement =
       await this.announcementBusinessService.공지사항을_조회한다(id);
 
+    // 2. 읽음 처리 (중복 확인 후 없으면 생성)
+    const existingRead = await this.announcementReadRepository.findOne({
+      where: {
+        announcementId: id,
+        employeeId: user.id,
+      },
+    });
+
+    if (!existingRead) {
+      await this.announcementReadRepository.save({
+        announcementId: id,
+        employeeId: user.id,
+        readAt: new Date(),
+      });
+    }
+
+    // 3. 응답 반환
     return {
       ...announcement,
       survey: announcement.survey
@@ -158,40 +183,6 @@ export class UserAnnouncementController {
           }
         : null,
     };
-  }
-
-  /**
-   * 공지사항을 읽음 처리한다
-   */
-  @Post(':id/read')
-  @ApiOperation({
-    summary: '공지사항 읽음 처리',
-    description: '공지사항을 읽음 상태로 처리합니다. 열람 기록을 남깁니다.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: '공지사항 ID',
-    type: String,
-  })
-  @ApiResponse({
-    status: 200,
-    description: '읽음 처리 성공',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean', example: true },
-      },
-    },
-  })
-  async 공지사항을_읽음처리한다(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id') id: string,
-  ): Promise<{ success: boolean }> {
-    // TODO: 공지사항 열람 기록 생성 로직 구현 필요
-    // - AnnouncementView 테이블에 기록 저장
-    // - 중복 열람 방지 로직 (같은 사용자가 이미 읽은 경우)
-
-    return { success: true };
   }
 
   /**
