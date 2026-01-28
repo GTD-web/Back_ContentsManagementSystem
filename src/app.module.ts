@@ -21,6 +21,8 @@ import { SeedDataModule } from './interface/admin/seed-data/seed-data.module';
 import { PermissionValidationModule } from './interface/admin/permission-validation/permission-validation.module';
 import { BackupModule } from './interface/admin/backup/backup.module';
 import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
+import { UserAnnouncementModule } from './interface/user/announcement/announcement.module';
+import { UserWikiModule } from './interface/user/wiki/wiki.module';
 import { HealthModule } from './interface/common/health/health.module';
 import { CompanyModule } from './interface/common/company/company.module';
 import { AuthContextModule } from '@context/auth-context';
@@ -77,6 +79,10 @@ import { JwtAuthGuard } from '@interface/common/guards/jwt-auth.guard';
     BackupModule,
     AnalyticsModule,
     CompanyModule,
+
+    // User Interface Layer 모듈
+    UserAnnouncementModule,
+    UserWikiModule,
   ],
   providers: [
     // 전역 JWT 인증 가드 설정
