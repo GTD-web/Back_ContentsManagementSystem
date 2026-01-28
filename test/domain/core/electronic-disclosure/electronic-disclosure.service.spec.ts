@@ -400,6 +400,62 @@ describe('ElectronicDisclosureService', () => {
       );
       expect(result).toEqual(mockUpdatedDisclosure);
     });
+
+    it('전자공시의 카테고리를 개별적으로 업데이트해야 한다', async () => {
+      // Given
+      const disclosureId = 'disclosure-1';
+      const newCategoryId = 'category-2';
+      const updateData = {
+        categoryId: newCategoryId,
+        updatedBy: 'user-1',
+      };
+
+      const mockExistingDisclosure = {
+        id: disclosureId,
+        isPublic: true,
+        order: 0,
+        categoryId: 'category-1',
+        category: { name: '기존 카테고리' },
+      };
+
+      const mockUpdatedDisclosure = {
+        ...mockExistingDisclosure,
+        categoryId: newCategoryId,
+        category: { name: '새 카테고리' },
+      };
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockExistingDisclosure],
+          raw: [{ category_name: '기존 카테고리' }],
+        }),
+      };
+
+      mockElectronicDisclosureRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
+      mockElectronicDisclosureRepository.save.mockResolvedValue(
+        mockUpdatedDisclosure as any,
+      );
+
+      // When
+      const result = await service.전자공시를_업데이트한다(disclosureId, updateData);
+
+      // Then
+      expect(electronicDisclosureRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(electronicDisclosureRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: disclosureId,
+          categoryId: newCategoryId,
+          updatedBy: 'user-1',
+        }),
+      );
+      expect(result.categoryId).toBe(newCategoryId);
+    });
   });
 
   describe('전자공시를_삭제한다', () => {

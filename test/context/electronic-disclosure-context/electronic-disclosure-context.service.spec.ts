@@ -310,11 +310,8 @@ describe('ElectronicDisclosureContextService', () => {
         attachments,
         createdBy,
       });
-      expect(categoryService.엔티티에_카테고리를_매핑한다).toHaveBeenCalledWith(
-        'disclosure-1',
-        categoryId,
-        createdBy,
-      );
+      // 카테고리 매핑은 더 이상 호출되지 않아야 함 (categoryId 필드 사용)
+      expect(categoryService.엔티티에_카테고리를_매핑한다).not.toHaveBeenCalled();
       expect(electronicDisclosureService.전자공시_번역을_생성한다).toHaveBeenCalledTimes(2);
       expect(result).toEqual(mockDisclosure);
     });
@@ -586,6 +583,78 @@ describe('ElectronicDisclosureContextService', () => {
         isSynced: false,
         updatedBy: 'user-1',
       });
+    });
+
+    it('전자공시의 카테고리를 개별적으로 수정해야 한다', async () => {
+      // Given
+      const disclosure1Id = 'disclosure-1';
+      const disclosure2Id = 'disclosure-2';
+      const newCategoryId = 'category-2';
+
+      const data1 = {
+        categoryId: newCategoryId,
+        updatedBy: 'user-1',
+      };
+
+      const data2 = {
+        categoryId: 'category-3',
+        updatedBy: 'user-1',
+      };
+
+      const mockDisclosure1 = {
+        id: disclosure1Id,
+        isPublic: true,
+        categoryId: 'category-1',
+      } as any as ElectronicDisclosure;
+
+      const mockDisclosure2 = {
+        id: disclosure2Id,
+        isPublic: true,
+        categoryId: 'category-1',
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure1 = {
+        ...mockDisclosure1,
+        categoryId: newCategoryId,
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure2 = {
+        ...mockDisclosure2,
+        categoryId: 'category-3',
+      } as any as ElectronicDisclosure;
+
+      mockElectronicDisclosureService.전자공시를_업데이트한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2);
+      mockElectronicDisclosureService.ID로_전자공시를_조회한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2);
+
+      // When
+      const result1 = await service.전자공시를_수정한다(disclosure1Id, data1);
+      const result2 = await service.전자공시를_수정한다(disclosure2Id, data2);
+
+      // Then
+      expect(electronicDisclosureService.전자공시를_업데이트한다).toHaveBeenNthCalledWith(
+        1,
+        disclosure1Id,
+        expect.objectContaining({
+          categoryId: newCategoryId,
+          updatedBy: 'user-1',
+        }),
+      );
+      expect(electronicDisclosureService.전자공시를_업데이트한다).toHaveBeenNthCalledWith(
+        2,
+        disclosure2Id,
+        expect.objectContaining({
+          categoryId: 'category-3',
+          updatedBy: 'user-1',
+        }),
+      );
+      expect(result1.categoryId).toBe(newCategoryId);
+      expect(result2.categoryId).toBe('category-3');
+      // 각 전자공시가 독립적인 categoryId를 가져야 함
+      expect(result1.categoryId).not.toBe(result2.categoryId);
     });
   });
 

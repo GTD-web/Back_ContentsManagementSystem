@@ -464,6 +464,98 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
       expect(result.attachments).toEqual([]);
     });
+
+    it('전자공시의 카테고리를 개별적으로 수정해야 한다', async () => {
+      // Given
+      const disclosure1Id = 'disclosure-1';
+      const disclosure2Id = 'disclosure-2';
+      
+      const translations = [
+        {
+          languageId: 'language-1',
+          title: '제목',
+        },
+      ];
+      const updatedBy = 'user-1';
+      const category1Id = 'category-1';
+      const category2Id = 'category-2';
+
+      const mockExistingDisclosure1 = {
+        id: disclosure1Id,
+        categoryId: null,
+        attachments: [],
+      } as any;
+
+      const mockExistingDisclosure2 = {
+        id: disclosure2Id,
+        categoryId: null,
+        attachments: [],
+      } as any;
+
+      const mockUpdatedDisclosure1 = {
+        id: disclosure1Id,
+        categoryId: category1Id,
+        attachments: [],
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure2 = {
+        id: disclosure2Id,
+        categoryId: category2Id,
+        attachments: [],
+      } as any as ElectronicDisclosure;
+
+      mockElectronicDisclosureContextService.전자공시_상세를_조회한다
+        .mockResolvedValueOnce(mockExistingDisclosure1)
+        .mockResolvedValueOnce(mockExistingDisclosure2);
+      mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
+        {} as any,
+      );
+      mockElectronicDisclosureContextService.전자공시를_수정한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure1) // categoryId 업데이트 호출
+        .mockResolvedValueOnce(mockUpdatedDisclosure2)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2); // categoryId 업데이트 호출
+
+      // When
+      const result1 = await service.전자공시를_수정한다(
+        disclosure1Id,
+        translations,
+        updatedBy,
+        category1Id,
+        undefined,
+      );
+      const result2 = await service.전자공시를_수정한다(
+        disclosure2Id,
+        translations,
+        updatedBy,
+        category2Id,
+        undefined,
+      );
+
+      // Then
+      // 첫 번째 전자공시 카테고리 업데이트 확인
+      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+        disclosure1Id,
+        expect.objectContaining({
+          categoryId: category1Id,
+          updatedBy,
+        }),
+      );
+      
+      // 두 번째 전자공시 카테고리 업데이트 확인
+      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+        disclosure2Id,
+        expect.objectContaining({
+          categoryId: category2Id,
+          updatedBy,
+        }),
+      );
+
+      // 각 전자공시가 독립적인 categoryId를 가져야 함
+      expect(result1.categoryId).toBe(category1Id);
+      expect(result2.categoryId).toBe(category2Id);
+      expect(result1.categoryId).not.toBe(result2.categoryId);
+    });
   });
 
   describe('전자공시_오더를_일괄_수정한다', () => {

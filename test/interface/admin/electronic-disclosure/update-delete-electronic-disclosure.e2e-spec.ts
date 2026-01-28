@@ -544,6 +544,83 @@ describe('PUT/PATCH/DELETE /api/admin/electronic-disclosures (전자공시 수�
   });
 
   describe('복합 시나리오', () => {
+    it('각 전자공시가 개별적인 카테고리를 가져야 한다', async () => {
+      // Given - 두 개의 카테고리 생성
+      const category1Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures/categories')
+        .send({
+          name: '카테고리 1',
+          description: '첫 번째 카테고리',
+        })
+        .expect(201);
+
+      const category2Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures/categories')
+        .send({
+          name: '카테고리 2',
+          description: '두 번째 카테고리',
+        })
+        .expect(201);
+
+      const category1Id = category1Response.body.id;
+      const category2Id = category2Response.body.id;
+
+      // 두 개의 전자공시 생성 (같은 카테고리로)
+      const translations1 = [{ languageId, title: '전자공시 1' }];
+      const translations2 = [{ languageId, title: '전자공시 2' }];
+
+      const disclosure1Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field('categoryId', category1Id)
+        .field('translations', JSON.stringify(translations1))
+        .expect(201);
+
+      const disclosure2Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field('categoryId', category1Id)
+        .field('translations', JSON.stringify(translations2))
+        .expect(201);
+
+      const disclosure1Id = disclosure1Response.body.id;
+      const disclosure2Id = disclosure2Response.body.id;
+
+      // 두 전자공시 모두 카테고리 1을 가지고 있어야 함
+      expect(disclosure1Response.body.categoryId).toBe(category1Id);
+      expect(disclosure2Response.body.categoryId).toBe(category1Id);
+
+      // When - 전자공시 1의 카테고리만 변경
+      const updatedTranslations1 = [{ languageId, title: '전자공시 1' }];
+
+      const updateResponse1 = await testSuite
+        .request()
+        .put(`/api/admin/electronic-disclosures/${disclosure1Id}`)
+        .field('categoryId', category2Id)
+        .field('translations', JSON.stringify(updatedTranslations1))
+        .expect(200);
+
+      // Then - 전자공시 1만 카테고리가 변경되어야 함
+      expect(updateResponse1.body.categoryId).toBe(category2Id);
+
+      // 전자공시 2는 여전히 카테고리 1을 가지고 있어야 함
+      const getDisclosure2Response = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures/${disclosure2Id}`)
+        .expect(200);
+
+      expect(getDisclosure2Response.body.categoryId).toBe(category1Id);
+
+      // 두 전자공시가 서로 다른 카테고리를 가져야 함
+      expect(updateResponse1.body.categoryId).not.toBe(getDisclosure2Response.body.categoryId);
+
+      console.log(`✅ 전자공시 1 카테고리: ${updateResponse1.body.categoryId}`);
+      console.log(`✅ 전자공시 2 카테고리: ${getDisclosure2Response.body.categoryId}`);
+      console.log(`✅ 각 전자공시가 개별적인 카테고리를 가지고 있습니다!`);
+    });
+
     it('전자공시를 생성, 수정, 공개 변경, 순서 변경, 삭제하는 전체 플로우를 테스트해야 한다', async () => {
       // 1. 생성
       const translationsData = [
