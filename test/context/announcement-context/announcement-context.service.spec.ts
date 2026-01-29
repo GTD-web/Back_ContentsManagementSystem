@@ -44,7 +44,9 @@ describe('AnnouncementContextService', () => {
       ],
     }).compile();
 
-    service = module.get<AnnouncementContextService>(AnnouncementContextService);
+    service = module.get<AnnouncementContextService>(
+      AnnouncementContextService,
+    );
     commandBus = module.get(CommandBus);
     queryBus = module.get(QueryBus);
   });
@@ -106,7 +108,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항을_수정한다(announcementId, updateDto);
+      const result = await service.공지사항을_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -137,7 +142,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_공개를_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_공개를_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -168,7 +176,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_고정을_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_고정을_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -199,7 +210,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_오더를_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_오더를_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -317,6 +331,42 @@ describe('AnnouncementContextService', () => {
       // Then
       expect(queryBus.execute).toHaveBeenCalledTimes(1);
       expect(result).toEqual(mockResult);
+    });
+
+    it('카테고리 ID로 필터링하여 조회할 수 있어야 한다', async () => {
+      // Given
+      const params = {
+        isPublic: true,
+        isFixed: false,
+        orderBy: 'order' as const,
+        page: 1,
+        limit: 10,
+        categoryId: 'category-1',
+      };
+
+      const mockResult = {
+        items: [
+          {
+            id: 'announcement-1',
+            categoryId: 'category-1',
+            title: '테스트 공지',
+            content: '테스트 내용',
+          } as Announcement,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockQueryBus.execute.mockResolvedValue(mockResult);
+
+      // When
+      const result = await service.공지사항_목록을_조회한다(params);
+
+      // Then
+      expect(queryBus.execute).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockResult);
+      expect(result.items[0].categoryId).toBe('category-1');
     });
   });
 

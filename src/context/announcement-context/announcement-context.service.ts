@@ -119,6 +119,7 @@ export class AnnouncementContextService {
     limit?: number;
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<AnnouncementListResult> {
     const query = new GetAnnouncementListQuery(
       params.isPublic,
@@ -128,6 +129,7 @@ export class AnnouncementContextService {
       params.limit || 10,
       params.startDate,
       params.endDate,
+      params.categoryId,
     );
     return await this.queryBus.execute(query);
   }
@@ -147,5 +149,4 @@ export class AnnouncementContextService {
   async 부서_변경_대상_목록을_조회한다(): Promise<Announcement[]> {
     return await this.announcementService.부서_변경_대상_목록을_조회한다();
   }
-
 }

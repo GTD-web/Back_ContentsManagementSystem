@@ -83,6 +83,7 @@ export class AnnouncementBusinessService {
     limit?: number;
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
@@ -131,6 +132,7 @@ export class AnnouncementBusinessService {
     limit?: number;
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;

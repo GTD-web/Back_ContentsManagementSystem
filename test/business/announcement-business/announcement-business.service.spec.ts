@@ -208,6 +208,55 @@ describe('AnnouncementBusinessService', () => {
       expect(result.items[0].categoryName).toBe('일반 공지');
       expect(result.total).toBe(1);
     });
+
+    it('카테고리 ID로 필터링하여 목록을 조회해야 한다', async () => {
+      // Given
+      const params = {
+        isPublic: true,
+        isFixed: false,
+        orderBy: 'order' as const,
+        page: 1,
+        limit: 10,
+        categoryId: 'cat-1',
+      };
+
+      const mockResult = {
+        items: [
+          {
+            id: 'announcement-1',
+            categoryId: 'cat-1',
+            category: { name: '일반 공지' },
+            title: '테스트 공지',
+            content: '테스트 내용',
+            isFixed: false,
+            isPublic: true,
+            mustRead: false,
+            order: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            survey: null,
+          } as Announcement,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockAnnouncementContextService.공지사항_목록을_조회한다.mockResolvedValue(
+        mockResult,
+      );
+
+      // When
+      const result = await service.공지사항_목록을_조회한다(params);
+
+      // Then
+      expect(
+        announcementContextService.공지사항_목록을_조회한다,
+      ).toHaveBeenCalledWith(params);
+      expect(result.items[0].categoryId).toBe('cat-1');
+      expect(result.items[0].categoryName).toBe('일반 공지');
+      expect(result.total).toBe(1);
+    });
   });
 
   describe('공지사항_전체_목록을_조회한다', () => {
@@ -215,7 +264,7 @@ describe('AnnouncementBusinessService', () => {
       // Given
       const mockResult = {
         items: [
-          { 
+          {
             id: 'announcement-1',
             categoryId: 'cat-1',
             category: { name: '일반 공지' },
@@ -228,7 +277,7 @@ describe('AnnouncementBusinessService', () => {
             updatedAt: new Date(),
             survey: null,
           } as Announcement,
-          { 
+          {
             id: 'announcement-2',
             categoryId: 'cat-2',
             category: { name: '긴급 공지' },
