@@ -13,11 +13,11 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
       .request()
       .get('/api/admin/languages')
       .expect(200);
-    
+
     const koreanLanguage = languagesResponse.body.items.find(
       (lang: any) => lang.code === 'ko',
     );
-    
+
     if (koreanLanguage) {
       testLanguageId = koreanLanguage.id;
     } else {
@@ -31,7 +31,7 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
           nativeName: '한국어',
           isDefault: true,
         });
-      
+
       testLanguageId = languageResponse.body.id;
     }
   });
@@ -58,7 +58,7 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         order: 0,
       })
       .expect(201);
-    
+
     testCategoryId = categoryResponse.body.id;
   });
 
@@ -92,12 +92,15 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 ...popup,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
       }
 
@@ -121,13 +124,16 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
       }
 
@@ -163,13 +169,16 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
       }
 
@@ -191,14 +200,17 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
       const publicPopup = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
+        .field(
+          'translations',
+          JSON.stringify([
             {
               languageId: testLanguageId,
               title: '공개 팝업',
               description: '공개된 팝업입니다',
             },
-          ]))
-          .field('categoryId', testCategoryId);
+          ]),
+        )
+        .field('categoryId', testCategoryId);
 
       // 공개 상태로 변경
       await testSuite
@@ -210,14 +222,17 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
       const privatePopup = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
+        .field(
+          'translations',
+          JSON.stringify([
             {
               languageId: testLanguageId,
               title: '비공개 팝업',
               description: '비공개 팝업입니다',
             },
-          ]))
-          .field('categoryId', testCategoryId);
+          ]),
+        )
+        .field('categoryId', testCategoryId);
 
       // 비공개 상태로 변경
       await testSuite
@@ -235,7 +250,9 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
 
       // Then
       expect(response.body.items.length).toBeGreaterThan(0);
-      expect(response.body.items.every((item: any) => item.isPublic === true)).toBe(true);
+      expect(
+        response.body.items.every((item: any) => item.isPublic === true),
+      ).toBe(true);
     });
 
     it('isPublic=false 필터가 동작해야 한다', async () => {
@@ -247,7 +264,76 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
 
       // Then
       expect(response.body.items.length).toBeGreaterThan(0);
-      expect(response.body.items.every((item: any) => item.isPublic === false)).toBe(true);
+      expect(
+        response.body.items.every((item: any) => item.isPublic === false),
+      ).toBe(true);
+    });
+
+    it('categoryId 필터가 동작해야 한다', async () => {
+      // Given - 두 번째 카테고리 생성
+      const secondCategoryResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups/categories')
+        .send({
+          name: '두 번째 카테고리',
+          description: '필터링 테스트용 두 번째 카테고리',
+          isActive: true,
+          order: 1,
+        })
+        .expect(201);
+      const secondCategoryId = secondCategoryResponse.body.id;
+
+      // 첫 번째 카테고리의 팝업 1개 추가 생성
+      await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '카테고리1-팝업3',
+              description: '설명',
+            },
+          ]),
+        )
+        .field('categoryId', testCategoryId);
+
+      // 두 번째 카테고리의 팝업 3개 생성
+      for (let i = 1; i <= 3; i++) {
+        await testSuite
+          .request()
+          .post('/api/admin/main-popups')
+          .field(
+            'translations',
+            JSON.stringify([
+              {
+                languageId: testLanguageId,
+                title: `카테고리2-팝업${i}`,
+                description: '설명',
+              },
+            ]),
+          )
+          .field('categoryId', secondCategoryId);
+      }
+
+      // When - 첫 번째 카테고리로 필터링
+      const response1 = await testSuite
+        .request()
+        .get(`/api/admin/main-popups?categoryId=${testCategoryId}`)
+        .expect(200);
+
+      // Then - 첫 번째 카테고리의 팝업만 3개 (beforeEach에서 생성한 2개 + 추가 1개)
+      expect(response1.body.total).toBe(3);
+
+      // When - 두 번째 카테고리로 필터링
+      const response2 = await testSuite
+        .request()
+        .get(`/api/admin/main-popups?categoryId=${secondCategoryId}`)
+        .expect(200);
+
+      // Then - 두 번째 카테고리의 팝업만 3개
+      expect(response2.body.total).toBe(3);
     });
   });
 
@@ -258,13 +344,16 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
       }
 
@@ -284,13 +373,16 @@ describe('GET /api/admin/main-popups (메인 팝업 목록 조회)', () => {
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
         // 생성 시간 차이를 두기 위한 대기
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -321,11 +413,11 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
       .request()
       .get('/api/admin/languages')
       .expect(200);
-    
+
     const koreanLanguage = languagesResponse.body.items.find(
       (lang: any) => lang.code === 'ko',
     );
-    
+
     if (koreanLanguage) {
       testLanguageId = koreanLanguage.id;
     } else {
@@ -339,7 +431,7 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
           nativeName: '한국어',
           isDefault: true,
         });
-      
+
       testLanguageId = languageResponse.body.id;
     }
   });
@@ -366,7 +458,7 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
         order: 0,
       })
       .expect(201);
-    
+
     testCategoryId = categoryResponse.body.id;
   });
 
@@ -389,13 +481,16 @@ describe('GET /api/admin/main-popups/all (메인 팝업 전체 목록 조회)', 
         await testSuite
           .request()
           .post('/api/admin/main-popups')
-          .field('translations', JSON.stringify([
+          .field(
+            'translations',
+            JSON.stringify([
               {
                 languageId: testLanguageId,
                 title: `팝업${i}`,
                 description: `설명${i}`,
               },
-            ]))
+            ]),
+          )
           .field('categoryId', testCategoryId);
       }
 
@@ -425,11 +520,11 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
       .request()
       .get('/api/admin/languages')
       .expect(200);
-    
+
     const koreanLanguage = languagesResponse.body.items.find(
       (lang: any) => lang.code === 'ko',
     );
-    
+
     if (koreanLanguage) {
       testLanguageId = koreanLanguage.id;
     } else {
@@ -443,7 +538,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
           nativeName: '한국어',
           isDefault: true,
         });
-      
+
       testLanguageId = languageResponse.body.id;
     }
   });
@@ -470,7 +565,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
         order: 0,
       })
       .expect(201);
-    
+
     testCategoryId = categoryResponse.body.id;
   });
 
@@ -480,14 +575,17 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
+        .field(
+          'translations',
+          JSON.stringify([
             {
               languageId: testLanguageId,
               title: '테스트 팝업',
               description: '테스트 설명',
             },
-          ]))
-          .field('categoryId', testCategoryId)
+          ]),
+        )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;
@@ -521,12 +619,12 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
         .request()
         .get('/api/admin/languages')
         .expect(200);
-      
+
       let enLanguageId: string;
       const englishLanguage = languagesResponse.body.items.find(
         (lang: any) => lang.code === 'en',
       );
-      
+
       if (englishLanguage) {
         enLanguageId = englishLanguage.id;
       } else {
@@ -545,7 +643,9 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/main-popups')
-        .field('translations', JSON.stringify([
+        .field(
+          'translations',
+          JSON.stringify([
             {
               languageId: testLanguageId,
               title: '다국어 팝업',
@@ -556,8 +656,9 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
               title: 'Multilingual Popup',
               description: 'English description',
             },
-          ]))
-          .field('categoryId', testCategoryId)
+          ]),
+        )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;
@@ -570,7 +671,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
 
       // Then
       expect(response.body.translations.length).toBeGreaterThanOrEqual(2);
-      
+
       // 한국어와 영어 번역이 있는지 확인 (자동 동기화된 다른 언어도 포함될 수 있음)
       const koTranslation = response.body.translations.find(
         (t: any) => t.languageId === testLanguageId,
@@ -578,7 +679,7 @@ describe('GET /api/admin/main-popups/:id (메인 팝업 상세 조회)', () => {
       const enTranslation = response.body.translations.find(
         (t: any) => t.languageId === enLanguageId,
       );
-      
+
       expect(koTranslation).toMatchObject({
         title: '다국어 팝업',
         languageId: testLanguageId,

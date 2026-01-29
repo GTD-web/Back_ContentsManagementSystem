@@ -29,14 +29,16 @@ export class MainPopupContextService {
     const popups = await this.mainPopupService.모든_메인_팝업을_조회한다({
       orderBy: 'order',
     });
-    
+
     // 각 메인 팝업에서 deletedAt이 null인 파일만 반환
-    popups.forEach(popup => {
+    popups.forEach((popup) => {
       if (popup.attachments) {
-        popup.attachments = popup.attachments.filter((att: any) => !att.deletedAt);
+        popup.attachments = popup.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
       }
     });
-    
+
     return popups;
   }
 
@@ -45,14 +47,14 @@ export class MainPopupContextService {
    */
   async 메인_팝업_상세를_조회한다(id: string): Promise<MainPopup> {
     const popup = await this.mainPopupService.ID로_메인_팝업을_조회한다(id);
-    
+
     // deletedAt이 null인 파일만 반환
     if (popup.attachments) {
       popup.attachments = popup.attachments.filter(
         (att: any) => !att.deletedAt,
       );
     }
-    
+
     return popup;
   }
 
@@ -99,7 +101,7 @@ export class MainPopupContextService {
 
   /**
    * 메인 팝업을 생성한다
-   * 
+   *
    * 다국어 전략:
    * 1. 전달받은 언어: isSynced = false (사용자 입력)
    * 2. 나머지 활성 언어: isSynced = true (자동 동기화)
@@ -161,7 +163,10 @@ export class MainPopupContextService {
     );
 
     // 7. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
-    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
       translations.find((t) => t.languageId === defaultLang?.id) ||
@@ -246,9 +251,10 @@ export class MainPopupContextService {
             existingTranslation.id,
             {
               title: translation.title,
-              description: translation.description !== undefined 
-                ? translation.description 
-                : undefined,
+              description:
+                translation.description !== undefined
+                  ? translation.description
+                  : undefined,
               isSynced: false, // 수정되었으므로 동기화 중단
               updatedBy: data.updatedBy,
             },
@@ -256,9 +262,7 @@ export class MainPopupContextService {
 
           // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
           if (baseLanguage && translation.languageId === baseLanguage.id) {
-            this.logger.debug(
-              '기본 언어 번역 수정 감지 - 동기화 이벤트 발행',
-            );
+            this.logger.debug('기본 언어 번역 수정 감지 - 동기화 이벤트 발행');
             this.eventBus.publish(
               new MainPopupTranslationUpdatedEvent(
                 id,
@@ -325,6 +329,7 @@ export class MainPopupContextService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: MainPopup[];
     total: number;
@@ -333,7 +338,7 @@ export class MainPopupContextService {
     totalPages: number;
   }> {
     this.logger.log(
-      `메인 팝업 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}`,
+      `메인 팝업 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}, 카테고리: ${categoryId}`,
     );
 
     // 전체 목록 조회
@@ -342,12 +347,15 @@ export class MainPopupContextService {
       orderBy,
       startDate,
       endDate,
+      categoryId,
     });
 
     // deletedAt이 null인 파일만 필터링
-    allPopups.forEach(popup => {
+    allPopups.forEach((popup) => {
       if (popup.attachments) {
-        popup.attachments = popup.attachments.filter((att: any) => !att.deletedAt);
+        popup.attachments = popup.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
       }
     });
 

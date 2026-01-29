@@ -46,7 +46,8 @@ export class MainPopupBusinessService {
   async 메인_팝업_상세를_조회한다(id: string): Promise<any> {
     this.logger.log(`메인 팝업 상세 조회 시작 - ID: ${id}`);
 
-    const popup = await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
+    const popup =
+      await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
 
     this.logger.log(`메인 팝업 상세 조회 완료 - ID: ${id}`);
 
@@ -166,7 +167,8 @@ export class MainPopupBusinessService {
     );
 
     // 1. 기존 메인 팝업 조회
-    const popup = await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
+    const popup =
+      await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
 
     // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = popup.attachments || [];
@@ -262,6 +264,7 @@ export class MainPopupBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: MainPopupListItemDto[];
     total: number;
@@ -270,7 +273,7 @@ export class MainPopupBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `메인 팝업 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `메인 팝업 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result = await this.mainPopupContextService.메인_팝업_목록을_조회한다(
@@ -280,16 +283,21 @@ export class MainPopupBusinessService {
       limit,
       startDate,
       endDate,
+      categoryId,
     );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // MainPopup 엔티티를 MainPopupListItemDto로 변환
-    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const items: MainPopupListItemDto[] = result.items.map((popup) => {
       const defaultTranslation =
-        popup.translations?.find((t) => t.language?.code === defaultLanguageCode) ||
-        popup.translations?.[0];
+        popup.translations?.find(
+          (t) => t.language?.code === defaultLanguageCode,
+        ) || popup.translations?.[0];
 
       return {
         id: popup.id,

@@ -722,12 +722,28 @@ describe('MainPopupBusinessService', () => {
       );
 
       // When
-      const result = await service.메인_팝업_목록을_조회한다(true, 'order', 1, 10);
+      const result = await service.메인_팝업_목록을_조회한다(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(
         mainPopupContextService.메인_팝업_목록을_조회한다,
-      ).toHaveBeenCalledWith(true, 'order', 1, 10, undefined, undefined);
+      ).toHaveBeenCalledWith(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
       expect(result.total).toBe(2);
       expect(result.items).toHaveLength(2);
       expect(result.items[0]).toMatchObject({
@@ -772,7 +788,15 @@ describe('MainPopupBusinessService', () => {
       );
 
       // When
-      const result = await service.메인_팝업_목록을_조회한다();
+      const result = await service.메인_팝업_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(result.items[0].title).toBe('Main Popup');
@@ -804,12 +828,84 @@ describe('MainPopupBusinessService', () => {
         10,
         startDate,
         endDate,
+        undefined,
       );
 
       // Then
       expect(
         mainPopupContextService.메인_팝업_목록을_조회한다,
-      ).toHaveBeenCalledWith(true, 'createdAt', 1, 10, startDate, endDate);
+      ).toHaveBeenCalledWith(
+        true,
+        'createdAt',
+        1,
+        10,
+        startDate,
+        endDate,
+        undefined,
+      );
+    });
+
+    it('카테고리 ID로 필터링하여 조회해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const mockPopups = [
+        {
+          id: 'popup-1',
+          isPublic: true,
+          order: 0,
+          categoryId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          translations: [
+            {
+              language: { code: 'ko' },
+              title: '카테고리1-팝업',
+              description: '설명',
+            },
+          ],
+          category: {
+            name: '공지사항',
+          },
+        } as any as MainPopup,
+      ];
+
+      const contextResult = {
+        items: mockPopups,
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      };
+
+      mockMainPopupContextService.메인_팝업_목록을_조회한다.mockResolvedValue(
+        contextResult,
+      );
+
+      // When
+      const result = await service.메인_팝업_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(
+        mainPopupContextService.메인_팝업_목록을_조회한다,
+      ).toHaveBeenCalledWith(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+      expect(result.total).toBe(1);
+      expect(result.items[0].categoryName).toBe('공지사항');
     });
   });
 

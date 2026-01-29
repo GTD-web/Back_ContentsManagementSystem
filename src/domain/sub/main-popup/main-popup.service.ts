@@ -45,6 +45,7 @@ export class MainPopupService {
     orderBy?: 'order' | 'createdAt';
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<MainPopup[]> {
     this.logger.debug(`메인 팝업 목록 조회`);
 
@@ -54,7 +55,11 @@ export class MainPopupService {
       .leftJoinAndSelect('translations.language', 'language');
 
     // category 조인
-    queryBuilder.leftJoin('categories', 'category', 'popup.categoryId = category.id');
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'popup.categoryId = category.id',
+    );
     queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
@@ -66,20 +71,41 @@ export class MainPopupService {
       hasWhere = true;
     }
 
+    if (options?.categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('popup.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      } else {
+        queryBuilder.where('popup.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (options?.startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('popup.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.andWhere('popup.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
       } else {
-        queryBuilder.where('popup.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.where('popup.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
         hasWhere = true;
       }
     }
 
     if (options?.endDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('popup.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.andWhere('popup.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
       } else {
-        queryBuilder.where('popup.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.where('popup.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
         hasWhere = true;
       }
     }
@@ -138,9 +164,13 @@ export class MainPopupService {
       popup.category = {
         name: raw.category_name,
       };
-      this.logger.debug(`메인 팝업 ${popup.id}: 카테고리명 = ${raw.category_name}`);
+      this.logger.debug(
+        `메인 팝업 ${popup.id}: 카테고리명 = ${raw.category_name}`,
+      );
     } else {
-      this.logger.warn(`메인 팝업 ${popup.id}: 카테고리명을 찾을 수 없음. categoryId: ${popup.categoryId}`);
+      this.logger.warn(
+        `메인 팝업 ${popup.id}: 카테고리명을 찾을 수 없음. categoryId: ${popup.categoryId}`,
+      );
     }
 
     return popup;
