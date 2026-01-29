@@ -12,7 +12,6 @@ import {
   UploadedFiles,
   BadRequestException,
   ParseUUIDPipe,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -36,7 +35,10 @@ import {
 } from '@interface/common/dto/ir/ir-response.dto';
 import { UpdateIRBatchOrderDto } from '@interface/common/dto/ir/update-ir-batch-order.dto';
 import { CreateIRDto } from '@interface/common/dto/ir/create-ir.dto';
-import { UpdateIRCategoryDto, UpdateIRCategoryOrderDto } from '@interface/common/dto/ir/update-ir.dto';
+import {
+  UpdateIRCategoryDto,
+  UpdateIRCategoryOrderDto,
+} from '@interface/common/dto/ir/update-ir.dto';
 
 @ApiTags('A-3. 관리자 - IR')
 @ApiBearerAuth('Bearer')
@@ -184,7 +186,9 @@ export class IRController {
     status: 400,
     description: '잘못된 UUID 형식',
   })
-  async IR_상세를_조회한다(@Param('id', ParseUUIDPipe) id: string): Promise<IRResponseDto> {
+  async IR_상세를_조회한다(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<IRResponseDto> {
     return await this.irBusinessService.IR_상세를_조회한다(id);
   }
 
@@ -262,8 +266,7 @@ export class IRController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -309,7 +312,7 @@ export class IRController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}].languageId는 필수 필드입니다.`,
@@ -333,7 +336,7 @@ export class IRController {
 
   /**
    * IR 오더를 일괄 수정한다
-   * 
+   *
    * 주의: 이 라우트는 :id 라우트보다 앞에 와야 합니다.
    */
   @Put('batch-order')
@@ -381,11 +384,9 @@ export class IRController {
     // 각 항목의 필수 필드 검증
     for (let i = 0; i < updateDto.irs.length; i++) {
       const item = updateDto.irs[i];
-      
+
       if (!item.id || typeof item.id !== 'string') {
-        throw new BadRequestException(
-          `irs[${i}].id는 필수 문자열 필드입니다.`,
-        );
+        throw new BadRequestException(`irs[${i}].id는 필수 문자열 필드입니다.`);
       }
 
       if (typeof item.order !== 'number' || item.order < 0) {
@@ -511,7 +512,7 @@ export class IRController {
   ): Promise<IRResponseDto> {
     // translations 파싱
     let translations = body?.translations;
-    
+
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
     }
@@ -535,7 +536,7 @@ export class IRController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}].languageId는 필수 필드입니다.`,
@@ -619,7 +620,9 @@ export class IRController {
     status: 400,
     description: '잘못된 UUID 형식',
   })
-  async IR을_삭제한다(@Param('id', ParseUUIDPipe) id: string): Promise<{ success: boolean }> {
+  async IR을_삭제한다(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ success: boolean }> {
     const result = await this.irBusinessService.IR을_삭제한다(id);
     return { success: result };
   }
@@ -753,10 +756,13 @@ export class IRController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateIRCategoryOrderDto,
   ): Promise<IRCategoryResponseDto> {
-    const result = await this.irBusinessService.IR_카테고리_오더를_변경한다(id, {
-      order: updateDto.order,
-      updatedBy: user.id,
-    });
+    const result = await this.irBusinessService.IR_카테고리_오더를_변경한다(
+      id,
+      {
+        order: updateDto.order,
+        updatedBy: user.id,
+      },
+    );
     return result;
   }
 

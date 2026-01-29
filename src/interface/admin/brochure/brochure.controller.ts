@@ -11,7 +11,6 @@ import {
   Patch,
   UseInterceptors,
   UploadedFiles,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -368,13 +367,10 @@ export class BrochureController {
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochurePublicDto,
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_공개를_수정한다(
-      id,
-      {
-        ...updateDto,
-        updatedBy: user.id,
-      },
-    );
+    return await this.brochureBusinessService.브로슈어_공개를_수정한다(id, {
+      ...updateDto,
+      updatedBy: user.id,
+    });
   }
 
   /**
@@ -664,13 +660,10 @@ export class BrochureController {
     @Body() updateDto: UpdateBrochureCategoryOrderDto,
   ): Promise<BrochureCategoryResponseDto> {
     const result =
-      await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
-        id,
-        {
-          ...updateDto,
-          updatedBy: user.id,
-        },
-      );
+      await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(id, {
+        ...updateDto,
+        updatedBy: user.id,
+      });
     return result;
   }
 

@@ -5,7 +5,6 @@ import {
   Put,
   Body,
   Param,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -36,8 +35,7 @@ export class AnalyticsController {
   @Post('page-views')
   @ApiOperation({
     summary: '페이지 조회 생성',
-    description:
-      '사용자가 페이지에 방문할 때 호출하여 방문 기록을 생성합니다.',
+    description: '사용자가 페이지에 방문할 때 호출하여 방문 기록을 생성합니다.',
   })
   @ApiResponse({
     status: 201,
@@ -62,8 +60,7 @@ export class AnalyticsController {
   @Put('page-views/:id')
   @ApiOperation({
     summary: '페이지 조회 수정',
-    description:
-      '사용자가 페이지를 떠날 때 호출하여 체류 시간을 기록합니다.',
+    description: '사용자가 페이지를 떠날 때 호출하여 체류 시간을 기록합니다.',
   })
   @ApiResponse({
     status: 200,

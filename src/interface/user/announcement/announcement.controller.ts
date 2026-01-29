@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -21,7 +13,6 @@ import { Repository } from 'typeorm';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { Public } from '@interface/common/decorators/public.decorator';
-import { JwtAuthGuard } from '@interface/common/guards';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
 import {
@@ -33,7 +24,6 @@ import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-surve
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
 @Public()
-@UseGuards(JwtAuthGuard)
 @Controller('user/announcements')
 export class UserAnnouncementController {
   constructor(

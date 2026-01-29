@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   Patch,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,

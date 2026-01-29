@@ -10,7 +10,6 @@ import {
   Query,
   UseInterceptors,
   UploadedFiles,
-  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import {
@@ -27,7 +26,6 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { Public } from '@interface/common/decorators/public.decorator';
-import { JwtAuthGuard } from '@interface/common/guards';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
 import {
   CreateFolderDto,
@@ -45,7 +43,6 @@ import {
 @ApiTags('U-2. 사용자 - Wiki')
 @ApiBearerAuth('Bearer')
 @Public()
-@UseGuards(JwtAuthGuard)
 @Controller('user/wiki')
 export class UserWikiController {
   constructor(private readonly wikiBusinessService: WikiBusinessService) {}
@@ -124,7 +121,8 @@ export class UserWikiController {
   @Get('folders/by-path')
   @ApiOperation({
     summary: '경로로 폴더 조회 (사용자용)',
-    description: '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환합니다.',
+    description:
+      '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -143,8 +141,9 @@ export class UserWikiController {
   ): Promise<WikiResponseDto> {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const folder = await this.wikiBusinessService.경로로_폴더를_조회한다(path);
-    const children =
-      await this.wikiBusinessService.폴더_하위_항목을_조회한다(folder.id);
+    const children = await this.wikiBusinessService.폴더_하위_항목을_조회한다(
+      folder.id,
+    );
     return WikiResponseDto.from(folder, children);
   }
 
