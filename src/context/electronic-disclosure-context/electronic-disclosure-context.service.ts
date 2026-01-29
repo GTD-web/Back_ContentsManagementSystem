@@ -28,17 +28,20 @@ export class ElectronicDisclosureContextService {
    * 전자공시 전체 목록을 조회한다
    */
   async 전자공시_전체_목록을_조회한다(): Promise<ElectronicDisclosure[]> {
-    const disclosures = await this.electronicDisclosureService.모든_전자공시를_조회한다({
-      orderBy: 'order',
-    });
-    
+    const disclosures =
+      await this.electronicDisclosureService.모든_전자공시를_조회한다({
+        orderBy: 'order',
+      });
+
     // 각 전자공시에서 deletedAt이 null인 파일만 반환
-    disclosures.forEach(disclosure => {
+    disclosures.forEach((disclosure) => {
       if (disclosure.attachments) {
-        disclosure.attachments = disclosure.attachments.filter((att: any) => !att.deletedAt);
+        disclosure.attachments = disclosure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
       }
     });
-    
+
     return disclosures;
   }
 
@@ -46,15 +49,16 @@ export class ElectronicDisclosureContextService {
    * 전자공시 상세를 조회한다
    */
   async 전자공시_상세를_조회한다(id: string): Promise<ElectronicDisclosure> {
-    const disclosure = await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
-    
+    const disclosure =
+      await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+
     // deletedAt이 null인 파일만 반환
     if (disclosure.attachments) {
       disclosure.attachments = disclosure.attachments.filter(
         (att: any) => !att.deletedAt,
       );
     }
-    
+
     return disclosure;
   }
 
@@ -101,7 +105,7 @@ export class ElectronicDisclosureContextService {
 
   /**
    * 전자공시를 생성한다
-   * 
+   *
    * 브로슈어와 동일한 다국어 전략 적용:
    * 1. 전달받은 언어: isSynced = false (사용자 입력)
    * 2. 나머지 활성 언어: isSynced = true (자동 동기화)
@@ -139,16 +143,18 @@ export class ElectronicDisclosureContextService {
     const allLanguages = await this.languageService.모든_언어를_조회한다(false);
 
     // 4. 다음 순서 계산
-    const nextOrder = await this.electronicDisclosureService.다음_순서를_계산한다();
+    const nextOrder =
+      await this.electronicDisclosureService.다음_순서를_계산한다();
 
     // 5. 전자공시 생성 (기본값: 공개)
-    const disclosure = await this.electronicDisclosureService.전자공시를_생성한다({
-      isPublic: true,
-      order: nextOrder,
-      categoryId,
-      attachments: attachments || null,
-      createdBy,
-    });
+    const disclosure =
+      await this.electronicDisclosureService.전자공시를_생성한다({
+        isPublic: true,
+        order: nextOrder,
+        categoryId,
+        attachments: attachments || null,
+        createdBy,
+      });
 
     // 6. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
     await this.electronicDisclosureService.전자공시_번역을_생성한다(
@@ -163,7 +169,10 @@ export class ElectronicDisclosureContextService {
     );
 
     // 7. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
-    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
       translations.find((t) => t.languageId === defaultLang?.id) ||
@@ -252,9 +261,7 @@ export class ElectronicDisclosureContextService {
 
           // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
           if (baseLanguage && translation.languageId === baseLanguage.id) {
-            this.logger.debug(
-              `기본 언어 번역 수정 감지 - 동기화 이벤트 발행`,
-            );
+            this.logger.debug(`기본 언어 번역 수정 감지 - 동기화 이벤트 발행`);
             this.eventBus.publish(
               new ElectronicDisclosureTranslationUpdatedEvent(
                 id,
@@ -357,6 +364,7 @@ export class ElectronicDisclosureContextService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: ElectronicDisclosure[];
     total: number;
@@ -365,7 +373,7 @@ export class ElectronicDisclosureContextService {
     totalPages: number;
   }> {
     this.logger.log(
-      `전자공시 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}`,
+      `전자공시 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}, 카테고리: ${categoryId}`,
     );
 
     // 전체 목록 조회
@@ -375,12 +383,15 @@ export class ElectronicDisclosureContextService {
         orderBy,
         startDate,
         endDate,
+        categoryId,
       });
 
     // deletedAt이 null인 파일만 필터링
-    allDisclosures.forEach(disclosure => {
+    allDisclosures.forEach((disclosure) => {
       if (disclosure.attachments) {
-        disclosure.attachments = disclosure.attachments.filter((att: any) => !att.deletedAt);
+        disclosure.attachments = disclosure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
       }
     });
 

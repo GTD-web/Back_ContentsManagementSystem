@@ -105,6 +105,12 @@ export class ElectronicDisclosureController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 전자공시_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -112,6 +118,7 @@ export class ElectronicDisclosureController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<ElectronicDisclosureListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -126,6 +133,7 @@ export class ElectronicDisclosureController {
         limitNum,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
+        categoryId || undefined,
       );
 
     return result;
@@ -197,22 +205,25 @@ export class ElectronicDisclosureController {
     this.logger.log(`📖 [전자공시 조회 요청]`);
     this.logger.log(`  - 전자공시 ID: ${id}`);
     this.logger.log(`========================================`);
-    
-    const result = await this.electronicDisclosureBusinessService.전자공시_상세를_조회한다(id);
-    
+
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시_상세를_조회한다(
+        id,
+      );
+
     this.logger.log(`========================================`);
     this.logger.log(`📖 [전자공시 조회 응답]`);
     this.logger.log(`  - 전자공시 ID: ${result.id}`);
     this.logger.log(`  - 카테고리 ID: ${result.categoryId || 'null'}`);
     this.logger.log(`  - 카테고리명: ${result.category?.name || 'null'}`);
     this.logger.log(`========================================`);
-    
+
     return result;
   }
 
   /**
    * 전자공시 카테고리를 생성한다
-   * 
+   *
    * 주의: 이 라우트는 @Post() 라우트보다 먼저 와야 합니다.
    */
   @Post('categories')
@@ -236,10 +247,12 @@ export class ElectronicDisclosureController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateElectronicDisclosureCategoryDto,
   ): Promise<ElectronicDisclosureCategoryResponseDto> {
-    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다({
-      ...createDto,
-      createdBy: user.id,
-    });
+    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다(
+      {
+        ...createDto,
+        createdBy: user.id,
+      },
+    );
   }
 
   /**
@@ -317,8 +330,7 @@ export class ElectronicDisclosureController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -340,7 +352,9 @@ export class ElectronicDisclosureController {
   ): Promise<ElectronicDisclosureResponseDto> {
     this.logger.log(`========================================`);
     this.logger.log(`✨ [전자공시 생성 요청]`);
-    this.logger.log(`  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`);
+    this.logger.log(
+      `  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`,
+    );
     this.logger.log(`  - categoryId: ${body?.categoryId || 'null'}`);
     this.logger.log(`  - 파일 개수: ${files?.length || 0}`);
     this.logger.log(`========================================`);
@@ -376,13 +390,13 @@ export class ElectronicDisclosureController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}]: languageId는 필수입니다.`,
         );
       }
-      
+
       if (!translation.title || translation.title.trim() === '') {
         throw new BadRequestException(
           `translations[${i}]: title은 필수이며 비어있을 수 없습니다.`,
@@ -390,18 +404,21 @@ export class ElectronicDisclosureController {
       }
     }
 
-    const result = await this.electronicDisclosureBusinessService.전자공시를_생성한다(
-      translations,
-      body.categoryId || null,
-      user.id,
-      files,
-    );
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시를_생성한다(
+        translations,
+        body.categoryId || null,
+        user.id,
+        files,
+      );
 
     this.logger.log(`========================================`);
     this.logger.log(`✨ [전자공시 생성 응답]`);
     this.logger.log(`  - 생성된 전자공시 ID: ${result.id}`);
     this.logger.log(`  - 응답 categoryId: ${result.categoryId || 'null'}`);
-    this.logger.log(`  - 응답 categoryName: ${result.category?.name || 'null'}`);
+    this.logger.log(
+      `  - 응답 categoryName: ${result.category?.name || 'null'}`,
+    );
     this.logger.log(`========================================`);
 
     return result;
@@ -409,7 +426,7 @@ export class ElectronicDisclosureController {
 
   /**
    * 전자공시 오더를 일괄 수정한다
-   * 
+   *
    * 주의: 이 라우트는 :id 라우트보다 먼저 와야 합니다.
    * NestJS는 라우트를 위에서부터 순차적으로 매칭하므로,
    * 'batch-order'가 ':id'로 잘못 인식되는 것을 방지합니다.
@@ -555,7 +572,9 @@ export class ElectronicDisclosureController {
     this.logger.log(`========================================`);
     this.logger.log(`✏️ [전자공시 수정 요청]`);
     this.logger.log(`  - 전자공시 ID: ${id}`);
-    this.logger.log(`  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`);
+    this.logger.log(
+      `  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`,
+    );
     this.logger.log(`  - categoryId: ${body?.categoryId || 'null'}`);
     this.logger.log(`  - 파일 개수: ${files?.length || 0}`);
     this.logger.log(`========================================`);
@@ -567,11 +586,11 @@ export class ElectronicDisclosureController {
 
     // translations 파싱
     let translations = body.translations;
-    
+
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
     }
-    
+
     if (typeof translations === 'string') {
       try {
         translations = JSON.parse(translations);
@@ -591,13 +610,13 @@ export class ElectronicDisclosureController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}]: languageId는 필수입니다.`,
         );
       }
-      
+
       if (!translation.title || translation.title.trim() === '') {
         throw new BadRequestException(
           `translations[${i}]: title은 필수이며 비어있을 수 없습니다.`,
@@ -605,19 +624,22 @@ export class ElectronicDisclosureController {
       }
     }
 
-    const result = await this.electronicDisclosureBusinessService.전자공시를_수정한다(
-      id,
-      translations,
-      user.id,
-      body.categoryId || null,
-      files,
-    );
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시를_수정한다(
+        id,
+        translations,
+        user.id,
+        body.categoryId || null,
+        files,
+      );
 
     this.logger.log(`========================================`);
     this.logger.log(`✏️ [전자공시 수정 응답]`);
     this.logger.log(`  - 전자공시 ID: ${result.id}`);
     this.logger.log(`  - 응답 categoryId: ${result.categoryId || 'null'}`);
-    this.logger.log(`  - 응답 categoryName: ${result.category?.name || 'null'}`);
+    this.logger.log(
+      `  - 응답 categoryName: ${result.category?.name || 'null'}`,
+    );
     this.logger.log(`========================================`);
 
     return result;
@@ -625,7 +647,7 @@ export class ElectronicDisclosureController {
 
   /**
    * 전자공시 카테고리를 수정한다
-   * 
+   *
    * 주의: 이 라우트는 @Patch(':id/public') 라우트보다 먼저 와야 합니다.
    */
   @Patch('categories/:id')
@@ -705,7 +727,7 @@ export class ElectronicDisclosureController {
 
   /**
    * 전자공시 카테고리를 삭제한다
-   * 
+   *
    * 주의: 이 라우트는 @Delete(':id') 라우트보다 먼저 와야 합니다.
    */
   @Delete('categories/:id')

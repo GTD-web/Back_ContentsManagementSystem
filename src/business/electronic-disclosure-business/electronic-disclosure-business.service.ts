@@ -16,7 +16,9 @@ import { ElectronicDisclosureListItemDto } from '@interface/common/dto/electroni
  */
 @Injectable()
 export class ElectronicDisclosureBusinessService {
-  private readonly logger = new Logger(ElectronicDisclosureBusinessService.name);
+  private readonly logger = new Logger(
+    ElectronicDisclosureBusinessService.name,
+  );
 
   constructor(
     private readonly electronicDisclosureContextService: ElectronicDisclosureContextService,
@@ -35,7 +37,9 @@ export class ElectronicDisclosureBusinessService {
     const disclosures =
       await this.electronicDisclosureContextService.전자공시_전체_목록을_조회한다();
 
-    this.logger.log(`전자공시 전체 목록 조회 완료 - 총 ${disclosures.length}개`);
+    this.logger.log(
+      `전자공시 전체 목록 조회 완료 - 총 ${disclosures.length}개`,
+    );
 
     return disclosures;
   }
@@ -47,7 +51,9 @@ export class ElectronicDisclosureBusinessService {
     this.logger.log(`전자공시 상세 조회 시작 - ID: ${id}`);
 
     const disclosure =
-      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(id);
+      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(
+        id,
+      );
 
     this.logger.log(`전자공시 상세 조회 완료 - ID: ${id}`);
 
@@ -95,7 +101,6 @@ export class ElectronicDisclosureBusinessService {
 
     return disclosure;
   }
-
 
   /**
    * 전자공시를 생성한다 (파일 업로드 포함)
@@ -172,7 +177,9 @@ export class ElectronicDisclosureBusinessService {
 
     // 1. 기존 전자공시 조회
     const disclosure =
-      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(id);
+      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(
+        id,
+      );
 
     // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = disclosure.attachments || [];
@@ -223,23 +230,20 @@ export class ElectronicDisclosureBusinessService {
     );
 
     // 5. categoryId 업데이트
-    await this.electronicDisclosureContextService.전자공시를_수정한다(
-      id,
-      {
-        categoryId,
-        updatedBy,
-      },
+    await this.electronicDisclosureContextService.전자공시를_수정한다(id, {
+      categoryId,
+      updatedBy,
+    });
+    this.logger.log(
+      `전자공시 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`,
     );
-    this.logger.log(`전자공시 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`);
 
     // 6. 번역 수정
-    const result = await this.electronicDisclosureContextService.전자공시를_수정한다(
-      id,
-      {
+    const result =
+      await this.electronicDisclosureContextService.전자공시를_수정한다(id, {
         translations,
         updatedBy,
-      },
-    );
+      });
 
     this.logger.log(`전자공시 수정 완료 - ID: ${id}`);
 
@@ -280,6 +284,7 @@ export class ElectronicDisclosureBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: ElectronicDisclosureListItemDto[];
     total: number;
@@ -288,7 +293,7 @@ export class ElectronicDisclosureBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `전자공시 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `전자공시 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result =
@@ -299,17 +304,22 @@ export class ElectronicDisclosureBusinessService {
         limit,
         startDate,
         endDate,
+        categoryId,
       );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // ElectronicDisclosure 엔티티를 ElectronicDisclosureListItemDto로 변환
-    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const items: ElectronicDisclosureListItemDto[] = result.items.map(
       (disclosure) => {
-        const defaultTranslation = disclosure.translations?.find(
-          (t) => t.language?.code === defaultLanguageCode
-        ) || disclosure.translations?.[0];
+        const defaultTranslation =
+          disclosure.translations?.find(
+            (t) => t.language?.code === defaultLanguageCode,
+          ) || disclosure.translations?.[0];
 
         return {
           id: disclosure.id,
