@@ -54,6 +54,7 @@
 - **S3 파일 업로드** - AWS S3 기반 파일 관리
 - **권한 스케줄러** - 자동 권한 무효화 감지 및 처리
 - **번역 동기화** - 다국어 콘텐츠 자동 동기화
+- **자동 백업** - GFS 백업 전략 (TypeORM 기반, gzip 압축 70-90% 절감)
 
 ## 🐳 Docker 실행
 
@@ -197,6 +198,7 @@ lumir-cms-backend/
 │   ├── context/                   # Context Layer - CQRS 패턴
 │   │   ├── announcement-context/  # 공지사항 Context (권한 스케줄러)
 │   │   ├── auth-context/          # 인증/인가 Context (SSO, JWT)
+│   │   ├── backup-context/        # 백업 Context (GFS 백업 전략)
 │   │   ├── brochure-context/      # 브로슈어 Context (번역 동기화)
 │   │   ├── company-context/       # 조직도 Context (외부 SSO 연동)
 │   │   ├── electronic-disclosure-context/  # 전자공시 Context
@@ -241,6 +243,7 @@ lumir-cms-backend/
 │   │   │   ├── main-popup/        # 메인 팝업 API
 │   │   │   ├── news/              # 뉴스 API
 │   │   │   ├── permission-validation/  # 권한 검증 API
+│   │   │   ├── backup/            # 백업 관리 API
 │   │   │   ├── seed-data/         # 초기 데이터 API
 │   │   │   ├── shareholders-meeting/   # 주주총회 API
 │   │   │   ├── survey/            # 설문조사 API
@@ -290,6 +293,7 @@ lumir-cms-backend/
 │   │   └── context-flows/         # Context별 상세 흐름
 │   ├── policies/                  # 정책 문서
 │   ├── scheduler/                 # 스케줄러 가이드
+│   ├── backup/                    # 백업 시스템 가이드
 │   └── tests/                     # 테스트 보고서
 │
 ├── migrations/                    # TypeORM 마이그레이션
@@ -350,6 +354,18 @@ DATABASE_PASSWORD=lumir_password_2024
 DATABASE_NAME=lumir_cms
 DB_SYNCHRONIZE=true  # 개발 환경에서만 true
 DB_LOGGING=true
+
+# 기본 언어 설정
+# 백엔드 어플리케이션의 기본 언어 코드 (ko, en, ja, zh 중 선택)
+# 이 설정은 번역 동기화, 기본 표시 언어, 테스트 환경에서 사용됩니다
+DEFAULT_LANGUAGE_CODE=en
+
+# 백업 설정
+BACKUP_ENABLED=true
+BACKUP_PATH=./backups/database
+BACKUP_COMPRESS=true          # gzip 압축 (70-90% 용량 절감)
+BACKUP_MAX_RETRIES=3
+BACKUP_RETRY_DELAY_MS=5000
 
 # SSO 설정
 SSO_BASE_URL=https://lsso.vercel.app
@@ -471,6 +487,7 @@ SSO_BASE_URL=https://sso.lumir.space
   - 공지사항 권한 스케줄러
   - 위키 권한 스케줄러
   - 다국어 번역 동기화 스케줄러
+  - 데이터베이스 자동 백업 (GFS 전략)
 
 ### 파일 업로드
 - **[AWS S3](https://aws.amazon.com/s3/)** `@aws-sdk/client-s3 v3.965.0` - 파일 저장소
@@ -533,6 +550,9 @@ SSO_BASE_URL=https://sso.lumir.space
 - [권한 로그 모달 제어 정책](./docs/policies/permission-log-modal-control-policy.md)
 - [Public 상태 관리 정책](./docs/policies/public-state-management-policy.md)
 - [권한 스케줄러 가이드](./docs/scheduler/permission-scheduler-guide.md)
+- **[데이터베이스 백업 가이드](./docs/backup/database-backup-guide.md)** ⭐ - GFS 백업 전략 및 압축
+- **[백업 압축 가이드](./docs/backup/compression-guide.md)** - 용량 최적화 전략
+- [SQL 복구 가이드](./docs/backup/sql-restore-guide.md) - 백업 복구 방법
 - [다국어 전략](./.cursor/multilingual-strategy.mdc)
 - [위키 권한 전략](./.cursor/wiki-permission-strategy.mdc)
 
@@ -575,6 +595,28 @@ npm run migration:show
 ```
 
 > 📖 자세한 내용은 [DATABASE.md](./docs/DATABASE.md) 참고
+
+### 백업 관리
+
+```bash
+# 모든 타입 백업 실행
+npm run backup
+
+# 특정 타입 백업 실행
+npm run backup daily            # 일간 백업
+npm run backup weekly           # 주간 백업
+npm run backup monthly          # 월간 백업
+
+# 백업 목록 조회
+npm run backup:list             # 모든 백업
+npm run backup:list daily       # 특정 타입만
+npm run backup:list -- --stats  # 통계 포함
+
+# 만료된 백업 정리
+npm run backup:cleanup
+```
+
+> 📖 자세한 내용은 [백업 가이드](./docs/backup/database-backup-guide.md) 및 [스크립트 가이드](./scripts/backup/README.md) 참고
 
 ### 테스트 및 코드 품질
 
@@ -698,6 +740,7 @@ UNLICENSED
 - ✅ S3 파일 업로드
 - ✅ 권한 스케줄러 (공지사항, 위키)
 - ✅ 번역 동기화 스케줄러
+- ✅ 자동 백업 시스템 (GFS 백업 전략, gzip 압축 70-90% 절감)
 
 ### 테스트 현황
 - ✅ E2E 테스트 (TestContainers 기반)

@@ -39,16 +39,34 @@ export class NewsService {
 
     const queryBuilder = this.repository.createQueryBuilder('news');
 
+    // category 조인
+    queryBuilder.leftJoin('categories', 'category', 'news.categoryId = category.id');
+    queryBuilder.addSelect(['category.name']);
+
     if (options?.isPublic !== undefined) {
       queryBuilder.where('news.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
     }
 
-    return await queryBuilder
-      .orderBy('news.order', 'ASC')
-      .addOrderBy('news.createdAt', 'DESC')
-      .getMany();
+    queryBuilder.orderBy('news.order', 'ASC').addOrderBy('news.createdAt', 'DESC');
+
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    // News는 translations가 없지만, 일관성을 위해 id로 매핑
+    items.forEach((news) => {
+      const matchingRaw = raw.find((r) => r.news_id === news.id);
+      if (matchingRaw && matchingRaw.category_name) {
+        news.category = {
+          name: matchingRaw.category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**
@@ -57,10 +75,26 @@ export class NewsService {
   async ID로_뉴스를_조회한다(id: string): Promise<News> {
     this.logger.debug(`뉴스 조회 - ID: ${id}`);
 
-    const news = await this.repository.findOne({ where: { id } });
+    // getRawAndEntities를 사용해서 category name도 함께 가져오기
+    const result = await this.repository
+      .createQueryBuilder('news')
+      .leftJoin('categories', 'category', 'news.categoryId = category.id')
+      .select(['news', 'category.name'])
+      .where('news.id = :id', { id })
+      .getRawAndEntities();
 
-    if (!news) {
+    if (!result.entities || result.entities.length === 0) {
       throw new NotFoundException(`뉴스를 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const news = result.entities[0];
+
+    if (result.raw && result.raw.length > 0) {
+      const raw = result.raw[0];
+      // TypeORM의 경우 alias.column은 alias_column으로 변환됩니다
+      news.category = {
+        name: raw.category_name,
+      };
     }
 
     return news;

@@ -7,6 +7,7 @@ import { CategoryService } from '@domain/common/category/category.service';
 import { SsoService } from '@domain/common/sso/sso.service';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
 import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
 import { Survey } from '@domain/sub/survey/survey.entity';
@@ -92,6 +93,10 @@ describe('AnnouncementBusinessService', () => {
     }),
   };
 
+  const mockDataSource = {
+    createQueryRunner: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -136,6 +141,10 @@ describe('AnnouncementBusinessService', () => {
           provide: getRepositoryToken(SurveyCompletion),
           useValue: mockSurveyCompletionRepository,
         },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
+        },
       ],
     }).compile();
 
@@ -167,8 +176,17 @@ describe('AnnouncementBusinessService', () => {
         items: [
           {
             id: 'announcement-1',
+            categoryId: 'cat-1',
+            category: { name: '일반 공지' },
             title: '테스트 공지',
             content: '테스트 내용',
+            isFixed: false,
+            isPublic: true,
+            mustRead: false,
+            order: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            survey: null,
           } as Announcement,
         ],
         total: 1,
@@ -187,7 +205,57 @@ describe('AnnouncementBusinessService', () => {
       expect(
         announcementContextService.공지사항_목록을_조회한다,
       ).toHaveBeenCalledWith(params);
-      expect(result).toEqual(mockResult);
+      expect(result.items[0].categoryName).toBe('일반 공지');
+      expect(result.total).toBe(1);
+    });
+
+    it('카테고리 ID로 필터링하여 목록을 조회해야 한다', async () => {
+      // Given
+      const params = {
+        isPublic: true,
+        isFixed: false,
+        orderBy: 'order' as const,
+        page: 1,
+        limit: 10,
+        categoryId: 'cat-1',
+      };
+
+      const mockResult = {
+        items: [
+          {
+            id: 'announcement-1',
+            categoryId: 'cat-1',
+            category: { name: '일반 공지' },
+            title: '테스트 공지',
+            content: '테스트 내용',
+            isFixed: false,
+            isPublic: true,
+            mustRead: false,
+            order: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            survey: null,
+          } as Announcement,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockAnnouncementContextService.공지사항_목록을_조회한다.mockResolvedValue(
+        mockResult,
+      );
+
+      // When
+      const result = await service.공지사항_목록을_조회한다(params);
+
+      // Then
+      expect(
+        announcementContextService.공지사항_목록을_조회한다,
+      ).toHaveBeenCalledWith(params);
+      expect(result.items[0].categoryId).toBe('cat-1');
+      expect(result.items[0].categoryName).toBe('일반 공지');
+      expect(result.total).toBe(1);
     });
   });
 
@@ -196,8 +264,32 @@ describe('AnnouncementBusinessService', () => {
       // Given
       const mockResult = {
         items: [
-          { id: 'announcement-1' } as Announcement,
-          { id: 'announcement-2' } as Announcement,
+          {
+            id: 'announcement-1',
+            categoryId: 'cat-1',
+            category: { name: '일반 공지' },
+            title: '공지1',
+            isFixed: false,
+            isPublic: true,
+            mustRead: false,
+            order: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            survey: null,
+          } as Announcement,
+          {
+            id: 'announcement-2',
+            categoryId: 'cat-2',
+            category: { name: '긴급 공지' },
+            title: '공지2',
+            isFixed: false,
+            isPublic: true,
+            mustRead: false,
+            order: 2,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            survey: null,
+          } as Announcement,
         ],
         total: 2,
         page: 1,
@@ -217,7 +309,9 @@ describe('AnnouncementBusinessService', () => {
       ).toHaveBeenCalledWith({
         limit: 10000,
       });
-      expect(result).toEqual(mockResult.items);
+      expect(result.length).toBe(2);
+      expect(result[0].categoryName).toBe('일반 공지');
+      expect(result[1].categoryName).toBe('긴급 공지');
     });
   });
 
@@ -229,6 +323,10 @@ describe('AnnouncementBusinessService', () => {
         id: announcementId,
         title: '테스트 공지',
         content: '테스트 내용',
+        categoryId: 'category-1',
+        category: {
+          name: '일반 공지',
+        },
       } as Announcement;
 
       mockAnnouncementContextService.공지사항을_조회한다.mockResolvedValue(
@@ -242,7 +340,9 @@ describe('AnnouncementBusinessService', () => {
       expect(
         announcementContextService.공지사항을_조회한다,
       ).toHaveBeenCalledWith(announcementId);
-      expect(result).toEqual(mockAnnouncement);
+      expect(result).toHaveProperty('categoryId', 'category-1');
+      expect(result).toHaveProperty('categoryName', '일반 공지');
+      expect(result).not.toHaveProperty('category');
     });
   });
 
@@ -250,6 +350,7 @@ describe('AnnouncementBusinessService', () => {
     it('컨텍스트 서비스를 호출하여 공지사항을 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId: 'category-1',
         title: '새 공지사항',
         content: '새 내용',
         isPublic: true,
@@ -293,6 +394,7 @@ describe('AnnouncementBusinessService', () => {
       // Given
       const announcementId = 'announcement-1';
       const updateDto = {
+        categoryId: 'category-1',
         title: '수정된 제목',
         updatedBy: 'user-1',
       };

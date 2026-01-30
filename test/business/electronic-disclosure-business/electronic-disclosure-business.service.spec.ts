@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { ElectronicDisclosureBusinessService } from '@business/electronic-disclosure-business/electronic-disclosure-business.service';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -40,6 +41,13 @@ describe('ElectronicDisclosureBusinessService', () => {
     getFileUrl: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +59,10 @@ describe('ElectronicDisclosureBusinessService', () => {
         {
           provide: CategoryService,
           useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: STORAGE_SERVICE,
@@ -133,7 +145,9 @@ describe('ElectronicDisclosureBusinessService', () => {
     it('컨텍스트 서비스를 호출하여 전자공시를 삭제해야 한다', async () => {
       // Given
       const disclosureId = 'disclosure-1';
-      mockElectronicDisclosureContextService.전자공시를_삭제한다.mockResolvedValue(true);
+      mockElectronicDisclosureContextService.전자공시를_삭제한다.mockResolvedValue(
+        true,
+      );
 
       // When
       const result = await service.전자공시를_삭제한다(disclosureId);
@@ -202,12 +216,18 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
 
       // When
-      const result = await service.전자공시를_생성한다(translations, createdBy, undefined);
+      const categoryId = 'category-1';
+      const result = await service.전자공시를_생성한다(
+        translations,
+        categoryId,
+        createdBy,
+        undefined,
+      );
 
       // Then
       expect(
         electronicDisclosureContextService.전자공시를_생성한다,
-      ).toHaveBeenCalledWith(translations, createdBy, undefined);
+      ).toHaveBeenCalledWith(translations, categoryId, createdBy, undefined);
       expect(result).toEqual(mockDisclosure);
     });
 
@@ -252,7 +272,13 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
 
       // When
-      const result = await service.전자공시를_생성한다(translations, createdBy, files);
+      const categoryId = 'category-1';
+      const result = await service.전자공시를_생성한다(
+        translations,
+        categoryId,
+        createdBy,
+        files,
+      );
 
       // Then
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
@@ -263,6 +289,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         electronicDisclosureContextService.전자공시를_생성한다,
       ).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
         expect.arrayContaining([
           expect.objectContaining({
@@ -287,6 +314,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
       const files = [
         {
           originalname: 'new-disclosure.pdf',
@@ -319,13 +347,20 @@ describe('ElectronicDisclosureBusinessService', () => {
 
       const mockUpdatedDisclosure = {
         id: disclosureId,
-        attachments: mockUploadedFiles,
+        attachments: [
+          {
+            fileName: 'new-disclosure.pdf',
+            fileUrl: 'https://s3.aws.com/new-disclosure.pdf',
+            fileSize: 4096,
+            mimeType: 'application/pdf',
+            deletedAt: null,
+          },
+        ],
       } as any as ElectronicDisclosure;
 
       mockElectronicDisclosureContextService.전자공시_상세를_조회한다.mockResolvedValue(
         mockExistingDisclosure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
         {} as any,
@@ -339,6 +374,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         disclosureId,
         translations,
         updatedBy,
+        categoryId,
         files,
       );
 
@@ -346,12 +382,23 @@ describe('ElectronicDisclosureBusinessService', () => {
       expect(
         electronicDisclosureContextService.전자공시_상세를_조회한다,
       ).toHaveBeenCalledWith(disclosureId);
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-disclosure.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         files,
         'electronic-disclosures',
+      );
+      expect(
+        electronicDisclosureContextService.전자공시_파일을_수정한다,
+      ).toHaveBeenCalledWith(
+        disclosureId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'new-disclosure.pdf',
+            deletedAt: null,
+          }),
+        ]),
+        updatedBy,
       );
       expect(
         electronicDisclosureContextService.전자공시_파일을_수정한다,
@@ -364,17 +411,25 @@ describe('ElectronicDisclosureBusinessService', () => {
         ]),
         updatedBy,
       );
-      expect(electronicDisclosureContextService.전자공시를_수정한다).toHaveBeenCalledWith(
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(
         disclosureId,
-        {
-          translations,
+        expect.objectContaining({
+          categoryId,
           updatedBy,
-        },
+        }),
       );
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(disclosureId, {
+        translations,
+        updatedBy,
+      });
       expect(result).toEqual(mockUpdatedDisclosure);
     });
 
-    it('파일 없이 전자공시를 수정해야 한다 (기존 파일 삭제)', async () => {
+    it('파일 없이 전자공시를 수정해야 한다 (기존 파일 소프트 삭제)', async () => {
       // Given
       const disclosureId = 'disclosure-1';
       const translations = [
@@ -384,6 +439,7 @@ describe('ElectronicDisclosureBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
 
       const mockExistingDisclosure = {
         id: disclosureId,
@@ -399,13 +455,20 @@ describe('ElectronicDisclosureBusinessService', () => {
 
       const mockUpdatedDisclosure = {
         id: disclosureId,
-        attachments: [],
+        attachments: [
+          {
+            fileName: 'old-disclosure.pdf',
+            fileUrl: 'https://s3.aws.com/old-disclosure.pdf',
+            fileSize: 2048,
+            mimeType: 'application/pdf',
+            deletedAt: expect.any(Date),
+          },
+        ],
       } as any as ElectronicDisclosure;
 
       mockElectronicDisclosureContextService.전자공시_상세를_조회한다.mockResolvedValue(
         mockExistingDisclosure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
         {} as any,
       );
@@ -418,18 +481,141 @@ describe('ElectronicDisclosureBusinessService', () => {
         disclosureId,
         translations,
         updatedBy,
+        categoryId,
         undefined,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-disclosure.pdf',
-      ]);
+      expect(
+        electronicDisclosureContextService.전자공시_상세를_조회한다,
+      ).toHaveBeenCalledWith(disclosureId);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(
         electronicDisclosureContextService.전자공시_파일을_수정한다,
-      ).toHaveBeenCalledWith(disclosureId, [], updatedBy);
-      expect(result.attachments).toEqual([]);
+      ).toHaveBeenCalledWith(
+        disclosureId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-disclosure.pdf',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
+        updatedBy,
+      );
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(
+        disclosureId,
+        expect.objectContaining({
+          categoryId,
+          updatedBy,
+        }),
+      );
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(disclosureId, {
+        translations,
+        updatedBy,
+      });
+      expect(result).toEqual(mockUpdatedDisclosure);
+    });
+
+    it('전자공시의 카테고리를 개별적으로 수정해야 한다', async () => {
+      // Given
+      const disclosure1Id = 'disclosure-1';
+      const disclosure2Id = 'disclosure-2';
+
+      const translations = [
+        {
+          languageId: 'language-1',
+          title: '제목',
+        },
+      ];
+      const updatedBy = 'user-1';
+      const category1Id = 'category-1';
+      const category2Id = 'category-2';
+
+      const mockExistingDisclosure1 = {
+        id: disclosure1Id,
+        categoryId: null,
+        attachments: [],
+      } as any;
+
+      const mockExistingDisclosure2 = {
+        id: disclosure2Id,
+        categoryId: null,
+        attachments: [],
+      } as any;
+
+      const mockUpdatedDisclosure1 = {
+        id: disclosure1Id,
+        categoryId: category1Id,
+        attachments: [],
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure2 = {
+        id: disclosure2Id,
+        categoryId: category2Id,
+        attachments: [],
+      } as any as ElectronicDisclosure;
+
+      mockElectronicDisclosureContextService.전자공시_상세를_조회한다
+        .mockResolvedValueOnce(mockExistingDisclosure1)
+        .mockResolvedValueOnce(mockExistingDisclosure2);
+      mockElectronicDisclosureContextService.전자공시_파일을_수정한다.mockResolvedValue(
+        {} as any,
+      );
+      mockElectronicDisclosureContextService.전자공시를_수정한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure1) // categoryId 업데이트 호출
+        .mockResolvedValueOnce(mockUpdatedDisclosure2)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2); // categoryId 업데이트 호출
+
+      // When
+      const result1 = await service.전자공시를_수정한다(
+        disclosure1Id,
+        translations,
+        updatedBy,
+        category1Id,
+        undefined,
+      );
+      const result2 = await service.전자공시를_수정한다(
+        disclosure2Id,
+        translations,
+        updatedBy,
+        category2Id,
+        undefined,
+      );
+
+      // Then
+      // 첫 번째 전자공시 카테고리 업데이트 확인
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(
+        disclosure1Id,
+        expect.objectContaining({
+          categoryId: category1Id,
+          updatedBy,
+        }),
+      );
+
+      // 두 번째 전자공시 카테고리 업데이트 확인
+      expect(
+        electronicDisclosureContextService.전자공시를_수정한다,
+      ).toHaveBeenCalledWith(
+        disclosure2Id,
+        expect.objectContaining({
+          categoryId: category2Id,
+          updatedBy,
+        }),
+      );
+
+      // 각 전자공시가 독립적인 categoryId를 가져야 함
+      expect(result1.categoryId).toBe(category1Id);
+      expect(result2.categoryId).toBe(category2Id);
+      expect(result1.categoryId).not.toBe(result2.categoryId);
     });
   });
 
@@ -477,6 +663,9 @@ describe('ElectronicDisclosureBusinessService', () => {
                 language: { code: 'ko' },
               },
             ],
+            category: {
+              name: '실적 공시',
+            },
             createdAt: new Date('2024-01-01'),
             updatedAt: new Date('2024-01-02'),
           } as any,
@@ -491,14 +680,31 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
 
       // When
-      const result = await service.전자공시_목록을_조회한다(true, 'order', 1, 10);
+      const result = await service.전자공시_목록을_조회한다(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(
         electronicDisclosureContextService.전자공시_목록을_조회한다,
-      ).toHaveBeenCalledWith(true, 'order', 1, 10, undefined, undefined);
+      ).toHaveBeenCalledWith(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
       expect(result.items).toHaveLength(1);
       expect(result.items[0].title).toBe('2024년 1분기 실적 공시');
+      expect(result.items[0].categoryName).toBe('실적 공시');
       expect(result.totalPages).toBe(1);
     });
 
@@ -526,12 +732,21 @@ describe('ElectronicDisclosureBusinessService', () => {
         10,
         startDate,
         endDate,
+        undefined,
       );
 
       // Then
       expect(
         electronicDisclosureContextService.전자공시_목록을_조회한다,
-      ).toHaveBeenCalledWith(undefined, 'order', 1, 10, startDate, endDate);
+      ).toHaveBeenCalledWith(
+        undefined,
+        'order',
+        1,
+        10,
+        startDate,
+        endDate,
+        undefined,
+      );
       expect(result.total).toBe(0);
     });
 
@@ -549,10 +764,78 @@ describe('ElectronicDisclosureBusinessService', () => {
       );
 
       // When
-      const result = await service.전자공시_목록을_조회한다(undefined, 'order', 1, 10);
+      const result = await service.전자공시_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
+    });
+
+    it('카테고리 ID로 필터링하여 조회해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const mockResult = {
+        items: [
+          {
+            id: 'disclosure-1',
+            isPublic: true,
+            order: 0,
+            categoryId,
+            translations: [
+              {
+                title: '전자공시 자료',
+                description: '설명',
+                language: { code: 'ko' },
+              },
+            ],
+            category: {
+              name: '실적 공시',
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockElectronicDisclosureContextService.전자공시_목록을_조회한다.mockResolvedValue(
+        mockResult,
+      );
+
+      // When
+      const result = await service.전자공시_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(
+        electronicDisclosureContextService.전자공시_목록을_조회한다,
+      ).toHaveBeenCalledWith(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+      expect(result.total).toBe(1);
+      expect(result.items[0].categoryName).toBe('실적 공시');
     });
   });
 
@@ -638,12 +921,17 @@ describe('ElectronicDisclosureBusinessService', () => {
         id: categoryId,
         ...updateDto,
         entityType: 'electronic-disclosure',
-      } as Category;
+      } as any as Category;
 
-      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(mockCategory);
+      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(
+        mockCategory,
+      );
 
       // When
-      const result = await service.전자공시_카테고리를_수정한다(categoryId, updateDto);
+      const result = await service.전자공시_카테고리를_수정한다(
+        categoryId,
+        updateDto,
+      );
 
       // Then
       expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(
@@ -669,16 +957,24 @@ describe('ElectronicDisclosureBusinessService', () => {
         entityType: 'electronic-disclosure',
       } as any as Category;
 
-      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(mockCategory);
+      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(
+        mockCategory,
+      );
 
       // When
-      const result = await service.전자공시_카테고리_오더를_변경한다(categoryId, data);
+      const result = await service.전자공시_카테고리_오더를_변경한다(
+        categoryId,
+        data,
+      );
 
       // Then
-      expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(categoryId, {
-        order: data.order,
-        updatedBy: data.updatedBy,
-      });
+      expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(
+        categoryId,
+        {
+          order: data.order,
+          updatedBy: data.updatedBy,
+        },
+      );
       expect(result).toEqual(mockCategory);
     });
   });
@@ -693,7 +989,9 @@ describe('ElectronicDisclosureBusinessService', () => {
       const result = await service.전자공시_카테고리를_삭제한다(categoryId);
 
       // Then
-      expect(categoryService.카테고리를_삭제한다).toHaveBeenCalledWith(categoryId);
+      expect(categoryService.카테고리를_삭제한다).toHaveBeenCalledWith(
+        categoryId,
+      );
       expect(result).toBe(true);
     });
   });

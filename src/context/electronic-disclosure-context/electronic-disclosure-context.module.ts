@@ -1,10 +1,16 @@
 import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ElectronicDisclosureContextService } from './electronic-disclosure-context.service';
 import { ElectronicDisclosureModule } from '@domain/core/electronic-disclosure/electronic-disclosure.module';
 import { LanguageModule } from '@domain/common/language/language.module';
+import { CategoryModule } from '@domain/common/category/category.module';
+import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import { ElectronicDisclosureTranslation } from '@domain/core/electronic-disclosure/electronic-disclosure-translation.entity';
-import { SyncElectronicDisclosureTranslationsHandler } from './handlers';
+import {
+  SyncElectronicDisclosureTranslationsHandler,
+  ElectronicDisclosureTranslationUpdatedHandler,
+} from './handlers';
 import { ElectronicDisclosureSyncScheduler } from './electronic-disclosure-sync.scheduler';
 
 /**
@@ -12,15 +18,21 @@ import { ElectronicDisclosureSyncScheduler } from './electronic-disclosure-sync.
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ElectronicDisclosureTranslation]),
+    CqrsModule,
+    TypeOrmModule.forFeature([ElectronicDisclosure, ElectronicDisclosureTranslation]),
     ElectronicDisclosureModule,
     LanguageModule,
+    CategoryModule,
   ],
   providers: [
     ElectronicDisclosureContextService,
     SyncElectronicDisclosureTranslationsHandler,
+    ElectronicDisclosureTranslationUpdatedHandler,
     ElectronicDisclosureSyncScheduler,
   ],
-  exports: [ElectronicDisclosureContextService],
+  exports: [
+    ElectronicDisclosureContextService,
+    SyncElectronicDisclosureTranslationsHandler,
+  ],
 })
 export class ElectronicDisclosureContextModule {}

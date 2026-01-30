@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MainPopupContextService } from '@context/main-popup-context/main-popup-context.service';
 import { MainPopup } from '@domain/sub/main-popup/main-popup.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class MainPopupBusinessService {
   constructor(
     private readonly mainPopupContextService: MainPopupContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -41,14 +43,21 @@ export class MainPopupBusinessService {
   /**
    * 메인 팝업 상세를 조회한다
    */
-  async 메인_팝업_상세를_조회한다(id: string): Promise<MainPopup> {
+  async 메인_팝업_상세를_조회한다(id: string): Promise<any> {
     this.logger.log(`메인 팝업 상세 조회 시작 - ID: ${id}`);
 
-    const popup = await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
+    const popup =
+      await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
 
     this.logger.log(`메인 팝업 상세 조회 완료 - ID: ${id}`);
 
-    return popup;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...popupData } = popup as any;
+
+    return {
+      ...popupData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -94,6 +103,7 @@ export class MainPopupBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
   ): Promise<MainPopup> {
@@ -127,6 +137,7 @@ export class MainPopupBusinessService {
     // 메인 팝업 생성
     const result = await this.mainPopupContextService.메인_팝업을_생성한다(
       translations,
+      categoryId,
       createdBy,
       attachments,
     );
@@ -147,6 +158,7 @@ export class MainPopupBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string | null,
     updatedBy?: string,
     files?: Express.Multer.File[],
   ): Promise<MainPopup> {
@@ -155,18 +167,18 @@ export class MainPopupBusinessService {
     );
 
     // 1. 기존 메인 팝업 조회
-    const popup = await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
+    const popup =
+      await this.mainPopupContextService.메인_팝업_상세를_조회한다(id);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = popup.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(
-        `스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`,
-      );
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -174,6 +186,7 @@ export class MainPopupBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -187,8 +200,12 @@ export class MainPopupBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -201,9 +218,10 @@ export class MainPopupBusinessService {
       `메인 팝업 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
+    // 5. 번역 및 카테고리 수정
     const result = await this.mainPopupContextService.메인_팝업을_수정한다(id, {
       translations,
+      categoryId,
       updatedBy,
     });
 
@@ -246,6 +264,7 @@ export class MainPopupBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: MainPopupListItemDto[];
     total: number;
@@ -254,7 +273,7 @@ export class MainPopupBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `메인 팝업 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `메인 팝업 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result = await this.mainPopupContextService.메인_팝업_목록을_조회한다(
@@ -264,22 +283,29 @@ export class MainPopupBusinessService {
       limit,
       startDate,
       endDate,
+      categoryId,
     );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // MainPopup 엔티티를 MainPopupListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const items: MainPopupListItemDto[] = result.items.map((popup) => {
-      const koreanTranslation =
-        popup.translations?.find((t) => t.language?.code === 'ko') ||
-        popup.translations?.[0];
+      const defaultTranslation =
+        popup.translations?.find(
+          (t) => t.language?.code === defaultLanguageCode,
+        ) || popup.translations?.[0];
 
       return {
         id: popup.id,
         isPublic: popup.isPublic,
         order: popup.order,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
+        categoryName: popup.category?.name || '',
         createdAt: popup.createdAt,
         updatedAt: popup.updatedAt,
       };

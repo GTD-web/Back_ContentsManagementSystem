@@ -31,11 +31,6 @@ export class UpdateMainPopupCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -46,11 +41,6 @@ export class UpdateMainPopupCategoryOrderDto {
   @IsNumber()
   @IsNotEmpty()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -113,4 +103,14 @@ export class UpdateMainPopupDto {
   @ValidateNested({ each: true })
   @Type(() => UpdateMainPopupTranslationDto)
   translations: UpdateMainPopupTranslationDto[];
+
+  @ApiProperty({
+    description: '메인 팝업 카테고리 ID (선택사항)',
+    example: 'uuid-category',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string | null;
 }

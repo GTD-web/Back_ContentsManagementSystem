@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ShareholdersMeetingContextService } from '@context/shareholders-meeting-context/shareholders-meeting-context.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class ShareholdersMeetingBusinessService {
   constructor(
     private readonly shareholdersMeetingContextService: ShareholdersMeetingContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -41,7 +43,7 @@ export class ShareholdersMeetingBusinessService {
   /**
    * 주주총회 상세를 조회한다
    */
-  async 주주총회_상세를_조회한다(id: string): Promise<ShareholdersMeeting> {
+  async 주주총회_상세를_조회한다(id: string): Promise<any> {
     this.logger.log(`주주총회 상세 조회 시작 - ID: ${id}`);
 
     const meeting =
@@ -49,7 +51,13 @@ export class ShareholdersMeetingBusinessService {
 
     this.logger.log(`주주총회 상세 조회 완료 - ID: ${id}`);
 
-    return meeting;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...meetingData } = meeting as any;
+
+    return {
+      ...meetingData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -98,6 +106,7 @@ export class ShareholdersMeetingBusinessService {
       description?: string;
     }>,
     meetingData: {
+      categoryId: string | null;
       location: string;
       meetingDate: Date;
     },
@@ -169,6 +178,8 @@ export class ShareholdersMeetingBusinessService {
       title: string;
       description?: string;
     }>,
+    updatedBy: string,
+    categoryId: string | null,
     meetingData?: {
       location?: string;
       meetingDate?: Date;
@@ -187,7 +198,6 @@ export class ShareholdersMeetingBusinessService {
         title: string;
       }>;
     }>,
-    updatedBy?: string,
     files?: Express.Multer.File[],
   ): Promise<ShareholdersMeeting> {
     this.logger.log(
@@ -198,14 +208,15 @@ export class ShareholdersMeetingBusinessService {
     const meeting =
       await this.shareholdersMeetingContextService.주주총회_상세를_조회한다(id);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = meeting.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -213,6 +224,7 @@ export class ShareholdersMeetingBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -226,8 +238,12 @@ export class ShareholdersMeetingBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -241,15 +257,14 @@ export class ShareholdersMeetingBusinessService {
     );
 
     // 5. 주주총회 정보 및 번역 수정
-    const result = await this.shareholdersMeetingContextService.주주총회를_수정한다(
-      id,
-      {
+    const result =
+      await this.shareholdersMeetingContextService.주주총회를_수정한다(id, {
+        categoryId,
         ...meetingData,
         translations,
         voteResults,
         updatedBy,
-      },
-    );
+      });
 
     this.logger.log(`주주총회 수정 완료 - ID: ${id}`);
 
@@ -290,6 +305,7 @@ export class ShareholdersMeetingBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: any[];
     total: number;
@@ -298,7 +314,7 @@ export class ShareholdersMeetingBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `주주총회 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `주주총회 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result =
@@ -309,24 +325,32 @@ export class ShareholdersMeetingBusinessService {
         limit,
         startDate,
         endDate,
+        categoryId,
       );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // ShareholdersMeeting 엔티티를 DTO로 변환
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const items = result.items.map((meeting) => {
-      const koreanTranslation =
-        meeting.translations?.find((t: any) => t.language?.code === 'ko') ||
-        meeting.translations?.[0];
+      const defaultTranslation =
+        meeting.translations?.find(
+          (t: any) => t.language?.code === defaultLanguageCode,
+        ) || meeting.translations?.[0];
 
       return {
         id: meeting.id,
+        categoryId: meeting.categoryId,
+        categoryName: meeting.category?.name || null,
         isPublic: meeting.isPublic,
         order: meeting.order,
         location: meeting.location,
         meetingDate: meeting.meetingDate,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
         createdAt: meeting.createdAt,
         updatedAt: meeting.updatedAt,
       };

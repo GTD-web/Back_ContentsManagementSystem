@@ -12,6 +12,8 @@ import {
   UploadedFiles,
   BadRequestException,
   ParseUUIDPipe,
+  UseGuards,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -44,6 +46,8 @@ import {
 @ApiBearerAuth('Bearer')
 @Controller('admin/electronic-disclosures')
 export class ElectronicDisclosureController {
+  private readonly logger = new Logger(ElectronicDisclosureController.name);
+
   constructor(
     private readonly electronicDisclosureBusinessService: ElectronicDisclosureBusinessService,
   ) {}
@@ -101,6 +105,12 @@ export class ElectronicDisclosureController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 전자공시_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -108,6 +118,7 @@ export class ElectronicDisclosureController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<ElectronicDisclosureListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -122,6 +133,7 @@ export class ElectronicDisclosureController {
         limitNum,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
+        categoryId || undefined,
       );
 
     return result;
@@ -180,7 +192,7 @@ export class ElectronicDisclosureController {
   @ApiResponse({
     status: 200,
     description: '전자공시 상세 조회 성공',
-    type: ElectronicDisclosure,
+    type: ElectronicDisclosureResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -188,9 +200,58 @@ export class ElectronicDisclosureController {
   })
   async 전자공시_상세를_조회한다(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ElectronicDisclosure> {
-    return await this.electronicDisclosureBusinessService.전자공시_상세를_조회한다(
-      id,
+  ): Promise<ElectronicDisclosureResponseDto> {
+    this.logger.log(`========================================`);
+    this.logger.log(`📖 [전자공시 조회 요청]`);
+    this.logger.log(`  - 전자공시 ID: ${id}`);
+    this.logger.log(`========================================`);
+
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시_상세를_조회한다(
+        id,
+      );
+
+    this.logger.log(`========================================`);
+    this.logger.log(`📖 [전자공시 조회 응답]`);
+    this.logger.log(`  - 전자공시 ID: ${result.id}`);
+    this.logger.log(`  - 카테고리 ID: ${result.categoryId || 'null'}`);
+    this.logger.log(`  - 카테고리명: ${result.category?.name || 'null'}`);
+    this.logger.log(`========================================`);
+
+    return result;
+  }
+
+  /**
+   * 전자공시 카테고리를 생성한다
+   *
+   * 주의: 이 라우트는 @Post() 라우트보다 먼저 와야 합니다.
+   */
+  @Post('categories')
+  @ApiOperation({
+    summary: '전자공시 카테고리 생성',
+    description:
+      '새로운 전자공시 카테고리를 생성합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `name`: 카테고리 이름\n\n' +
+      '**선택 필드:**\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `order`: 정렬 순서 (기본값: 0)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '전자공시 카테고리 생성 성공',
+    type: ElectronicDisclosureCategoryResponseDto,
+  })
+  async 전자공시_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() createDto: CreateElectronicDisclosureCategoryDto,
+  ): Promise<ElectronicDisclosureCategoryResponseDto> {
+    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다(
+      {
+        ...createDto,
+        createdBy: user.id,
+      },
     );
   }
 
@@ -199,7 +260,7 @@ export class ElectronicDisclosureController {
    */
   @Post()
   @UseInterceptors(
-    FilesInterceptor('files', undefined, {
+    FilesInterceptor('files', 10, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -230,7 +291,14 @@ export class ElectronicDisclosureController {
   @ApiOperation({
     summary: '전자공시 생성',
     description:
-      '새로운 전자공시를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 전자공시를 생성합니다. 제목, 설명, 카테고리와 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 전자공시 카테고리 ID\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -253,11 +321,16 @@ export class ElectronicDisclosureController {
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"2024년 1분기 실적 공시","description":"2024년 1분기 실적 공시 자료입니다."}]',
         },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '전자공시 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -277,6 +350,15 @@ export class ElectronicDisclosureController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ElectronicDisclosureResponseDto> {
+    this.logger.log(`========================================`);
+    this.logger.log(`✨ [전자공시 생성 요청]`);
+    this.logger.log(
+      `  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`,
+    );
+    this.logger.log(`  - categoryId: ${body?.categoryId || 'null'}`);
+    this.logger.log(`  - 파일 개수: ${files?.length || 0}`);
+    this.logger.log(`========================================`);
+
     // body 존재 여부 확인
     if (!body) {
       throw new BadRequestException('요청 본문이 필요합니다.');
@@ -308,13 +390,13 @@ export class ElectronicDisclosureController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}]: languageId는 필수입니다.`,
         );
       }
-      
+
       if (!translation.title || translation.title.trim() === '') {
         throw new BadRequestException(
           `translations[${i}]: title은 필수이며 비어있을 수 없습니다.`,
@@ -322,16 +404,29 @@ export class ElectronicDisclosureController {
       }
     }
 
-    return await this.electronicDisclosureBusinessService.전자공시를_생성한다(
-      translations,
-      user.id,
-      files,
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시를_생성한다(
+        translations,
+        body.categoryId || null,
+        user.id,
+        files,
+      );
+
+    this.logger.log(`========================================`);
+    this.logger.log(`✨ [전자공시 생성 응답]`);
+    this.logger.log(`  - 생성된 전자공시 ID: ${result.id}`);
+    this.logger.log(`  - 응답 categoryId: ${result.categoryId || 'null'}`);
+    this.logger.log(
+      `  - 응답 categoryName: ${result.category?.name || 'null'}`,
     );
+    this.logger.log(`========================================`);
+
+    return result;
   }
 
   /**
    * 전자공시 오더를 일괄 수정한다
-   * 
+   *
    * 주의: 이 라우트는 :id 라우트보다 먼저 와야 합니다.
    * NestJS는 라우트를 위에서부터 순차적으로 매칭하므로,
    * 'batch-order'가 ':id'로 잘못 인식되는 것을 방지합니다.
@@ -340,7 +435,11 @@ export class ElectronicDisclosureController {
   @ApiOperation({
     summary: '전자공시 오더 일괄 수정',
     description:
-      '여러 전자공시의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 전자공시 목록을 전달하면 됩니다.',
+      '여러 전자공시의 정렬 순서를 한번에 수정합니다. ' +
+      '프론트엔드에서 변경된 순서대로 전자공시 목록을 전달하면 됩니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `electronicDisclosures`: 전자공시 ID와 order를 포함한 객체 배열\n' +
+      '  - 각 객체: `{ id: string, order: number }`',
   })
   @ApiResponse({
     status: 200,
@@ -376,7 +475,7 @@ export class ElectronicDisclosureController {
    */
   @Put(':id')
   @UseInterceptors(
-    FilesInterceptor('files', undefined, {
+    FilesInterceptor('files', 10, {
       fileFilter: (req, file, callback) => {
         // 허용된 MIME 타입: PDF, JPG, PNG, WEBP, XLSX, DOCX
         const allowedMimeTypes = [
@@ -406,7 +505,21 @@ export class ElectronicDisclosureController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '전자공시 수정',
-    description: '전자공시의 번역 정보 및 파일을 수정합니다.',
+    description:
+      '전자공시의 번역 정보 및 파일을 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 전자공시 카테고리 ID (UUID)\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 전자공시 ID (UUID, 필수)\n\n' +
+      '⚠️ **파일 관리 방식**:\n' +
+      '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
+      '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -424,6 +537,12 @@ export class ElectronicDisclosureController {
             '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"2024년 1분기 실적 공시","description":"2024년 1분기 실적 공시 자료입니다."}]',
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '전자공시 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
         },
         files: {
           type: 'array',
@@ -450,6 +569,16 @@ export class ElectronicDisclosureController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ElectronicDisclosureResponseDto> {
+    this.logger.log(`========================================`);
+    this.logger.log(`✏️ [전자공시 수정 요청]`);
+    this.logger.log(`  - 전자공시 ID: ${id}`);
+    this.logger.log(
+      `  - 요청 Body: ${body ? JSON.stringify(body, null, 2) : 'undefined'}`,
+    );
+    this.logger.log(`  - categoryId: ${body?.categoryId || 'null'}`);
+    this.logger.log(`  - 파일 개수: ${files?.length || 0}`);
+    this.logger.log(`========================================`);
+
     // body 존재 여부 확인
     if (!body) {
       throw new BadRequestException('요청 본문이 필요합니다.');
@@ -457,11 +586,11 @@ export class ElectronicDisclosureController {
 
     // translations 파싱
     let translations = body.translations;
-    
+
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
     }
-    
+
     if (typeof translations === 'string') {
       try {
         translations = JSON.parse(translations);
@@ -481,13 +610,13 @@ export class ElectronicDisclosureController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}]: languageId는 필수입니다.`,
         );
       }
-      
+
       if (!translation.title || translation.title.trim() === '') {
         throw new BadRequestException(
           `translations[${i}]: title은 필수이며 비어있을 수 없습니다.`,
@@ -495,12 +624,133 @@ export class ElectronicDisclosureController {
       }
     }
 
-    return await this.electronicDisclosureBusinessService.전자공시를_수정한다(
-      id,
-      translations,
-      user.id,
-      files,
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시를_수정한다(
+        id,
+        translations,
+        user.id,
+        body.categoryId || null,
+        files,
+      );
+
+    this.logger.log(`========================================`);
+    this.logger.log(`✏️ [전자공시 수정 응답]`);
+    this.logger.log(`  - 전자공시 ID: ${result.id}`);
+    this.logger.log(`  - 응답 categoryId: ${result.categoryId || 'null'}`);
+    this.logger.log(
+      `  - 응답 categoryName: ${result.category?.name || 'null'}`,
     );
+    this.logger.log(`========================================`);
+
+    return result;
+  }
+
+  /**
+   * 전자공시 카테고리를 수정한다
+   *
+   * 주의: 이 라우트는 @Patch(':id/public') 라우트보다 먼저 와야 합니다.
+   */
+  @Patch('categories/:id')
+  @ApiOperation({
+    summary: '전자공시 카테고리 수정',
+    description:
+      '전자공시 카테고리를 수정합니다.\n\n' +
+      '**선택 필드 (모두 선택):**\n' +
+      '- `name`: 카테고리 이름\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `order`: 정렬 순서\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '전자공시 카테고리 수정 성공',
+    type: ElectronicDisclosureCategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '카테고리를 찾을 수 없음',
+  })
+  async 전자공시_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDto: UpdateElectronicDisclosureCategoryEntityDto,
+  ): Promise<ElectronicDisclosureCategoryResponseDto> {
+    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_수정한다(
+      id,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
+    );
+  }
+
+  /**
+   * 전자공시 카테고리 오더를 변경한다
+   */
+  @Patch('categories/:id/order')
+  @ApiOperation({
+    summary: '전자공시 카테고리 오더 변경',
+    description:
+      '전자공시 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '전자공시 카테고리 오더 변경 성공',
+    type: ElectronicDisclosureCategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '카테고리를 찾을 수 없음',
+  })
+  async 전자공시_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDto: UpdateElectronicDisclosureCategoryOrderDto,
+  ): Promise<ElectronicDisclosureCategoryResponseDto> {
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시_카테고리_오더를_변경한다(
+        id,
+        {
+          order: updateDto.order,
+          updatedBy: user.id,
+        },
+      );
+    return result;
+  }
+
+  /**
+   * 전자공시 카테고리를 삭제한다
+   *
+   * 주의: 이 라우트는 @Delete(':id') 라우트보다 먼저 와야 합니다.
+   */
+  @Delete('categories/:id')
+  @ApiOperation({
+    summary: '전자공시 카테고리 삭제',
+    description: '전자공시 카테고리를 삭제합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '전자공시 카테고리 삭제 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '카테고리를 찾을 수 없음',
+  })
+  async 전자공시_카테고리를_삭제한다(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ success: boolean }> {
+    const result =
+      await this.electronicDisclosureBusinessService.전자공시_카테고리를_삭제한다(
+        id,
+      );
+    return { success: result };
   }
 
   /**
@@ -509,7 +759,15 @@ export class ElectronicDisclosureController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '전자공시 공개 상태 수정',
-    description: '전자공시의 공개 상태를 수정합니다.',
+    description:
+      '전자공시의 공개 상태를 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `isPublic`: 공개 여부 (boolean)\n' +
+      '  - `true`: 공개\n' +
+      '  - `false`: 비공개\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 전자공시 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -553,117 +811,6 @@ export class ElectronicDisclosureController {
   ): Promise<{ success: boolean }> {
     const result =
       await this.electronicDisclosureBusinessService.전자공시를_삭제한다(id);
-    return { success: result };
-  }
-
-  /**
-   * 전자공시 카테고리를 생성한다
-   */
-  @Post('categories')
-  @ApiOperation({
-    summary: '전자공시 카테고리 생성',
-    description: '새로운 전자공시 카테고리를 생성합니다.',
-  })
-  @ApiResponse({
-    status: 201,
-    description: '전자공시 카테고리 생성 성공',
-    type: ElectronicDisclosureCategoryResponseDto,
-  })
-  async 전자공시_카테고리를_생성한다(
-    @Body() createDto: CreateElectronicDisclosureCategoryDto,
-  ): Promise<ElectronicDisclosureCategoryResponseDto> {
-    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_생성한다(
-      createDto,
-    );
-  }
-
-  /**
-   * 전자공시 카테고리를 수정한다
-   */
-  @Patch('categories/:id')
-  @ApiOperation({
-    summary: '전자공시 카테고리 수정',
-    description: '전자공시 카테고리를 수정합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '전자공시 카테고리 수정 성공',
-    type: ElectronicDisclosureCategoryResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '카테고리를 찾을 수 없음',
-  })
-  async 전자공시_카테고리를_수정한다(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateDto: UpdateElectronicDisclosureCategoryEntityDto,
-  ): Promise<ElectronicDisclosureCategoryResponseDto> {
-    return await this.electronicDisclosureBusinessService.전자공시_카테고리를_수정한다(
-      id,
-      {
-        ...updateDto,
-        updatedBy: user.id,
-      },
-    );
-  }
-
-  /**
-   * 전자공시 카테고리 오더를 변경한다
-   */
-  @Patch('categories/:id/order')
-  @ApiOperation({
-    summary: '전자공시 카테고리 오더 변경',
-    description: '전자공시 카테고리의 정렬 순서를 변경합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '전자공시 카테고리 오더 변경 성공',
-    type: ElectronicDisclosureCategoryResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '카테고리를 찾을 수 없음',
-  })
-  async 전자공시_카테고리_오더를_변경한다(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateDto: UpdateElectronicDisclosureCategoryOrderDto,
-  ): Promise<ElectronicDisclosureCategoryResponseDto> {
-    const result =
-      await this.electronicDisclosureBusinessService.전자공시_카테고리_오더를_변경한다(
-        id,
-        {
-          order: updateDto.order,
-          updatedBy: user.id,
-        },
-      );
-    return result;
-  }
-
-  /**
-   * 전자공시 카테고리를 삭제한다
-   */
-  @Delete('categories/:id')
-  @ApiOperation({
-    summary: '전자공시 카테고리 삭제',
-    description: '전자공시 카테고리를 삭제합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '전자공시 카테고리 삭제 성공',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '카테고리를 찾을 수 없음',
-  })
-  async 전자공시_카테고리를_삭제한다(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<{ success: boolean }> {
-    const result =
-      await this.electronicDisclosureBusinessService.전자공시_카테고리를_삭제한다(
-        id,
-      );
     return { success: result };
   }
 }

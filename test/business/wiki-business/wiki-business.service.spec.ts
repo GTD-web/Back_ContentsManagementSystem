@@ -3,6 +3,7 @@ import { WikiBusinessService } from '@business/wiki-business/wiki-business.servi
 import { WikiContextService } from '@context/wiki-context/wiki-context.service';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-log.entity';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import { NotFoundException } from '@nestjs/common';
@@ -39,6 +40,44 @@ describe('WikiBusinessService', () => {
     find: jest.fn(),
   };
 
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    setLock: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+  };
+
+  const mockWikiRepository = {
+    findOne: jest.fn(),
+    createQueryBuilder: jest.fn(() => mockQueryBuilder),
+  };
+
+  const mockPermissionLogRepo = {
+    save: jest.fn(),
+  };
+
+  const mockManager = {
+    getRepository: jest.fn((entity) => {
+      if (entity === WikiFileSystem) return mockWikiRepository;
+      if (entity === WikiPermissionLog) return mockPermissionLogRepo;
+      return { findOne: jest.fn(), save: jest.fn() };
+    }),
+    save: jest.fn(async (entity, data) => {
+      if (entity === WikiPermissionLog) {
+        mockPermissionLogRepo.save(data);
+        return data;
+      }
+      return data;
+    }),
+  };
+
+  const mockDataSource = {
+    createQueryRunner: jest.fn(),
+    transaction: jest.fn(async (callback) => {
+      return await callback(mockManager);
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +93,10 @@ describe('WikiBusinessService', () => {
         {
           provide: getRepositoryToken(WikiPermissionLog),
           useValue: mockPermissionLogRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -414,7 +457,16 @@ describe('WikiBusinessService', () => {
         name: '테스트 파일',
         fileUrl: null,
         attachments: [],
-      } as WikiFileSystem;
+        type: 'file',
+        parentId: null,
+        isPublic: true,
+        permissionRankIds: null,
+        permissionPositionIds: null,
+        permissionDepartmentIds: null,
+        order: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any as WikiFileSystem;
 
       mockWikiContextService.위키_상세를_조회한다.mockResolvedValue(mockFile);
       mockWikiContextService.위키를_삭제한다.mockResolvedValue(true);
@@ -943,23 +995,20 @@ describe('WikiBusinessService', () => {
         permissionPositionIds: null,
       } as WikiFileSystem;
 
-      mockWikiContextService.위키_상세를_조회한다.mockResolvedValue(
-        existingWiki,
-      );
-      mockWikiContextService.위키를_수정한다.mockResolvedValue(updatedWiki);
-      mockPermissionLogRepository.save.mockResolvedValue({});
+      mockQueryBuilder.getOne.mockResolvedValue(existingWiki);
+      mockManager.save.mockResolvedValue(updatedWiki);
+      mockPermissionLogRepo.save.mockResolvedValue({});
 
       // When
       const result = await service.위키_권한을_교체한다(wikiId, dto, userId);
 
       // Then
-      expect(wikiContextService.위키_상세를_조회한다).toHaveBeenCalledWith(
-        wikiId,
+      expect(mockQueryBuilder.getOne).toHaveBeenCalled();
+      expect(mockManager.save).toHaveBeenCalled();
+      expect(mockManager.save).toHaveBeenCalledWith(
+        WikiPermissionLog,
+        expect.any(Object),
       );
-      expect(wikiContextService.위키를_수정한다).toHaveBeenCalledWith(wikiId, {
-        permissionDepartmentIds: ['dept-new-1', 'dept-new-2', 'dept-other'],
-      });
-      expect(permissionLogRepository.save).toHaveBeenCalled();
       expect(result.success).toBe(true);
       expect(result.replacedDepartments).toBe(2);
     });
@@ -972,7 +1021,7 @@ describe('WikiBusinessService', () => {
         departments: [{ oldId: 'dept-old-1', newId: 'dept-new-1' }],
       };
 
-      mockWikiContextService.위키_상세를_조회한다.mockResolvedValue(null);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
       // When & Then
       await expect(

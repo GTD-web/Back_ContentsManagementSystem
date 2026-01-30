@@ -130,11 +130,13 @@ describe('IRService', () => {
           id: 'ir-1',
           isPublic: true,
           order: 0,
+          category: { name: '재무정보' },
         },
         {
           id: 'ir-2',
           isPublic: true,
           order: 1,
+          category: { name: '경영정보' },
         },
       ];
 
@@ -142,8 +144,16 @@ describe('IRService', () => {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockIRs),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockIRs,
+          raw: [
+            { category_name: '재무정보' },
+            { category_name: '경영정보' },
+          ],
+        }),
       };
 
       mockIRRepository.createQueryBuilder.mockReturnValue(
@@ -155,6 +165,8 @@ describe('IRService', () => {
 
       // Then
       expect(irRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith('categories', 'category', 'ir.categoryId = category.id');
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(['category.name']);
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('ir.order', 'ASC');
       expect(result).toEqual(mockIRs);
     });
@@ -166,6 +178,7 @@ describe('IRService', () => {
           id: 'ir-1',
           isPublic: true,
           order: 0,
+          category: { name: '재무정보' },
         },
       ];
 
@@ -173,8 +186,13 @@ describe('IRService', () => {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockIRs),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockIRs,
+          raw: [{ category_name: '재무정보' }],
+        }),
       };
 
       mockIRRepository.createQueryBuilder.mockReturnValue(
@@ -198,8 +216,13 @@ describe('IRService', () => {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockIRs),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockIRs,
+          raw: [],
+        }),
       };
 
       mockIRRepository.createQueryBuilder.mockReturnValue(
@@ -223,8 +246,13 @@ describe('IRService', () => {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockIRs),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockIRs,
+          raw: [],
+        }),
       };
 
       mockIRRepository.createQueryBuilder.mockReturnValue(
@@ -258,17 +286,31 @@ describe('IRService', () => {
         isPublic: true,
         order: 0,
         translations: [],
+        category: { name: '재무정보' },
       };
 
-      mockIRRepository.findOne.mockResolvedValue(mockIR as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockIR],
+          raw: [{ category_name: '재무정보' }],
+        }),
+      };
+
+      mockIRRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When
       const result = await service.ID로_IR을_조회한다(irId);
 
       // Then
-      expect(irRepository.findOne).toHaveBeenCalledWith({
-        where: { id: irId },
-        relations: ['translations', 'translations.language'],
+      expect(irRepository.createQueryBuilder).toHaveBeenCalledWith('ir');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('ir.id = :id', {
+        id: irId,
       });
       expect(result).toEqual(mockIR);
     });
@@ -276,7 +318,20 @@ describe('IRService', () => {
     it('IR이 없으면 NotFoundException을 던져야 한다', async () => {
       // Given
       const irId = 'non-existent';
-      mockIRRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockIRRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(service.ID로_IR을_조회한다(irId)).rejects.toThrow(
@@ -301,6 +356,7 @@ describe('IRService', () => {
         id: irId,
         isPublic: true,
         order: 0,
+        category: { name: '재무정보' },
       };
 
       const mockUpdatedIR = {
@@ -308,14 +364,27 @@ describe('IRService', () => {
         ...updateData,
       };
 
-      mockIRRepository.findOne.mockResolvedValue(mockExistingIR as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockExistingIR],
+          raw: [{ category_name: '재무정보' }],
+        }),
+      };
+
+      mockIRRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockIRRepository.save.mockResolvedValue(mockUpdatedIR as any);
 
       // When
       const result = await service.IR을_업데이트한다(irId, updateData);
 
       // Then
-      expect(irRepository.findOne).toHaveBeenCalled();
+      expect(irRepository.createQueryBuilder).toHaveBeenCalled();
       expect(irRepository.save).toHaveBeenCalledWith(
         expect.objectContaining(updateData),
       );
@@ -331,16 +400,30 @@ describe('IRService', () => {
         id: irId,
         isPublic: true,
         order: 0,
+        category: { name: '재무정보' },
       };
 
-      mockIRRepository.findOne.mockResolvedValue(mockIR as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockIR],
+          raw: [{ category_name: '재무정보' }],
+        }),
+      };
+
+      mockIRRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockIRRepository.softRemove.mockResolvedValue(mockIR as any);
 
       // When
       const result = await service.IR을_삭제한다(irId);
 
       // Then
-      expect(irRepository.findOne).toHaveBeenCalled();
+      expect(irRepository.createQueryBuilder).toHaveBeenCalled();
       expect(irRepository.softRemove).toHaveBeenCalledWith(mockIR);
       expect(result).toBe(true);
     });
@@ -357,12 +440,26 @@ describe('IRService', () => {
         id: irId,
         isPublic,
         updatedBy,
+        category: { name: '재무정보' },
       };
 
-      mockIRRepository.findOne.mockResolvedValue({
-        id: irId,
-        isPublic: true,
-      } as any);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [{
+            id: irId,
+            isPublic: true,
+          }],
+          raw: [{ category_name: '재무정보' }],
+        }),
+      };
+
+      mockIRRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockIRRepository.save.mockResolvedValue(mockIR as any);
 
       // When

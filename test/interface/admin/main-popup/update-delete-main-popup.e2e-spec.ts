@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -28,6 +29,18 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
       (lang: any) => lang.code === 'ko',
     );
     testLanguageId = koreanLanguage.id;
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -45,7 +58,8 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
               description: '원본 설명',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -63,6 +77,7 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(200);
 
       // Then
@@ -119,7 +134,8 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
               description: '원본 설명',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -141,7 +157,8 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
               description: 'Updated English Description',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       // 디버깅을 위해 상태와 응답 확인
       if (response.status !== 200) {
@@ -185,7 +202,8 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
               description: '원본 설명',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -202,6 +220,7 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(200);
 
       // Then
@@ -212,6 +231,61 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
       );
       expect(targetTranslation).toBeDefined();
       expect(targetTranslation.title).toBe('수정된 제목');
+    });
+
+    it('카테고리 ID를 수정할 수 있어야 한다', async () => {
+      // Given - 카테고리 생성
+      const categoryResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups/categories')
+        .send({
+          name: '공지사항',
+          description: '공지사항 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
+      // 메인 팝업 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '원본 제목',
+              description: '원본 설명',
+            },
+          ]),
+        )
+        .field('categoryId', testCategoryId);
+
+      const mainPopupId = createResponse.body.id;
+
+      // When - 카테고리 ID 추가
+      const response = await testSuite
+        .request()
+        .put(`/api/admin/main-popups/${mainPopupId}`)
+        .field(
+          'translations',
+          JSON.stringify([
+            {
+              languageId: testLanguageId,
+              title: '원본 제목',
+              description: '원본 설명',
+            },
+          ]),
+        )
+        .field('categoryId', categoryId)
+        .expect(200);
+
+      // Then
+      expect(response.body).toMatchObject({
+        id: mainPopupId,
+        categoryId: categoryId,
+      });
     });
   });
 
@@ -233,6 +307,7 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(404);
     });
 
@@ -249,7 +324,8 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
               title: '원본 제목',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -266,6 +342,7 @@ describe('PUT /api/admin/main-popups/:id (메인 팝업 수정)', () => {
 describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 수정)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -290,6 +367,18 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
       (lang: any) => lang.code === 'ko',
     );
     testLanguageId = koreanLanguage.id;
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -307,7 +396,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
               description: '테스트 설명',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -327,6 +417,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('메인 팝업을 비공개로 변경해야 한다', async () => {
@@ -343,7 +435,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
               description: '테스트 설명',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -361,6 +454,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('공개 상태를 여러 번 변경할 수 있어야 한다', async () => {
@@ -376,7 +471,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
               title: '테스트 팝업',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -430,7 +526,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
               title: '테스트 팝업',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -455,7 +552,8 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
               title: '테스트 팝업',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -477,6 +575,7 @@ describe('PATCH /api/admin/main-popups/:id/public (메인 팝업 공개 상태 �
 describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -502,6 +601,18 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
       (lang: any) => lang.code === 'ko',
     );
     testLanguageId = koreanLanguage.id;
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -519,7 +630,8 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
               description: '삭제될 예정입니다',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 
@@ -557,7 +669,8 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
                 description: `설명${i}`,
               },
             ]),
-          );
+          )
+        .field('categoryId', testCategoryId);
         popupIds.push(response.body.id);
       }
 
@@ -593,7 +706,8 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
               title: '팝업1',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const response2 = await testSuite
         .request()
@@ -606,7 +720,8 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
               title: '팝업2',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId1 = response1.body.id;
 
@@ -653,7 +768,8 @@ describe('DELETE /api/admin/main-popups/:id (메인 팝업 삭제)', () => {
               title: '삭제할 팝업',
             },
           ]),
-        );
+        )
+        .field('categoryId', testCategoryId);
 
       const mainPopupId = createResponse.body.id;
 

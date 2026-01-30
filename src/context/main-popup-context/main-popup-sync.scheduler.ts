@@ -5,7 +5,8 @@ import { SyncMainPopupTranslationsHandler } from './handlers/jobs/sync-main-popu
 /**
  * 메인팝업 동기화 스케줄러
  *
- * 1분마다 메인팝업 번역 동기화 작업을 실행합니다.
+ * 매 시간 10분에 메인팝업 번역 동기화 작업을 실행합니다. (백업용)
+ * 실시간 동기화는 이벤트 핸들러에서 처리합니다.
  */
 @Injectable()
 export class MainPopupSyncScheduler {
@@ -16,12 +17,13 @@ export class MainPopupSyncScheduler {
   ) {}
 
   /**
-   * 1분마다 메인팝업 번역 동기화 실행
+   * 매 시간 10분에 메인팝업 번역 동기화 실행 (백업용)
+   * 예: 00:10, 01:10, 02:10, ...
    */
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron('10 * * * *')
   async handleMainPopupTranslationSync() {
     try {
-      this.logger.debug('메인팝업 번역 동기화 스케줄러 실행');
+      this.logger.debug('메인팝업 번역 동기화 스케줄러 실행 (백업)');
       await this.syncHandler.execute();
     } catch (error) {
       // 테스트 환경에서 언어 데이터가 없을 수 있으므로 에러를 로그만 남기고 계속 진행

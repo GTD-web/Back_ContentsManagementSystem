@@ -28,6 +28,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
           provide: LanguageService,
           useValue: {
             코드로_언어를_조회한다: jest.fn(),
+            기본_언어를_조회한다: jest.fn(),
           },
         },
         {
@@ -98,7 +99,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
         isSynced: true,
       } as ElectronicDisclosureTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       electronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue([
@@ -117,7 +118,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
       await handler.execute();
 
       // Then
-      expect(languageService.코드로_언어를_조회한다).toHaveBeenCalledWith('ko');
+      expect(languageService.기본_언어를_조회한다).toHaveBeenCalled();
       expect(
         electronicDisclosureService.모든_전자공시를_조회한다,
       ).toHaveBeenCalled();
@@ -157,7 +158,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
         isPublic: true,
       } as ElectronicDisclosure;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       electronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue([
@@ -205,7 +206,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
         isSynced: false, // 수동 관리
       } as ElectronicDisclosureTranslation;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       electronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue([
@@ -233,7 +234,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
 
     it('한국어 언어가 없으면 동기화를 건너뛰어야 한다', async () => {
       // Given
-      languageService.코드로_언어를_조회한다.mockResolvedValue(null as any);
+      languageService.기본_언어를_조회한다.mockResolvedValue(null as any);
 
       // When
       await handler.execute();
@@ -262,7 +263,7 @@ describe('SyncElectronicDisclosureTranslationsHandler', () => {
         id: 'disclosure-2',
       } as ElectronicDisclosure;
 
-      languageService.코드로_언어를_조회한다.mockResolvedValue(
+      languageService.기본_언어를_조회한다.mockResolvedValue(
         koreanLanguage,
       );
       electronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue([

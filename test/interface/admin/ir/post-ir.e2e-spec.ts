@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('POST /api/admin/irs (IR 생성)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -26,6 +27,18 @@ describe('POST /api/admin/irs (IR 생성)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // IR 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/irs/categories')
+      .send({
+        name: '재무제표',
+        description: '재무제표 카테고리',
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -44,6 +57,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       // Then
@@ -53,6 +67,9 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
       });
+
+      // 카테고리 확인
+      expect(response.body.categoryName).toBeDefined();
 
       // 자동 번역 동기화로 인해 4개 언어 모두 번역이 생성됨
       expect(response.body.translations).toHaveLength(4);
@@ -109,6 +126,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       // Then
@@ -142,6 +160,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       // Then
@@ -163,6 +182,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
       await testSuite
         .request()
         .post('/api/admin/irs')
+        .field('categoryId', categoryId)
         .expect(400);
     });
 
@@ -181,6 +201,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(400);
     });
 
@@ -198,6 +219,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(400);
     });
   });
@@ -216,7 +238,27 @@ describe('POST /api/admin/irs (IR 생성)', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/irs')
-        .field('translations', JSON.stringify(translationsData));
+        .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId);
+
+      expect([400, 404, 500]).toContain(response.status);
+    });
+
+    it('존재하지 않는 categoryId로 생성 시 에러가 발생해야 한다', async () => {
+      // Given
+      const translationsData = [
+        {
+          languageId,
+          title: '테스트',
+        },
+      ];
+
+      // When & Then
+      const response = await testSuite
+        .request()
+        .post('/api/admin/irs')
+        .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', '00000000-0000-0000-0000-000000000001');
 
       expect([400, 404, 500]).toContain(response.status);
     });
@@ -227,6 +269,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', 'invalid json')
+        .field('categoryId', categoryId)
         .expect(400);
     });
 
@@ -236,6 +279,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify([]))
+        .field('categoryId', categoryId)
         .expect(400);
     });
   });
@@ -254,6 +298,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       const irId = createResponse.body.id;
@@ -282,6 +327,7 @@ describe('POST /api/admin/irs (IR 생성)', () => {
         .request()
         .post('/api/admin/irs')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       const irId = createResponse.body.id;
@@ -298,6 +344,85 @@ describe('POST /api/admin/irs (IR 생성)', () => {
       );
       expect(foundIR).toBeDefined();
       expect(foundIR.id).toBe(irId);
+    });
+  });
+
+  describe('카테고리 개별 설정', () => {
+    it('각 IR이 개별적인 카테고리를 가져야 한다', async () => {
+      // Given - 두 개의 카테고리 생성
+      const category1Response = await testSuite
+        .request()
+        .post('/api/admin/irs/categories')
+        .send({
+          name: '재무정보',
+          description: '재무정보 카테고리',
+        })
+        .expect(201);
+
+      const category2Response = await testSuite
+        .request()
+        .post('/api/admin/irs/categories')
+        .send({
+          name: '투자정보',
+          description: '투자정보 카테고리',
+        })
+        .expect(201);
+
+      const category1Id = category1Response.body.id;
+      const category2Id = category2Response.body.id;
+
+      // 두 개의 IR 생성 (같은 카테고리로)
+      const translations1 = [{ languageId, title: 'IR 1' }];
+      const translations2 = [{ languageId, title: 'IR 2' }];
+
+      const ir1Response = await testSuite
+        .request()
+        .post('/api/admin/irs')
+        .field('categoryId', category1Id)
+        .field('translations', JSON.stringify(translations1))
+        .expect(201);
+
+      const ir2Response = await testSuite
+        .request()
+        .post('/api/admin/irs')
+        .field('categoryId', category1Id)
+        .field('translations', JSON.stringify(translations2))
+        .expect(201);
+
+      const ir1Id = ir1Response.body.id;
+      const ir2Id = ir2Response.body.id;
+
+      // 두 IR 모두 카테고리 1을 가지고 있어야 함
+      expect(ir1Response.body.categoryId).toBe(category1Id);
+      expect(ir2Response.body.categoryId).toBe(category1Id);
+
+      // When - IR 1의 카테고리만 변경
+      const updatedTranslations1 = [{ languageId, title: 'IR 1' }];
+
+      const updateResponse1 = await testSuite
+        .request()
+        .put(`/api/admin/irs/${ir1Id}`)
+        .field('categoryId', category2Id)
+        .field('translations', JSON.stringify(updatedTranslations1))
+        .expect(200);
+
+      // Then - IR 1만 카테고리가 변경되어야 함
+      expect(updateResponse1.body.categoryId).toBe(category2Id);
+
+      // IR 2는 여전히 카테고리 1을 가지고 있어야 함
+      const getIR2Response = await testSuite
+        .request()
+        .get(`/api/admin/irs/${ir2Id}`)
+        .expect(200);
+
+      expect(getIR2Response.body.categoryId).toBe(category1Id);
+
+      // 두 IR이 서로 다른 카테고리를 가져야 함
+      expect(updateResponse1.body.categoryId).not.toBe(getIR2Response.body.categoryId);
+
+      console.log(`✅ IR 1 카테고리: ${updateResponse1.body.categoryId}`);
+      console.log(`✅ IR 2 카테고리: ${getIR2Response.body.categoryId}`);
+      console.log(`✅ 각 IR이 개별적인 카테고리를 가지고 있습니다!`);
     });
   });
 });

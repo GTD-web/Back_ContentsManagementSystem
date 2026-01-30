@@ -2,6 +2,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 
 describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -13,6 +14,18 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/announcements/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 공지사항 카테고리',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -21,7 +34,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '원본 제목', content: '원본 내용', isPublic: false });
+        .send({ categoryId: testCategoryId, title: '원본 제목', content: '원본 내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -29,14 +42,16 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
-        .send({ title: '수정된 제목' })
+        .send({ categoryId: testCategoryId, title: '수정된 제목' })
         .expect(200);
 
       // Then
       expect(response.body).toMatchObject({
         id: announcementId,
         title: '수정된 제목',
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
       // content는 응답에 포함될 수도, 안 될 수도 있음
     });
 
@@ -45,7 +60,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '원본 제목', content: '원본 내용', isPublic: false });
+        .send({ categoryId: testCategoryId, title: '원본 제목', content: '원본 내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -53,13 +68,15 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
-        .send({ content: '수정된 내용' })
+        .send({ categoryId: testCategoryId, content: '수정된 내용' })
         .expect(200);
 
       // Then
       expect(response.body).toMatchObject({
         id: announcementId,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
       // title, content는 응답에 포함될 수도, 안 될 수도 있음
     });
 
@@ -69,6 +86,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .post('/api/admin/announcements')
         .send({
+          categoryId: testCategoryId,
           title: '원본 제목',
           content: '원본 내용',
           isFixed: false,
@@ -83,6 +101,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
         .send({
+          categoryId: testCategoryId,
           title: '수정된 제목',
           content: '수정된 내용',
           mustRead: true,
@@ -94,8 +113,10 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         id: announcementId,
         title: '수정된 제목',
         content: '수정된 내용',
+        categoryId: testCategoryId,
         mustRead: true,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('공지사항의 날짜를 수정해야 한다', async () => {
@@ -104,6 +125,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .post('/api/admin/announcements')
         .send({
+          categoryId: testCategoryId,
           title: '테스트',
           content: '내용',
           isPublic: false, // 비공개 상태
@@ -118,6 +140,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
         .send({
+          categoryId: testCategoryId,
           releasedAt: '2024-02-01T00:00:00Z',
           expiredAt: '2024-12-31T23:59:59Z',
         })
@@ -135,6 +158,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .post('/api/admin/announcements')
         .send({
+          categoryId: testCategoryId,
           title: '테스트',
           content: '내용',
           isPublic: false, // 비공개 상태
@@ -149,6 +173,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
         .send({
+          categoryId: testCategoryId,
           permissionEmployeeIds: ['uuid-2', 'uuid-3'],
           permissionRankCodes: ['책임매니저'],
           permissionPositionCodes: ['팀장'],
@@ -169,7 +194,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       await testSuite
         .request()
         .put(`/api/admin/announcements/${nonExistentId}`)
-        .send({ title: '수정된 제목' })
+        .send({ categoryId: testCategoryId, title: '수정된 제목' })
         .expect(404);
     });
 
@@ -178,7 +203,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용' });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용' });
 
       const announcementId = createResponse.body.id;
 
@@ -186,7 +211,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
       await testSuite
         .request()
         .put(`/api/admin/announcements/${announcementId}`)
-        .send({ isFixed: 'not-a-boolean' })
+        .send({ categoryId: testCategoryId, isFixed: 'not-a-boolean' })
         .expect(400);
     });
   });
@@ -194,6 +219,7 @@ describe('PUT /api/admin/announcements/:id (공지사항 수정)', () => {
 
 describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 수정)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -205,6 +231,18 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/announcements/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 공지사항 카테고리',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -213,7 +251,7 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용', isPublic: false });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -228,7 +266,9 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
       expect(response.body).toMatchObject({
         id: announcementId,
         isPublic: true,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('공개 상태를 false로 변경해야 한다', async () => {
@@ -236,7 +276,7 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용', isPublic: true });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용', isPublic: true });
 
       const announcementId = createResponse.body.id;
 
@@ -251,7 +291,9 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
       expect(response.body).toMatchObject({
         id: announcementId,
         isPublic: false,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
   });
 
@@ -261,7 +303,7 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용' });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용' });
 
       const announcementId = createResponse.body.id;
 
@@ -289,6 +331,7 @@ describe('PATCH /api/admin/announcements/:id/public (공지사항 공개 상태 
 
 describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 수정)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -300,6 +343,18 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/announcements/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 공지사항 카테고리',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -308,7 +363,7 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용', isFixed: false });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용', isFixed: false });
 
       const announcementId = createResponse.body.id;
 
@@ -323,7 +378,9 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
       expect(response.body).toMatchObject({
         id: announcementId,
         isFixed: true,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('고정 상태를 false로 변경해야 한다', async () => {
@@ -331,7 +388,7 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용', isFixed: true });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용', isFixed: true });
 
       const announcementId = createResponse.body.id;
 
@@ -346,7 +403,9 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
       expect(response.body).toMatchObject({
         id: announcementId,
         isFixed: false,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
   });
 
@@ -356,7 +415,7 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '테스트', content: '내용' });
+        .send({ categoryId: testCategoryId, title: '테스트', content: '내용' });
 
       const announcementId = createResponse.body.id;
 
@@ -384,6 +443,7 @@ describe('PATCH /api/admin/announcements/:id/fixed (공지사항 고정 상태 �
 
 describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -395,6 +455,18 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
 
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/announcements/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 공지사항 카테고리',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -403,7 +475,7 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/announcements')
-        .send({ title: '삭제할 공지', content: '내용', isPublic: false });
+        .send({ categoryId: testCategoryId, title: '삭제할 공지', content: '내용', isPublic: false });
 
       const announcementId = createResponse.body.id;
 
@@ -432,7 +504,7 @@ describe('DELETE /api/admin/announcements/:id (공지사항 삭제)', () => {
         const response = await testSuite
           .request()
           .post('/api/admin/announcements')
-          .send({ title: `공지${i}`, content: `내용${i}`, isPublic: false });
+          .send({ categoryId: testCategoryId, title: `공지${i}`, content: `내용${i}`, isPublic: false });
         ids.push(response.body.id);
       }
 

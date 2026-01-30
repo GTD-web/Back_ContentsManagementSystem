@@ -28,6 +28,9 @@ export class AnnouncementResponseDto {
   @ApiProperty({ description: '공지사항 ID' })
   id: string;
 
+  @ApiProperty({ description: '공지사항 카테고리 ID (UUID)', nullable: true })
+  categoryId: string | null;
+
   @ApiProperty({ description: '제목', example: '2024년 신년 인사' })
   title: string;
 
@@ -118,6 +121,9 @@ export class AnnouncementResponseDto {
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
 
+  @ApiProperty({ description: '카테고리 이름', example: '일반 공지', required: false })
+  categoryName?: string;
+
   @ApiProperty({
     description: '연결된 설문조사',
     type: SurveyResponseDto,
@@ -133,6 +139,12 @@ export class AnnouncementResponseDto {
 export class AnnouncementListItemDto {
   @ApiProperty({ description: '공지사항 ID' })
   id: string;
+
+  @ApiProperty({ description: '공지사항 카테고리 ID (UUID)', nullable: true })
+  categoryId: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '일반 공지' })
+  categoryName: string;
 
   @ApiProperty({ description: '제목', example: '2024년 신년 인사' })
   title: string;

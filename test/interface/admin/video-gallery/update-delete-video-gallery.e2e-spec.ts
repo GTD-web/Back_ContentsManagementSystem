@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,6 +16,16 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 생성
     const createResponse = await testSuite
       .request()
@@ -22,6 +33,7 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
       .send({
         title: '원본 제목',
         description: '원본 설명',
+        categoryId,
       });
     videoGalleryId = createResponse.body.id;
   });
@@ -39,6 +51,7 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
         .request()
         .put(`/api/admin/video-galleries/${videoGalleryId}`)
         .field('title', updateDto.title)
+        .field('categoryId', categoryId)
         .field('description', updateDto.description)
         .expect(200);
 
@@ -64,6 +77,7 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
         .request()
         .put(`/api/admin/video-galleries/${videoGalleryId}`)
         .field('title', updateDto.title)
+        .field('categoryId', categoryId)
         .field('youtubeUrls', updateDto.youtubeUrls)
         .expect(200);
 
@@ -83,6 +97,7 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
         .request()
         .put(`/api/admin/video-galleries/${videoGalleryId}`)
         .field('title', updateDto.title)
+        .field('categoryId', categoryId)
         .field('description', updateDto.description)
         .expect(200);
 
@@ -104,12 +119,14 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
         .request()
         .put(`/api/admin/video-galleries/${nonExistentId}`)
         .field('title', updateDto.title)
+        .field('categoryId', categoryId)
         .expect(404);
     });
 
     it('title이 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const updateDto = {
+        categoryId,
         description: '설명만 있음',
       };
 
@@ -126,6 +143,7 @@ describe('PUT /api/admin/video-galleries/:id (비디오갤러리 수정)', () =>
 describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개 상태 수정)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -138,12 +156,23 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 생성
     const createResponse = await testSuite
       .request()
       .post('/api/admin/video-galleries')
       .send({
         title: '공개 상태 테스트',
+        categoryId,
       });
     videoGalleryId = createResponse.body.id;
   });
@@ -164,6 +193,9 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.category).toBeUndefined();
     });
 
     it('비디오갤러리를 공개로 변경해야 한다', async () => {
@@ -186,6 +218,9 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
+      expect(response.body.category).toBeUndefined();
     });
   });
 
@@ -207,6 +242,7 @@ describe('PATCH /api/admin/video-galleries/:id/public (비디오갤러리 공개
 describe('DELETE /api/admin/video-galleries/:id (비디오갤러리 삭제)', () => {
   const testSuite = new BaseE2ETest();
   let videoGalleryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -219,12 +255,23 @@ describe('DELETE /api/admin/video-galleries/:id (비디오갤러리 삭제)', ()
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/video-galleries/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 비디오갤러리 생성
     const createResponse = await testSuite
       .request()
       .post('/api/admin/video-galleries')
       .send({
         title: '삭제 테스트',
+        categoryId,
       });
     videoGalleryId = createResponse.body.id;
   });

@@ -38,6 +38,7 @@ export class CreateVideoGalleryHandler
     const saved = await this.videoGalleryService.비디오갤러리를_생성한다({
       title: data.title,
       description: data.description || null,
+      categoryId: data.categoryId,
       isPublic: true, // 기본값: 공개
       order: nextOrder, // 자동 계산
       videoSources: data.videoSources || null,

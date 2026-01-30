@@ -44,7 +44,9 @@ describe('AnnouncementContextService', () => {
       ],
     }).compile();
 
-    service = module.get<AnnouncementContextService>(AnnouncementContextService);
+    service = module.get<AnnouncementContextService>(
+      AnnouncementContextService,
+    );
     commandBus = module.get(CommandBus);
     queryBus = module.get(QueryBus);
   });
@@ -57,6 +59,7 @@ describe('AnnouncementContextService', () => {
     it('CreateAnnouncementCommand를 실행해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId: 'category-uuid-1',
         title: '새 공지사항',
         content: '새 내용',
         isPublic: true,
@@ -91,6 +94,7 @@ describe('AnnouncementContextService', () => {
       // Given
       const announcementId = 'announcement-1';
       const updateDto = {
+        categoryId: 'category-1',
         title: '수정된 제목',
         content: '수정된 내용',
         updatedBy: 'user-1',
@@ -104,7 +108,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항을_수정한다(announcementId, updateDto);
+      const result = await service.공지사항을_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -135,7 +142,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_공개를_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_공개를_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -166,7 +176,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_고정을_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_고정을_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -197,7 +210,10 @@ describe('AnnouncementContextService', () => {
       mockCommandBus.execute.mockResolvedValue(mockResult);
 
       // When
-      const result = await service.공지사항_오더를_수정한다(announcementId, updateDto);
+      const result = await service.공지사항_오더를_수정한다(
+        announcementId,
+        updateDto,
+      );
 
       // Then
       expect(commandBus.execute).toHaveBeenCalledTimes(1);
@@ -316,6 +332,42 @@ describe('AnnouncementContextService', () => {
       expect(queryBus.execute).toHaveBeenCalledTimes(1);
       expect(result).toEqual(mockResult);
     });
+
+    it('카테고리 ID로 필터링하여 조회할 수 있어야 한다', async () => {
+      // Given
+      const params = {
+        isPublic: true,
+        isFixed: false,
+        orderBy: 'order' as const,
+        page: 1,
+        limit: 10,
+        categoryId: 'category-1',
+      };
+
+      const mockResult = {
+        items: [
+          {
+            id: 'announcement-1',
+            categoryId: 'category-1',
+            title: '테스트 공지',
+            content: '테스트 내용',
+          } as Announcement,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockQueryBus.execute.mockResolvedValue(mockResult);
+
+      // When
+      const result = await service.공지사항_목록을_조회한다(params);
+
+      // Then
+      expect(queryBus.execute).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockResult);
+      expect(result.items[0].categoryId).toBe('category-1');
+    });
   });
 
   describe('공지사항을_조회한다', () => {
@@ -329,6 +381,10 @@ describe('AnnouncementContextService', () => {
         isPublic: true,
         isFixed: false,
         mustRead: false,
+        categoryId: 'category-1',
+        category: {
+          name: '일반 공지',
+        },
       } as Announcement;
 
       mockQueryBus.execute.mockResolvedValue(mockAnnouncement);
@@ -344,6 +400,8 @@ describe('AnnouncementContextService', () => {
         }),
       );
       expect(result).toEqual(mockAnnouncement);
+      expect(result.categoryId).toBe('category-1');
+      expect(result.category?.name).toBe('일반 공지');
     });
   });
 });

@@ -85,8 +85,10 @@ export class CreateIRDto {
   @Type(() => CreateIRTranslationDto)
   translations: CreateIRTranslationDto[];
 
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
+  @ApiProperty({
+    description: 'IR 카테고리 ID (필수)',
+    example: 'uuid-category',
+  })
   @IsString()
-  createdBy?: string;
+  categoryId: string;
 }

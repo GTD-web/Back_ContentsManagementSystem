@@ -49,7 +49,8 @@ export class AnnouncementService {
     this.logger.debug(`공지사항 목록 조회`);
 
     const queryBuilder =
-      this.announcementRepository.createQueryBuilder('announcement');
+      this.announcementRepository.createQueryBuilder('announcement')
+        .leftJoinAndSelect('announcement.category', 'category');
 
     if (options?.isFixed !== undefined) {
       queryBuilder.where('announcement.isFixed = :isFixed', {
@@ -69,11 +70,20 @@ export class AnnouncementService {
       }
     }
 
-    return await queryBuilder
+    const announcements = await queryBuilder
       .orderBy('announcement.isFixed', 'DESC')
       .addOrderBy('announcement.order', 'DESC')
       .addOrderBy('announcement.createdAt', 'DESC')
       .getMany();
+
+    // 각 공지사항에서 deletedAt이 null인 파일만 반환
+    announcements.forEach(announcement => {
+      if (announcement.attachments) {
+        announcement.attachments = announcement.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
+    return announcements;
   }
 
   /**
@@ -84,11 +94,18 @@ export class AnnouncementService {
 
     const announcement = await this.announcementRepository.findOne({
       where: { id },
-      relations: ['survey', 'survey.questions'],
+      relations: ['category', 'survey', 'survey.questions'],
     });
 
     if (!announcement) {
       throw new NotFoundException(`공지사항을 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    // deletedAt이 null인 파일만 반환
+    if (announcement.attachments) {
+      announcement.attachments = announcement.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
     }
 
     return announcement;
@@ -109,8 +126,33 @@ export class AnnouncementService {
     // 수정 가능 여부 검증
     this.수정_가능_여부를_검증한다(announcement);
 
+    // attachments가 전달된 경우 소프트 삭제 처리
+    if (data.attachments !== undefined) {
+      const currentAttachments = announcement.attachments || [];
+      
+      // 기존 파일에 deletedAt 설정 (소프트 삭제)
+      const markedForDeletion = currentAttachments.map((att: any) => ({
+        ...att,
+        deletedAt: new Date(),
+      }));
+      
+      // 새 파일에 deletedAt: null 설정
+      const newAttachments = (data.attachments || []).map((att: any) => ({
+        ...att,
+        deletedAt: null,
+      }));
+      
+      // 기존 소프트 삭제 + 새 파일 합침
+      data.attachments = [...markedForDeletion, ...newAttachments];
+      
+      this.logger.log(
+        `첨부파일 처리 - 기존 ${currentAttachments.length}개 소프트 삭제, 새 파일 ${newAttachments.length}개 추가`,
+      );
+    }
+
     // 허용된 필드만 수정 (화이트리스트 방식)
     const allowedFields = [
+      'categoryId',
       'title',
       'content',
       'mustRead',
@@ -222,7 +264,7 @@ export class AnnouncementService {
   async 필독_공지사항_목록을_조회한다(): Promise<Announcement[]> {
     this.logger.debug(`필독 공지사항 목록 조회`);
 
-    return await this.announcementRepository.find({
+    const announcements = await this.announcementRepository.find({
       where: {
         mustRead: true,
         isPublic: true,
@@ -232,6 +274,15 @@ export class AnnouncementService {
         createdAt: 'DESC',
       },
     });
+
+    // 각 공지사항에서 deletedAt이 null인 파일만 반환
+    announcements.forEach(announcement => {
+      if (announcement.attachments) {
+        announcement.attachments = announcement.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
+    return announcements;
   }
 
   /**
@@ -240,7 +291,7 @@ export class AnnouncementService {
   async 고정_공지사항_목록을_조회한다(): Promise<Announcement[]> {
     this.logger.debug(`고정 공지사항 목록 조회`);
 
-    return await this.announcementRepository.find({
+    const announcements = await this.announcementRepository.find({
       where: {
         isFixed: true,
       },
@@ -249,6 +300,15 @@ export class AnnouncementService {
         createdAt: 'DESC',
       },
     });
+
+    // 각 공지사항에서 deletedAt이 null인 파일만 반환
+    announcements.forEach(announcement => {
+      if (announcement.attachments) {
+        announcement.attachments = announcement.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
+    return announcements;
   }
 
   /**
@@ -266,11 +326,20 @@ export class AnnouncementService {
     });
 
     // permissionDepartmentIds가 null이거나 빈 배열인 것만 필터링
-    return announcements.filter(
+    const filtered = announcements.filter(
       (announcement) =>
         !announcement.permissionDepartmentIds ||
         announcement.permissionDepartmentIds.length === 0,
     );
+
+    // 각 공지사항에서 deletedAt이 null인 파일만 반환
+    filtered.forEach(announcement => {
+      if (announcement.attachments) {
+        announcement.attachments = announcement.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
+    return filtered;
   }
 
   /**

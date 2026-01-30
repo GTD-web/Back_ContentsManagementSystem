@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/brochures (브로슈어 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -26,6 +27,19 @@ describe('GET /api/admin/brochures (브로슈어 목록 조회)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 테스트용 브로슈어 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/brochures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -50,11 +64,13 @@ describe('GET /api/admin/brochures (브로슈어 목록 조회)', () => {
           translations: [
             { languageId, title: '브로슈어 1', description: '설명 1' },
           ],
+          categoryId,
         },
         {
           translations: [
             { languageId, title: '브로슈어 2', description: '설명 2' },
           ],
+          categoryId,
         },
       ];
 
@@ -74,12 +90,76 @@ describe('GET /api/admin/brochures (브로슈어 목록 조회)', () => {
       expect(response.body.items[0]).toHaveProperty('title');
       expect(response.body.items[0]).toHaveProperty('description');
     });
+
+    it('categoryId 필터가 동작해야 한다', async () => {
+      // Given - 두 번째 카테고리 생성
+      const secondCategoryResponse = await testSuite
+        .request()
+        .post('/api/admin/brochures/categories')
+        .send({
+          name: '테스트 카테고리 2',
+          description: 'E2E 테스트용 카테고리 2',
+          order: 1,
+        })
+        .expect(201);
+      const secondCategoryId = secondCategoryResponse.body.id;
+
+      // 첫 번째 카테고리의 브로슈어 2개 생성
+      await testSuite
+        .request()
+        .post('/api/admin/brochures')
+        .send({
+          translations: [{ languageId, title: '카테고리1-브로슈어1' }],
+          categoryId,
+        })
+        .expect(201);
+
+      await testSuite
+        .request()
+        .post('/api/admin/brochures')
+        .send({
+          translations: [{ languageId, title: '카테고리1-브로슈어2' }],
+          categoryId,
+        })
+        .expect(201);
+
+      // 두 번째 카테고리의 브로슈어 3개 생성
+      for (let i = 1; i <= 3; i++) {
+        await testSuite
+          .request()
+          .post('/api/admin/brochures')
+          .send({
+            translations: [{ languageId, title: `카테고리2-브로슈어${i}` }],
+            categoryId: secondCategoryId,
+          })
+          .expect(201);
+      }
+
+      // When - 첫 번째 카테고리로 필터링
+      const response1 = await testSuite
+        .request()
+        .get(`/api/admin/brochures?categoryId=${categoryId}`)
+        .expect(200);
+
+      // Then - 첫 번째 카테고리의 브로슈어만 2개
+      expect(response1.body.total).toBe(2);
+
+      // When - 두 번째 카테고리로 필터링
+      const response2 = await testSuite
+        .request()
+        .get(`/api/admin/brochures?categoryId=${secondCategoryId}`)
+        .expect(200);
+
+      // Then - 두 번째 카테고리의 브로슈어만 3개
+      expect(response2.body.total).toBe(3);
+    });
   });
 });
 
 describe('GET /api/admin/brochures/:id (브로슈어 상세 조회)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -103,6 +183,19 @@ describe('GET /api/admin/brochures/:id (브로슈어 상세 조회)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 테스트용 브로슈어 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/brochures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -119,6 +212,7 @@ describe('GET /api/admin/brochures/:id (브로슈어 상세 조회)', () => {
               description: '상세 설명',
             },
           ],
+          categoryId,
         });
 
       const brochureId = createResponse.body.id;
@@ -133,23 +227,25 @@ describe('GET /api/admin/brochures/:id (브로슈어 상세 조회)', () => {
       expect(response.body).toMatchObject({
         id: brochureId,
         isPublic: true, // 기본값 확인
+        categoryId: categoryId,
       });
+      expect(response.body.categoryName).toBe('테스트 카테고리');
       // 정책: 입력한 언어(ko) + 자동 생성된 언어들(en, ja, zh) = 총 4개
       expect(response.body.translations).toHaveLength(4);
-      
+
       // 입력한 한국어 번역 확인 (isSynced=false)
       const koTranslation = response.body.translations.find(
-        (t: any) => t.language.code === 'ko'
+        (t: any) => t.language.code === 'ko',
       );
       expect(koTranslation).toMatchObject({
         title: '회사 소개 브로슈어',
         description: '상세 설명',
         isSynced: false, // 수동 입력
       });
-      
+
       // 자동 생성된 번역들 확인 (isSynced=true)
       const autoTranslations = response.body.translations.filter(
-        (t: any) => t.language.code !== 'ko'
+        (t: any) => t.language.code !== 'ko',
       );
       expect(autoTranslations).toHaveLength(3); // en, ja, zh
       autoTranslations.forEach((t: any) => {

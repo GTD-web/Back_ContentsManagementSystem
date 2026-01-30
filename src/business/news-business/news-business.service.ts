@@ -7,6 +7,7 @@ import { Category } from '@domain/common/category/category.entity';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
 import { NewsDetailResult } from '@context/news-context/interfaces/news-context.interface';
+import { NewsListItemDto } from '@interface/common/dto/news/news-response.dto';
 
 /**
  * 뉴스 비즈니스 서비스
@@ -36,15 +37,16 @@ export class NewsBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
-    items: News[];
+    items: NewsListItemDto[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }> {
     this.logger.log(
-      `뉴스 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `뉴스 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result = await this.newsContextService.뉴스_목록을_조회한다(
@@ -54,16 +56,31 @@ export class NewsBusinessService {
       limit,
       startDate,
       endDate,
+      categoryId,
     );
 
     const totalPages = Math.ceil(result.total / limit);
+
+    // 엔티티를 DTO로 변환
+    const items: NewsListItemDto[] = result.items.map((news) => ({
+      id: news.id,
+      title: news.title,
+      description: news.description,
+      url: news.url,
+      categoryId: news.categoryId,
+      categoryName: news.category?.name || '',
+      isPublic: news.isPublic,
+      order: news.order,
+      createdAt: news.createdAt,
+      updatedAt: news.updatedAt,
+    }));
 
     this.logger.log(
       `뉴스 목록 조회 완료 - 총 ${result.total}개 (${page}/${totalPages} 페이지)`,
     );
 
     return {
-      items: result.items,
+      items,
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -94,8 +111,9 @@ export class NewsBusinessService {
    */
   async 뉴스를_생성한다(
     title: string,
-    description?: string | null,
-    url?: string | null,
+    description: string | null,
+    url: string | null,
+    categoryId: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
   ): Promise<NewsDetailResult> {
@@ -131,6 +149,7 @@ export class NewsBusinessService {
       title,
       description,
       url,
+      categoryId,
       attachments:
         attachments && attachments.length > 0 ? attachments : undefined,
       createdBy,
@@ -140,8 +159,8 @@ export class NewsBusinessService {
 
     this.logger.log(`뉴스 생성 완료 - ID: ${result.id}`);
 
-    // 상세 정보 조회
-    return await this.newsContextService.뉴스_상세_조회한다(result.id);
+    // 상세 정보 조회 (category 정보 포함)
+    return await this.뉴스_상세_조회한다(result.id);
   }
 
   /**
@@ -177,20 +196,27 @@ export class NewsBusinessService {
 
     this.logger.log(`뉴스 공개 수정 완료 - ID: ${id}`);
 
-    return result;
+    // 상세 정보 재조회하여 category 정보 포함
+    return await this.뉴스_상세_조회한다(id);
   }
 
   /**
    * 뉴스 상세 조회한다
    */
-  async 뉴스_상세_조회한다(id: string): Promise<NewsDetailResult> {
+  async 뉴스_상세_조회한다(id: string): Promise<any> {
     this.logger.log(`뉴스 상세 조회 시작 - ID: ${id}`);
 
     const result = await this.newsContextService.뉴스_상세_조회한다(id);
 
     this.logger.log(`뉴스 상세 조회 완료 - ID: ${id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...newsData } = result as any;
+
+    return {
+      ...newsData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -241,7 +267,6 @@ export class NewsBusinessService {
       name?: string;
       description?: string;
       isActive?: boolean;
-      order?: number;
       updatedBy?: string;
     },
   ): Promise<Category> {
@@ -299,7 +324,9 @@ export class NewsBusinessService {
     news: Array<{ id: string; order: number }>,
     updatedBy?: string,
   ): Promise<{ success: boolean; updatedCount: number }> {
-    this.logger.log(`뉴스 일괄 오더 수정 시작 - 수정할 뉴스 수: ${news.length}`);
+    this.logger.log(
+      `뉴스 일괄 오더 수정 시작 - 수정할 뉴스 수: ${news.length}`,
+    );
 
     const result = await this.newsContextService.뉴스_오더를_일괄_수정한다({
       news,
@@ -319,8 +346,9 @@ export class NewsBusinessService {
   async 뉴스를_수정한다(
     newsId: string,
     title: string,
-    description?: string | null,
-    url?: string | null,
+    description: string | null,
+    url: string | null,
+    categoryId: string | null,
     updatedBy?: string,
     files?: Express.Multer.File[],
   ): Promise<News> {
@@ -329,16 +357,15 @@ export class NewsBusinessService {
     // 1. 기존 뉴스 조회
     const news = await this.newsContextService.뉴스_상세_조회한다(newsId);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = news.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(
-        `스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`,
-      );
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -346,6 +373,7 @@ export class NewsBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -359,8 +387,12 @@ export class NewsBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -377,11 +409,13 @@ export class NewsBusinessService {
       title,
       description,
       url,
+      categoryId,
       updatedBy,
     });
 
     this.logger.log(`뉴스 수정 완료 - 뉴스 ID: ${newsId}`);
 
-    return result;
+    // 상세 정보 재조회하여 category 정보 포함
+    return await this.뉴스_상세_조회한다(newsId);
   }
 }

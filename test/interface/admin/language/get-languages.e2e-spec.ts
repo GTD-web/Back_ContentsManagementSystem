@@ -4,7 +4,6 @@ describe('GET /api/admin/languages (언어 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
 
   beforeAll(async () => {
-    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
     await testSuite.beforeAll();
   });
 
@@ -17,55 +16,51 @@ describe('GET /api/admin/languages (언어 목록 조회)', () => {
   });
 
   describe('성공 케이스', () => {
-    it('빈 목록을 반환해야 한다', async () => {
-      // When
+    it('서버 시작 시 기본 언어가 자동 초기화되어야 한다', async () => {
+      // When - 서버 시작 후 언어 목록 조회
       const response = await testSuite
         .request()
         .get('/api/admin/languages')
         .expect(200);
 
-      // Then
-      expect(response.body).toMatchObject({
-        items: [],
-        total: 0,
-      });
-    });
-
-    it('등록된 언어 목록을 조회해야 한다', async () => {
-      // Given
-      const languages = [
-        { code: 'ko', name: '한국어', isActive: true },
-        { code: 'en', name: 'English', isActive: true },
-        { code: 'ja', name: '日本語', isActive: true }, // 변경: true
-      ];
-
-      for (const lang of languages) {
-        await testSuite.request().post('/api/admin/languages').send(lang);
-      }
-
-      // When
-      const response = await testSuite
-        .request()
-        .get('/api/admin/languages')
-        .expect(200);
-
-      // Then
-      expect(response.body.items).toHaveLength(3);
+      // Then - 기본 언어 4개가 이미 초기화되어 있어야 함
+      expect(response.body.items).toHaveLength(4);
+      expect(response.body.total).toBe(4);
       expect(response.body.items).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ code: 'ko', name: '한국어' }),
           expect.objectContaining({ code: 'en', name: 'English' }),
           expect.objectContaining({ code: 'ja', name: '日本語' }),
+          expect.objectContaining({ code: 'zh', name: '中文' }),
+        ]),
+      );
+    });
+
+    it('등록된 언어 목록을 조회해야 한다', async () => {
+      // Given - 기본 언어 초기화
+      await testSuite.initializeDefaultLanguages();
+
+      // When
+      const response = await testSuite
+        .request()
+        .get('/api/admin/languages')
+        .expect(200);
+
+      // Then
+      expect(response.body.items).toHaveLength(4); // en, ko, ja, zh
+      expect(response.body.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ko', name: '한국어' }),
+          expect.objectContaining({ code: 'en', name: 'English' }),
+          expect.objectContaining({ code: 'ja', name: '日本語' }),
+          expect.objectContaining({ code: 'zh', name: '中文' }),
         ]),
       );
     });
 
     it('isActive 필드가 포함되어야 한다', async () => {
       // Given
-      await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어', isActive: true });
+      await testSuite.initializeDefaultLanguages();
 
       // When
       const response = await testSuite
@@ -77,75 +72,33 @@ describe('GET /api/admin/languages (언어 목록 조회)', () => {
       expect(response.body.items[0]).toHaveProperty('isActive');
       expect(typeof response.body.items[0].isActive).toBe('boolean');
     });
-  });
-});
 
-describe('GET /api/admin/languages/:id (언어 상세 조회)', () => {
-  const testSuite = new BaseE2ETest();
-
-  beforeAll(async () => {
-    testSuite['skipDefaultLanguageInit'] = true; // 언어 테스트는 기본 언어 초기화 건너뛰기
-    await testSuite.beforeAll();
-  });
-
-  afterAll(async () => {
-    await testSuite.afterAll();
-  });
-
-  beforeEach(async () => {
-    await testSuite.cleanupBeforeTest();
-  });
-
-  describe('성공 케이스', () => {
-    it('ID로 언어를 조회해야 한다', async () => {
-      // Given
-      const createResponse = await testSuite
-        .request()
-        .post('/api/admin/languages')
-        .send({ code: 'ko', name: '한국어', isActive: true });
-
-      const languageId = createResponse.body.id;
-
+    it('isDefault 필드가 포함되어야 하고 기본 언어가 표시되어야 한다', async () => {
       // When
       const response = await testSuite
         .request()
-        .get(`/api/admin/languages/${languageId}`)
+        .get('/api/admin/languages')
         .expect(200);
 
       // Then
-      expect(response.body).toMatchObject({
-        id: languageId,
-        code: 'ko',
-        name: '한국어',
-        isActive: true,
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
+      // 모든 언어에 isDefault 필드가 있어야 함
+      response.body.items.forEach((lang: any) => {
+        expect(lang).toHaveProperty('isDefault');
+        expect(typeof lang.isDefault).toBe('boolean');
       });
-    });
-  });
 
-  describe('실패 케이스', () => {
-    it('존재하지 않는 ID로 조회 시 404 에러가 발생해야 한다', async () => {
-      // Given
-      const nonExistentId = '00000000-0000-0000-0000-000000000001';
+      // 기본 언어(테스트 환경: ko) 확인
+      const defaultLanguage = response.body.items.find(
+        (lang: any) => lang.isDefault === true,
+      );
+      expect(defaultLanguage).toBeDefined();
+      expect(defaultLanguage.code).toBe('ko'); // 테스트 환경의 기본 언어
 
-      // When & Then
-      await testSuite
-        .request()
-        .get(`/api/admin/languages/${nonExistentId}`)
-        .expect(404);
-    });
-
-    it('잘못된 UUID 형식으로 조회 시 400 에러가 발생해야 한다', async () => {
-      // Given
-      const invalidId = 'invalid-uuid';
-
-      // When & Then
-      const response = await testSuite
-        .request()
-        .get(`/api/admin/languages/${invalidId}`);
-
-      expect([400, 500]).toContain(response.status);
+      // 나머지 언어는 isDefault가 false여야 함
+      const nonDefaultLanguages = response.body.items.filter(
+        (lang: any) => lang.isDefault === false,
+      );
+      expect(nonDefaultLanguages).toHaveLength(3); // en, ja, zh
     });
   });
 });

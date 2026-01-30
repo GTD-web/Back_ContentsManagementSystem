@@ -40,6 +40,7 @@ describe('CreateVideoGalleryHandler', () => {
       const command = new CreateVideoGalleryCommand({
         title: '비디오 갤러리 제목',
         description: '비디오 갤러리 설명',
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -47,6 +48,7 @@ describe('CreateVideoGalleryHandler', () => {
         id: 'video-gallery-1',
         title: command.data.title,
         description: command.data.description,
+        categoryId: 'category-1',
         isPublic: true,
         order: 0,
         videoSources: null,
@@ -67,6 +69,7 @@ describe('CreateVideoGalleryHandler', () => {
         expect.objectContaining({
           title: command.data.title,
           description: command.data.description,
+          categoryId: 'category-1',
           isPublic: true,
           order: 0,
           createdBy: 'user-1',
@@ -84,6 +87,7 @@ describe('CreateVideoGalleryHandler', () => {
       const command = new CreateVideoGalleryCommand({
         title: '비디오 갤러리 제목',
         description: '비디오 갤러리 설명',
+        categoryId: 'category-1',
         videoSources: [
           {
             url: 'https://www.youtube.com/watch?v=abc123',
@@ -102,6 +106,7 @@ describe('CreateVideoGalleryHandler', () => {
         id: 'video-gallery-1',
         title: command.data.title,
         description: command.data.description,
+        categoryId: 'category-1',
         isPublic: true,
         order: 0,
         videoSources: command.data.videoSources,
@@ -119,6 +124,7 @@ describe('CreateVideoGalleryHandler', () => {
       // Then
       expect(videoGalleryService.비디오갤러리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           videoSources: command.data.videoSources,
         }),
       );
@@ -130,11 +136,13 @@ describe('CreateVideoGalleryHandler', () => {
       const command = new CreateVideoGalleryCommand({
         title: '비디오 갤러리 제목',
         description: '비디오 갤러리 설명',
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
       const mockVideoGallery = {
         id: 'video-gallery-1',
+        categoryId: 'category-1',
         isPublic: true,
         order: 5, // 계산된 order
         createdAt: new Date(),
@@ -152,6 +160,7 @@ describe('CreateVideoGalleryHandler', () => {
       expect(videoGalleryService.다음_순서를_계산한다).toHaveBeenCalled();
       expect(videoGalleryService.비디오갤러리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           order: 5,
         }),
       );
@@ -162,11 +171,13 @@ describe('CreateVideoGalleryHandler', () => {
       // Given
       const command = new CreateVideoGalleryCommand({
         title: '비디오 갤러리 제목',
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
       const mockVideoGallery = {
         id: 'video-gallery-1',
+        categoryId: 'category-1',
         isPublic: true,
         order: 0,
         createdAt: new Date(),
@@ -183,6 +194,7 @@ describe('CreateVideoGalleryHandler', () => {
       // Then
       expect(videoGalleryService.비디오갤러리를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
+          categoryId: 'category-1',
           isPublic: true,
         }),
       );

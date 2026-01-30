@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('POST /api/admin/brochures (브로슈어 생성)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -26,6 +27,19 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 테스트용 브로슈어 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/brochures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -39,6 +53,7 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
             description: '루미르 테크놀로지 회사 소개서',
           },
         ],
+        categoryId,
       };
 
       // When
@@ -52,9 +67,11 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
       expect(response.body).toMatchObject({
         id: expect.any(String),
         isPublic: true, // 기본값 확인
+        categoryId: categoryId,
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
       });
+      expect(response.body.categoryName).toBe('테스트 카테고리');
       
       // 자동 번역 동기화로 인해 4개 언어 모두 번역이 생성됨
       expect(response.body.translations).toHaveLength(4);
@@ -106,6 +123,7 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
             description: 'Lumir Technology Introduction',
           },
         ],
+        categoryId,
       };
 
       // When
@@ -141,6 +159,7 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
             title: '회사 소개 브로슈어',
           },
         ],
+        categoryId,
       };
 
       // When
@@ -207,6 +226,7 @@ describe('POST /api/admin/brochures (브로슈어 생성)', () => {
             title: '테스트',
           },
         ],
+        categoryId,
       };
 
       // When & Then

@@ -1,8 +1,12 @@
-import { Injectable, Logger, Inject, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { BrochureContextService } from '@context/brochure-context/brochure-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
 import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
-import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
 import { Category } from '@domain/common/category/category.entity';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
@@ -38,6 +42,7 @@ export class BrochureBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: BrochureListItemDto[];
     total: number;
@@ -46,7 +51,7 @@ export class BrochureBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `브로슈어 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `브로슈어 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result = await this.brochureContextService.브로슈어_목록을_조회한다(
@@ -56,6 +61,7 @@ export class BrochureBusinessService {
       limit,
       startDate,
       endDate,
+      categoryId,
     );
 
     const totalPages = Math.ceil(result.total / limit);
@@ -70,6 +76,7 @@ export class BrochureBusinessService {
         order: brochure.order,
         title: koreanTranslation?.title || '',
         description: koreanTranslation?.description || null,
+        categoryName: brochure.category?.name || '',
         createdAt: brochure.createdAt,
         updatedAt: brochure.updatedAt,
       };
@@ -101,7 +108,9 @@ export class BrochureBusinessService {
       1000, // 충분히 큰 숫자
     );
 
-    this.logger.log(`브로슈어 전체 목록 조회 완료 - 총 ${result.items.length}개`);
+    this.logger.log(
+      `브로슈어 전체 목록 조회 완료 - 총 ${result.items.length}개`,
+    );
 
     return result.items;
   }
@@ -115,6 +124,7 @@ export class BrochureBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
   ): Promise<BrochureDetailResult> {
@@ -148,6 +158,7 @@ export class BrochureBusinessService {
     // 생성 데이터 구성
     const createData = {
       translations,
+      categoryId,
       attachments:
         attachments && attachments.length > 0 ? attachments : undefined,
       createdBy,
@@ -190,17 +201,15 @@ export class BrochureBusinessService {
       isPublic: boolean;
       updatedBy?: string;
     },
-  ): Promise<Brochure> {
+  ): Promise<BrochureDetailResult> {
     this.logger.log(`브로슈어 공개 수정 시작 - ID: ${id}`);
 
-    const result = await this.brochureContextService.브로슈어_공개를_수정한다(
-      id,
-      data,
-    );
+    await this.brochureContextService.브로슈어_공개를_수정한다(id, data);
 
     this.logger.log(`브로슈어 공개 수정 완료 - ID: ${id}`);
 
-    return result;
+    // 상세 정보 조회하여 categoryName 포함하여 반환
+    return await this.brochureContextService.브로슈어_상세_조회한다(id);
   }
 
   /**
@@ -232,17 +241,26 @@ export class BrochureBusinessService {
   /**
    * 기본 브로슈어들을 생성한다
    */
-  async 기본_브로슈어들을_생성한다(createdBy?: string): Promise<Brochure[]> {
+  async 기본_브로슈어들을_생성한다(
+    createdBy?: string,
+  ): Promise<BrochureDetailResult[]> {
     this.logger.log(
       `기본 브로슈어 생성 시작 - 생성자: ${createdBy || 'Unknown'}`,
     );
 
-    const result =
+    const brochures =
       await this.brochureContextService.기본_브로슈어들을_생성한다(createdBy);
 
-    this.logger.log(`기본 브로슈어 생성 완료 - 총 ${result.length}개`);
+    this.logger.log(`기본 브로슈어 생성 완료 - 총 ${brochures.length}개`);
 
-    return result;
+    // 각 브로슈어의 상세 정보 조회하여 categoryName 포함
+    const results = await Promise.all(
+      brochures.map((brochure) =>
+        this.brochureContextService.브로슈어_상세_조회한다(brochure.id),
+      ),
+    );
+
+    return results;
   }
 
   /**
@@ -294,9 +312,9 @@ export class BrochureBusinessService {
   }
 
   /**
-   * 브로슈어 카테고리를 수정한다
+   * 브로슈어 카테고리 엔티티를 수정한다
    */
-  async 브로슈어_카테고리를_수정한다(
+  async 브로슈어_카테고리_엔티티를_수정한다(
     id: string,
     data: {
       name?: string;
@@ -306,14 +324,14 @@ export class BrochureBusinessService {
       updatedBy?: string;
     },
   ): Promise<Category> {
-    this.logger.log(`브로슈어 카테고리 수정 시작 - ID: ${id}`);
+    this.logger.log(`브로슈어 카테고리 엔티티 수정 시작 - ID: ${id}`);
 
     const updatedCategory = await this.categoryService.카테고리를_업데이트한다(
       id,
       data,
     );
 
-    this.logger.log(`브로슈어 카테고리 수정 완료 - ID: ${id}`);
+    this.logger.log(`브로슈어 카테고리 엔티티 수정 완료 - ID: ${id}`);
 
     return updatedCategory;
   }
@@ -387,11 +405,14 @@ export class BrochureBusinessService {
       title: string;
       description?: string;
     }>,
-    updatedBy?: string,
+    updatedBy: string,
+    categoryId: string | null,
     files?: Express.Multer.File[],
   ): Promise<BrochureTranslation[]> {
     if (!translations || translations.length === 0) {
-      throw new BadRequestException('translations는 비어있지 않은 배열이어야 합니다.');
+      throw new BadRequestException(
+        'translations는 비어있지 않은 배열이어야 합니다.',
+      );
     }
 
     this.logger.log(
@@ -402,14 +423,15 @@ export class BrochureBusinessService {
     const brochure =
       await this.brochureContextService.브로슈어_상세_조회한다(brochureId);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = brochure.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -417,6 +439,7 @@ export class BrochureBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -430,8 +453,12 @@ export class BrochureBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -443,7 +470,16 @@ export class BrochureBusinessService {
       `브로슈어 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
+    // 5. categoryId 업데이트
+    await this.brochureContextService.브로슈어를_수정한다(brochureId, {
+      categoryId,
+      updatedBy,
+    });
+    this.logger.log(
+      `브로슈어 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`,
+    );
+
+    // 6. 번역 수정
     const result = await this.brochureContextService.브로슈어_번역들을_수정한다(
       brochureId,
       {

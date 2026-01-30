@@ -46,6 +46,14 @@ export class NewsResponseDto {
   })
   url: string | null;
 
+  @ApiProperty({
+    description: '뉴스 카테고리 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    required: false,
+    nullable: true,
+  })
+  categoryId: string | null;
+
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
 
@@ -71,6 +79,9 @@ export class NewsResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '신제품', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -96,6 +107,16 @@ export class NewsListItemDto {
     nullable: true,
   })
   url: string | null;
+
+  @ApiProperty({
+    description: '뉴스 카테고리 ID',
+    required: false,
+    nullable: true,
+  })
+  categoryId: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '신제품' })
+  categoryName: string;
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;

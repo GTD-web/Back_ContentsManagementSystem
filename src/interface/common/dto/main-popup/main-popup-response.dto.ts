@@ -82,6 +82,12 @@ export class MainPopupResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 ID', nullable: true })
+  categoryId: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '공지사항', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -107,6 +113,9 @@ export class MainPopupListItemDto {
     example: '메인 팝업 설명',
   })
   description: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '공지사항' })
+  categoryName: string;
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;

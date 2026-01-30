@@ -92,10 +92,14 @@ export class CreateMainPopupDto {
   @Type(() => CreateMainPopupTranslationDto)
   translations: CreateMainPopupTranslationDto[];
 
-  @ApiProperty({ description: '생성자 ID', required: false })
+  @ApiProperty({
+    description: '메인 팝업 카테고리 ID (선택사항)',
+    example: 'uuid-category',
+    required: false,
+  })
   @IsOptional()
   @IsString()
-  createdBy?: string;
+  categoryId?: string | null;
 }
 
 /**

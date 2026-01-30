@@ -1,7 +1,11 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventBus } from '@nestjs/cqrs';
 import { ElectronicDisclosureService } from '@domain/core/electronic-disclosure/electronic-disclosure.service';
 import { LanguageService } from '@domain/common/language/language.service';
+import { CategoryService } from '@domain/common/category/category.service';
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
+import { ElectronicDisclosureTranslationUpdatedEvent } from './events/electronic-disclosure-translation-updated.event';
 
 /**
  * 전자공시 컨텍스트 서비스
@@ -15,22 +19,47 @@ export class ElectronicDisclosureContextService {
   constructor(
     private readonly electronicDisclosureService: ElectronicDisclosureService,
     private readonly languageService: LanguageService,
+    private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
+    private readonly eventBus: EventBus,
   ) {}
 
   /**
    * 전자공시 전체 목록을 조회한다
    */
   async 전자공시_전체_목록을_조회한다(): Promise<ElectronicDisclosure[]> {
-    return await this.electronicDisclosureService.모든_전자공시를_조회한다({
-      orderBy: 'order',
+    const disclosures =
+      await this.electronicDisclosureService.모든_전자공시를_조회한다({
+        orderBy: 'order',
+      });
+
+    // 각 전자공시에서 deletedAt이 null인 파일만 반환
+    disclosures.forEach((disclosure) => {
+      if (disclosure.attachments) {
+        disclosure.attachments = disclosure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
+      }
     });
+
+    return disclosures;
   }
 
   /**
    * 전자공시 상세를 조회한다
    */
   async 전자공시_상세를_조회한다(id: string): Promise<ElectronicDisclosure> {
-    return await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+    const disclosure =
+      await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+
+    // deletedAt이 null인 파일만 반환
+    if (disclosure.attachments) {
+      disclosure.attachments = disclosure.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+
+    return disclosure;
   }
 
   /**
@@ -76,7 +105,7 @@ export class ElectronicDisclosureContextService {
 
   /**
    * 전자공시를 생성한다
-   * 
+   *
    * 브로슈어와 동일한 다국어 전략 적용:
    * 1. 전달받은 언어: isSynced = false (사용자 입력)
    * 2. 나머지 활성 언어: isSynced = true (자동 동기화)
@@ -87,6 +116,7 @@ export class ElectronicDisclosureContextService {
       title: string;
       description?: string;
     }>,
+    categoryId: string | null,
     createdBy?: string,
     attachments?: Array<{
       fileName: string;
@@ -113,15 +143,18 @@ export class ElectronicDisclosureContextService {
     const allLanguages = await this.languageService.모든_언어를_조회한다(false);
 
     // 4. 다음 순서 계산
-    const nextOrder = await this.electronicDisclosureService.다음_순서를_계산한다();
+    const nextOrder =
+      await this.electronicDisclosureService.다음_순서를_계산한다();
 
     // 5. 전자공시 생성 (기본값: 공개)
-    const disclosure = await this.electronicDisclosureService.전자공시를_생성한다({
-      isPublic: true,
-      order: nextOrder,
-      attachments: attachments || null,
-      createdBy,
-    });
+    const disclosure =
+      await this.electronicDisclosureService.전자공시를_생성한다({
+        isPublic: true,
+        order: nextOrder,
+        categoryId,
+        attachments: attachments || null,
+        createdBy,
+      });
 
     // 6. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
     await this.electronicDisclosureService.전자공시_번역을_생성한다(
@@ -135,10 +168,14 @@ export class ElectronicDisclosureContextService {
       createdBy,
     );
 
-    // 7. 기준 번역 선정 (한국어 우선, 없으면 첫 번째)
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    // 7. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
-      translations.find((t) => t.languageId === koreanLang?.id) ||
+      translations.find((t) => t.languageId === defaultLang?.id) ||
       translations[0];
 
     // 8. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)
@@ -161,7 +198,7 @@ export class ElectronicDisclosureContextService {
 
     const totalTranslations = translations.length + remainingLanguages.length;
     this.logger.log(
-      `전자공시 생성 완료 - ID: ${disclosure.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})`,
+      `전자공시 생성 완료 - ID: ${disclosure.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})${categoryId ? `, 카테고리 ID: ${categoryId}` : ''}`,
     );
 
     // 9. 번역 포함하여 재조회
@@ -178,6 +215,7 @@ export class ElectronicDisclosureContextService {
     data: {
       isPublic?: boolean;
       order?: number;
+      categoryId?: string | null;
       translations?: Array<{
         id?: string;
         languageId: string;
@@ -193,6 +231,7 @@ export class ElectronicDisclosureContextService {
     const updateData: any = {};
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.updatedBy) updateData.updatedBy = data.updatedBy;
 
     if (Object.keys(updateData).length > 0) {
@@ -201,6 +240,9 @@ export class ElectronicDisclosureContextService {
         updateData,
       );
     }
+
+    // 기본 언어 조회 (이벤트 발행용)
+    const baseLanguage = await this.languageService.기본_언어를_조회한다();
 
     // 번역 업데이트 (제공된 경우)
     if (data.translations && data.translations.length > 0) {
@@ -216,6 +258,20 @@ export class ElectronicDisclosureContextService {
               updatedBy: data.updatedBy,
             },
           );
+
+          // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
+          if (baseLanguage && translation.languageId === baseLanguage.id) {
+            this.logger.debug(`기본 언어 번역 수정 감지 - 동기화 이벤트 발행`);
+            this.eventBus.publish(
+              new ElectronicDisclosureTranslationUpdatedEvent(
+                id,
+                translation.languageId,
+                translation.title,
+                translation.description,
+                data.updatedBy,
+              ),
+            );
+          }
         } else {
           // 해당 언어의 번역이 이미 있는지 확인
           const existingTranslations =
@@ -235,6 +291,22 @@ export class ElectronicDisclosureContextService {
                 updatedBy: data.updatedBy,
               },
             );
+
+            // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
+            if (baseLanguage && translation.languageId === baseLanguage.id) {
+              this.logger.debug(
+                `기본 언어 번역 수정 감지 - 동기화 이벤트 발행`,
+              );
+              this.eventBus.publish(
+                new ElectronicDisclosureTranslationUpdatedEvent(
+                  id,
+                  translation.languageId,
+                  translation.title,
+                  translation.description,
+                  data.updatedBy,
+                ),
+              );
+            }
           } else {
             // 새 번역 생성
             await this.electronicDisclosureService.전자공시_번역을_생성한다(
@@ -254,8 +326,8 @@ export class ElectronicDisclosureContextService {
       }
     }
 
-    // 번역 포함하여 재조회
-    return await this.electronicDisclosureService.ID로_전자공시를_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.전자공시_상세를_조회한다(id);
   }
 
   /**
@@ -292,6 +364,7 @@ export class ElectronicDisclosureContextService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: ElectronicDisclosure[];
     total: number;
@@ -300,7 +373,7 @@ export class ElectronicDisclosureContextService {
     totalPages: number;
   }> {
     this.logger.log(
-      `전자공시 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}`,
+      `전자공시 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}, 카테고리: ${categoryId}`,
     );
 
     // 전체 목록 조회
@@ -310,7 +383,17 @@ export class ElectronicDisclosureContextService {
         orderBy,
         startDate,
         endDate,
+        categoryId,
       });
+
+    // deletedAt이 null인 파일만 필터링
+    allDisclosures.forEach((disclosure) => {
+      if (disclosure.attachments) {
+        disclosure.attachments = disclosure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
+      }
+    });
 
     // 페이징 적용
     const total = allDisclosures.length;

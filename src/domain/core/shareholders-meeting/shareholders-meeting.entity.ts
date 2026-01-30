@@ -1,7 +1,8 @@
-import { Entity, Column, OneToMany, Index } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
 import { VoteResult } from './vote-result.entity';
 import { ShareholdersMeetingTranslation } from './shareholders-meeting-translation.entity';
+import { Category } from '../../common/category/category.entity';
 
 /**
  * ShareholdersMeeting Entity (주주총회)
@@ -13,7 +14,19 @@ import { ShareholdersMeetingTranslation } from './shareholders-meeting-translati
 @Index('idx_shareholders_meeting_is_public', ['isPublic'])
 @Index('idx_shareholders_meeting_date', ['meetingDate'])
 @Index('idx_shareholders_meeting_order', ['order'])
+@Index('idx_shareholders_meeting_category_id', ['categoryId'])
 export class ShareholdersMeeting extends BaseEntity<ShareholdersMeeting> {
+  @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '주주총회 카테고리 ID (선택)',
+  })
+  categoryId: string | null;
+
+  @ManyToOne(() => Category, { nullable: true })
+  @JoinColumn({ name: 'categoryId' })
+  category: Category | null;
+
   @Column({
     type: 'boolean',
     default: true,

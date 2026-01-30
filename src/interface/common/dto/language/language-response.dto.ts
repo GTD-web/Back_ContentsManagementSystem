@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { LanguageCode } from '@domain/common/language/language-code.types';
 
 /**
  * 언어 응답 DTO
@@ -8,14 +7,20 @@ export class LanguageResponseDto {
   @ApiProperty({ description: '언어 ID', example: 'uuid' })
   id: string;
 
-  @ApiProperty({ description: '언어 코드', example: 'ko', enum: ['ko', 'en', 'ja', 'zh'] })
-  code: LanguageCode;
+  @ApiProperty({ description: '언어 코드 (ISO 639-1)', example: 'ko', type: String })
+  code: string;
 
   @ApiProperty({ description: '언어 이름', example: '한국어' })
   name: string;
 
   @ApiProperty({ description: '활성화 여부', example: true })
   isActive: boolean;
+
+  @ApiProperty({ description: '기본 언어 여부', example: false })
+  isDefault: boolean;
+
+  @ApiProperty({ description: '정렬 순서', example: 0 })
+  order: number;
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;

@@ -45,6 +45,7 @@ export class MainPopupService {
     orderBy?: 'order' | 'createdAt';
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<MainPopup[]> {
     this.logger.debug(`메인 팝업 목록 조회`);
 
@@ -52,6 +53,14 @@ export class MainPopupService {
       .createQueryBuilder('popup')
       .leftJoinAndSelect('popup.translations', 'translations')
       .leftJoinAndSelect('translations.language', 'language');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'popup.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
@@ -62,20 +71,41 @@ export class MainPopupService {
       hasWhere = true;
     }
 
+    if (options?.categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('popup.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      } else {
+        queryBuilder.where('popup.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (options?.startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('popup.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.andWhere('popup.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
       } else {
-        queryBuilder.where('popup.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.where('popup.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
         hasWhere = true;
       }
     }
 
     if (options?.endDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('popup.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.andWhere('popup.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
       } else {
-        queryBuilder.where('popup.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.where('popup.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
         hasWhere = true;
       }
     }
@@ -87,7 +117,23 @@ export class MainPopupService {
       queryBuilder.orderBy('popup.createdAt', 'DESC');
     }
 
-    return await queryBuilder.getMany();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    // 주의: translations를 leftJoinAndSelect하면 각 popup마다 여러 row가 생기므로
+    // popup.id를 기준으로 raw 데이터를 찾아야 함
+    items.forEach((popup) => {
+      const matchingRaw = raw.find((r) => r.popup_id === popup.id);
+      if (matchingRaw && matchingRaw.category_name) {
+        popup.category = {
+          name: matchingRaw.category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**
@@ -96,13 +142,35 @@ export class MainPopupService {
   async ID로_메인_팝업을_조회한다(id: string): Promise<MainPopup> {
     this.logger.debug(`메인 팝업 조회 - ID: ${id}`);
 
-    const popup = await this.mainPopupRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.mainPopupRepository
+      .createQueryBuilder('popup')
+      .leftJoinAndSelect('popup.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'popup.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('popup.id = :id', { id });
 
-    if (!popup) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`메인 팝업을 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const popup = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      popup.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(
+        `메인 팝업 ${popup.id}: 카테고리명 = ${raw.category_name}`,
+      );
+    } else {
+      this.logger.warn(
+        `메인 팝업 ${popup.id}: 카테고리명을 찾을 수 없음. categoryId: ${popup.categoryId}`,
+      );
     }
 
     return popup;

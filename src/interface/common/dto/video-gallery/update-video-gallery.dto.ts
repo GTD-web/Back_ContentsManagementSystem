@@ -1,10 +1,90 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { VideoSourceDto } from './create-video-gallery.dto';
+
+/**
+ * 비디오갤러리 수정 DTO
+ */
+export class UpdateVideoGalleryDto {
+  @ApiProperty({
+    description: '제목',
+    example: '회사 소개 영상',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty({
+    description: '설명',
+    example: '루미르 회사 소개 동영상입니다.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @ApiProperty({
+    description: '카테고리 ID (UUID) - null 허용',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string | null;
+
+  @ApiProperty({
+    description: '공개 여부',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
+
+  @ApiProperty({
+    description: '정렬 순서',
+    example: 0,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  order?: number;
+
+  @ApiProperty({
+    description: '비디오 소스 목록',
+    type: [VideoSourceDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VideoSourceDto)
+  videoSources?: VideoSourceDto[];
+}
+
+/**
+ * 비디오갤러리 파일 수정 DTO
+ */
+export class UpdateVideoGalleryFileDto {
+  @ApiProperty({
+    description: '비디오 소스 목록',
+    type: [VideoSourceDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VideoSourceDto)
+  videoSources: VideoSourceDto[];
+}
 
 /**
  * 비디오갤러리 공개 상태 수정 DTO
@@ -13,11 +93,6 @@ export class UpdateVideoGalleryPublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
   @IsBoolean()
   isPublic: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -27,11 +102,6 @@ export class UpdateVideoGalleryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -60,11 +130,6 @@ export class CreateVideoGalleryCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
 
 /**
@@ -88,16 +153,6 @@ export class UpdateVideoGalleryCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiProperty({ description: '정렬 순서', required: false })
-  @IsOptional()
-  @IsNumber()
-  order?: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -107,9 +162,4 @@ export class UpdateVideoGalleryCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }

@@ -48,6 +48,11 @@ describe('GetVideoGalleryDetailHandler', () => {
         description: '설명',
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
+        category: {
+          id: 'category-1',
+          name: '제품 소개',
+        },
         videoSources: [
           {
             url: 'https://www.youtube.com/watch?v=abc123',
@@ -75,7 +80,9 @@ describe('GetVideoGalleryDetailHandler', () => {
         description: '설명',
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
       });
+      expect(result.category?.name).toBe('제품 소개');
     });
 
     it('비디오 소스 정보를 포함해야 한다', async () => {
@@ -108,8 +115,8 @@ describe('GetVideoGalleryDetailHandler', () => {
 
       // Then
       expect(result.videoSources).toHaveLength(2);
-      expect(result.videoSources[0].type).toBe('youtube');
-      expect(result.videoSources[1].type).toBe('upload');
+      expect(result.videoSources![0].type).toBe('youtube');
+      expect(result.videoSources![1].type).toBe('upload');
     });
 
     it('존재하지 않는 비디오갤러리 조회 시 NotFoundException을 발생시켜야 한다', async () => {

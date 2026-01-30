@@ -63,16 +63,24 @@ export class ElectronicDisclosureService {
     orderBy?: 'order' | 'createdAt';
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<ElectronicDisclosure[]> {
     this.logger.debug(`전자공시 목록 조회`);
 
-    const queryBuilder = this.electronicDisclosureRepository.createQueryBuilder(
-      'disclosure',
-    );
+    const queryBuilder =
+      this.electronicDisclosureRepository.createQueryBuilder('disclosure');
 
     // translations와 language 관계 로드
     queryBuilder.leftJoinAndSelect('disclosure.translations', 'translations');
     queryBuilder.leftJoinAndSelect('translations.language', 'language');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'disclosure.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
@@ -83,20 +91,41 @@ export class ElectronicDisclosureService {
       hasWhere = true;
     }
 
+    if (options?.categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('disclosure.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      } else {
+        queryBuilder.where('disclosure.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (options?.startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('disclosure.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.andWhere('disclosure.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
       } else {
-        queryBuilder.where('disclosure.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.where('disclosure.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
         hasWhere = true;
       }
     }
 
     if (options?.endDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('disclosure.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.andWhere('disclosure.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
       } else {
-        queryBuilder.where('disclosure.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.where('disclosure.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
         hasWhere = true;
       }
     }
@@ -108,7 +137,23 @@ export class ElectronicDisclosureService {
       queryBuilder.orderBy('disclosure.createdAt', 'DESC');
     }
 
-    return await queryBuilder.getMany();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    // 주의: translations를 leftJoinAndSelect하면 각 disclosure마다 여러 row가 생기므로
+    // disclosure.id를 기준으로 raw 데이터를 찾아야 함
+    items.forEach((disclosure) => {
+      const matchingRaw = raw.find((r) => r.disclosure_id === disclosure.id);
+      if (matchingRaw && matchingRaw.category_name) {
+        disclosure.category = {
+          name: matchingRaw.category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**
@@ -117,13 +162,35 @@ export class ElectronicDisclosureService {
   async ID로_전자공시를_조회한다(id: string): Promise<ElectronicDisclosure> {
     this.logger.debug(`전자공시 조회 - ID: ${id}`);
 
-    const disclosure = await this.electronicDisclosureRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.electronicDisclosureRepository
+      .createQueryBuilder('disclosure')
+      .leftJoinAndSelect('disclosure.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'disclosure.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('disclosure.id = :id', { id });
 
-    if (!disclosure) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`전자공시를 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const disclosure = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      disclosure.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(
+        `전자공시 ${disclosure.id}: 카테고리명 = ${raw.category_name}`,
+      );
+    } else {
+      this.logger.warn(
+        `전자공시 ${disclosure.id}: 카테고리명을 찾을 수 없음. categoryId: ${disclosure.categoryId}`,
+      );
     }
 
     return disclosure;
@@ -136,16 +203,27 @@ export class ElectronicDisclosureService {
     id: string,
     data: Partial<ElectronicDisclosure>,
   ): Promise<ElectronicDisclosure> {
-    this.logger.log(`전자공시 업데이트 시작 - ID: ${id}`);
+    this.logger.log(
+      `전자공시 업데이트 시작 - ID: ${id}, 업데이트 데이터: ${JSON.stringify(data)}`,
+    );
 
     const disclosure = await this.ID로_전자공시를_조회한다(id);
+    this.logger.debug(
+      `업데이트 전 - ID: ${disclosure.id}, categoryId: ${disclosure.categoryId}`,
+    );
 
     Object.assign(disclosure, data);
+    this.logger.debug(
+      `업데이트 후 (저장 전) - ID: ${disclosure.id}, categoryId: ${disclosure.categoryId}`,
+    );
 
     try {
-      const updated = await this.electronicDisclosureRepository.save(disclosure);
+      const updated =
+        await this.electronicDisclosureRepository.save(disclosure);
+      this.logger.log(
+        `전자공시 업데이트 완료 - ID: ${updated.id}, categoryId: ${updated.categoryId}`,
+      );
 
-      this.logger.log(`전자공시 업데이트 완료 - ID: ${id}`);
       return updated;
     } catch (error) {
       if (error instanceof QueryFailedError) {
@@ -195,12 +273,11 @@ export class ElectronicDisclosureService {
    * 다음 순서 번호를 계산한다
    */
   async 다음_순서를_계산한다(): Promise<number> {
-    const maxOrderDisclosures =
-      await this.electronicDisclosureRepository.find({
-        order: { order: 'DESC' },
-        select: ['order'],
-        take: 1,
-      });
+    const maxOrderDisclosures = await this.electronicDisclosureRepository.find({
+      order: { order: 'DESC' },
+      select: ['order'],
+      take: 1,
+    });
 
     return maxOrderDisclosures.length > 0
       ? maxOrderDisclosures[0].order + 1
@@ -351,7 +428,9 @@ export class ElectronicDisclosureService {
     // 존재하지 않는 ID 확인 (unique ID 개수와 비교)
     if (existingDisclosures.length !== uniqueDisclosureIds.length) {
       const foundIds = existingDisclosures.map((d) => d.id);
-      const missingIds = uniqueDisclosureIds.filter((id) => !foundIds.includes(id));
+      const missingIds = uniqueDisclosureIds.filter(
+        (id) => !foundIds.includes(id),
+      );
       throw new NotFoundException(
         `일부 전자공시를 찾을 수 없습니다. 누락된 ID: ${missingIds.join(', ')}`,
       );

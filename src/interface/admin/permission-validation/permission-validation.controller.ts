@@ -1,4 +1,4 @@
-import { Controller, Post } from '@nestjs/common';
+import { Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { WikiPermissionScheduler } from '@context/wiki-context/wiki-permission.scheduler';

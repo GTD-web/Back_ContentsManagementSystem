@@ -16,6 +16,7 @@ export class GetLumirStoryListQuery {
     public readonly limit: number = 10,
     public readonly startDate?: Date,
     public readonly endDate?: Date,
+    public readonly categoryId?: string,
   ) {}
 }
 
@@ -23,9 +24,7 @@ export class GetLumirStoryListQuery {
  * 루미르스토리 목록 조회 핸들러
  */
 @QueryHandler(GetLumirStoryListQuery)
-export class GetLumirStoryListHandler
-  implements IQueryHandler<GetLumirStoryListQuery>
-{
+export class GetLumirStoryListHandler implements IQueryHandler<GetLumirStoryListQuery> {
   private readonly logger = new Logger(GetLumirStoryListHandler.name);
 
   constructor(
@@ -34,14 +33,23 @@ export class GetLumirStoryListHandler
   ) {}
 
   async execute(query: GetLumirStoryListQuery): Promise<LumirStoryListResult> {
-    const { isPublic, orderBy, page, limit, startDate, endDate } = query;
+    const { isPublic, orderBy, page, limit, startDate, endDate, categoryId } =
+      query;
 
     this.logger.debug(
-      `루미르스토리 목록 조회 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `루미르스토리 목록 조회 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const queryBuilder =
       this.lumirStoryRepository.createQueryBuilder('lumirStory');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'lumirStory.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
@@ -50,9 +58,24 @@ export class GetLumirStoryListHandler
       hasWhere = true;
     }
 
+    if (categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('lumirStory.categoryId = :categoryId', {
+          categoryId,
+        });
+      } else {
+        queryBuilder.where('lumirStory.categoryId = :categoryId', {
+          categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('lumirStory.createdAt >= :startDate', { startDate });
+        queryBuilder.andWhere('lumirStory.createdAt >= :startDate', {
+          startDate,
+        });
       } else {
         queryBuilder.where('lumirStory.createdAt >= :startDate', { startDate });
         hasWhere = true;
@@ -78,7 +101,19 @@ export class GetLumirStoryListHandler
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
-    const [items, total] = await queryBuilder.getManyAndCount();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+    const total = await queryBuilder.skip(0).take(undefined).getCount();
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    items.forEach((lumirStory, index) => {
+      if (raw[index] && raw[index].category_name) {
+        lumirStory.category = {
+          name: raw[index].category_name,
+        };
+      }
+    });
 
     return { items, total, page, limit };
   }

@@ -25,6 +25,14 @@ export class LumirStory extends BaseEntity<LumirStory> {
   content: string;
 
   @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '카테고리 ID (선택)',
+  })
+  @Index('idx_lumir_story_category_id')
+  categoryId: string | null;
+
+  @Column({
     type: 'text',
     nullable: true,
     comment: '썸네일/대표 이미지 URL (AWS S3)',
@@ -56,6 +64,11 @@ export class LumirStory extends BaseEntity<LumirStory> {
     comment: '정렬 순서',
   })
   order: number;
+
+  // TypeORM 조인 시 임시로 담기 위한 필드 (DB 컬럼이 아님)
+  category?: {
+    name: string;
+  };
 
   /**
    * 엔티티를 DTO로 변환한다

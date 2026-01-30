@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -30,6 +31,18 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
     );
 
     testLanguageId = koreanLanguage.id;
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용',
+      })
+      .expect(201);
+
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -45,16 +58,19 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             description: '2024년 신년 이벤트 안내',
           },
         ]))
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // Then
       expect(response.body).toMatchObject({
         id: expect.any(String),
+        categoryId: testCategoryId,
         isPublic: true, // 기본값: 공개
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
       });
 
+      expect(response.body.categoryName).toBeDefined();
       expect(response.body.translations).toBeDefined();
       expect(response.body.translations.length).toBeGreaterThan(0);
       
@@ -95,6 +111,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             description: '2024 New Year Event Notice',
           },
         ]))
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // Then
@@ -128,6 +145,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             title: '간단한 팝업',
           },
         ]))
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // Then
@@ -162,6 +180,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
               ...popup,
             },
           ]))
+          .field('categoryId', testCategoryId)
           .expect(201);
 
         const koTranslation = response.body.translations.find(
@@ -173,6 +192,49 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
         });
       }
     });
+
+    it('카테고리 ID와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given - 먼저 카테고리 생성
+      const categoryResponse = await testSuite
+        .request()
+        .post('/api/admin/main-popups/categories')
+        .send({
+          name: '이벤트',
+          description: '이벤트 카테고리',
+        })
+        .expect(201);
+
+      const categoryId = categoryResponse.body.id;
+
+      // When - 카테고리 ID와 함께 팝업 생성
+      const response = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field('translations', JSON.stringify([
+          {
+            languageId: testLanguageId,
+            title: '이벤트 팝업',
+            description: '특별 이벤트 안내',
+          },
+        ]))
+        .field('categoryId', categoryId)
+        .expect(201);
+
+      // Then
+      expect(response.body).toMatchObject({
+        id: expect.any(String),
+        categoryId: categoryId,
+      });
+
+      expect(response.body.categoryName).toBeDefined();
+      const koTranslation = response.body.translations.find(
+        (t: any) => t.languageId === testLanguageId,
+      );
+      expect(koTranslation).toMatchObject({
+        title: '이벤트 팝업',
+        description: '특별 이벤트 안내',
+      });
+    });
   });
 
   describe('실패 케이스 - 필수 필드 누락', () => {
@@ -181,6 +243,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
       await testSuite
         .request()
         .post('/api/admin/main-popups')
+        .field('categoryId', testCategoryId)
         .field('dummy', 'value') // 필드가 없으면 multipart로 인식 안 되므로 더미 필드 추가
         .expect(400);
     });
@@ -191,6 +254,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
         .request()
         .post('/api/admin/main-popups')
         .field('translations', JSON.stringify([]))
+        .field('categoryId', testCategoryId)
         .expect(400);
     });
 
@@ -204,6 +268,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             title: '제목만 있는 팝업',
           },
         ]))
+        .field('categoryId', testCategoryId)
         .expect(400);
     });
 
@@ -218,7 +283,26 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             description: '설명만 있는 팝업',
           },
         ]))
+        .field('categoryId', testCategoryId)
         .expect(400);
+    });
+
+    it('categoryId가 누락되어도 메인 팝업을 생성할 수 있어야 한다', async () => {
+      // When & Then
+      const response = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field('translations', JSON.stringify([
+          {
+            languageId: testLanguageId,
+            title: '제목',
+            description: '설명',
+          },
+        ]))
+        .expect(201);
+
+      expect(response.body.id).toBeDefined();
+      expect(response.body.categoryId).toBeNull();
     });
   });
 
@@ -229,6 +313,7 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
         .request()
         .post('/api/admin/main-popups')
         .field('translations', 'invalid-json')
+        .field('categoryId', testCategoryId)
         .expect(400);
     });
 
@@ -244,7 +329,8 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             title: 12345,
             description: '설명',
           },
-        ]));
+        ]))
+        .field('categoryId', testCategoryId);
       // 200 또는 400 모두 가능하므로 expect 제거
     });
 
@@ -258,7 +344,8 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             languageId: 12345,
             title: '제목',
           },
-        ]));
+        ]))
+        .field('categoryId', testCategoryId);
       
       // 400 또는 500 (DB 에러) 가능
       expect([400, 404, 500]).toContain(response.status);
@@ -279,10 +366,31 @@ describe('POST /api/admin/main-popups (메인 팝업 생성)', () => {
             languageId: nonExistentLanguageId,
             title: '제목',
           },
-        ]));
+        ]))
+        .field('categoryId', testCategoryId);
 
       // Then - 외래키 제약조건 또는 비즈니스 로직에 따라 400 또는 404 에러 발생
       expect([400, 404, 500]).toContain(response.status);
+    });
+
+    it('잘못된 UUID 형식의 categoryId로 생성 시 에러가 발생해야 한다', async () => {
+      // Given
+      const invalidCategoryId = 'invalid-uuid';
+
+      // When
+      const response = await testSuite
+        .request()
+        .post('/api/admin/main-popups')
+        .field('translations', JSON.stringify([
+          {
+            languageId: testLanguageId,
+            title: '제목',
+          },
+        ]))
+        .field('categoryId', invalidCategoryId);
+
+      // Then
+      expect(response.status).toBe(400);
     });
   });
 });

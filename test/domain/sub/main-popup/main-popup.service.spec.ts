@@ -57,6 +57,7 @@ describe('MainPopupService', () => {
       const createData = {
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
         attachments: null,
         createdBy: 'user-1',
       };
@@ -85,6 +86,7 @@ describe('MainPopupService', () => {
       const createData = {
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
         attachments: [
           {
             fileName: 'popup.jpg',
@@ -112,22 +114,58 @@ describe('MainPopupService', () => {
       // Then
       expect(result.attachments).toEqual(createData.attachments);
     });
+
+    it('카테고리 ID와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given
+      const createData = {
+        isPublic: true,
+        order: 0,
+        categoryId: 'category-1',
+        attachments: null,
+        createdBy: 'user-1',
+      };
+
+      const mockPopup = {
+        id: 'popup-1',
+        ...createData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockMainPopupRepository.create.mockReturnValue(mockPopup as any);
+      mockMainPopupRepository.save.mockResolvedValue(mockPopup as any);
+
+      // When
+      const result = await service.메인_팝업을_생성한다(createData);
+
+      // Then
+      expect(mainPopupRepository.create).toHaveBeenCalledWith(createData);
+      expect(result.categoryId).toBe('category-1');
+    });
   });
 
   describe('모든_메인_팝업을_조회한다', () => {
     it('모든 메인 팝업을 order 순으로 조회해야 한다', async () => {
       // Given
       const mockPopups = [
-        { id: 'popup-1', order: 0, isPublic: true } as MainPopup,
-        { id: 'popup-2', order: 1, isPublic: true } as MainPopup,
+        { id: 'popup-1', order: 0, isPublic: true, category: { name: '공지사항' } } as MainPopup,
+        { id: 'popup-2', order: 1, isPublic: true, category: { name: '이벤트' } } as MainPopup,
       ];
 
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockPopups),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockPopups,
+          raw: [
+            { category_name: '공지사항' },
+            { category_name: '이벤트' },
+          ],
+        }),
       };
 
       mockMainPopupRepository.createQueryBuilder.mockReturnValue(
@@ -147,6 +185,8 @@ describe('MainPopupService', () => {
         'popup.translations',
         'translations',
       );
+      expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith('categories', 'category', 'popup.categoryId = category.id');
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(['category.name']);
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
         'popup.order',
         'ASC',
@@ -157,15 +197,20 @@ describe('MainPopupService', () => {
     it('공개된 메인 팝업만 조회해야 한다', async () => {
       // Given
       const mockPopups = [
-        { id: 'popup-1', isPublic: true } as MainPopup,
+        { id: 'popup-1', isPublic: true, category: { name: '공지사항' } } as MainPopup,
       ];
 
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockPopups),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockPopups,
+          raw: [{ category_name: '공지사항' }],
+        }),
       };
 
       mockMainPopupRepository.createQueryBuilder.mockReturnValue(
@@ -190,15 +235,20 @@ describe('MainPopupService', () => {
       const startDate = new Date('2024-01-01');
       const endDate = new Date('2024-12-31');
       const mockPopups = [
-        { id: 'popup-1', createdAt: new Date('2024-06-01') } as MainPopup,
+        { id: 'popup-1', createdAt: new Date('2024-06-01'), category: { name: '공지사항' } } as MainPopup,
       ];
 
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockPopups),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockPopups,
+          raw: [{ category_name: '공지사항' }],
+        }),
       };
 
       mockMainPopupRepository.createQueryBuilder.mockReturnValue(
@@ -232,17 +282,33 @@ describe('MainPopupService', () => {
         id: popupId,
         isPublic: true,
         translations: [],
+        category: { name: '공지사항' },
       } as any as MainPopup;
 
-      mockMainPopupRepository.findOne.mockResolvedValue(mockPopup);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockPopup],
+          raw: [{ category_name: '공지사항' }],
+        }),
+      };
+
+      mockMainPopupRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When
       const result = await service.ID로_메인_팝업을_조회한다(popupId);
 
       // Then
-      expect(mainPopupRepository.findOne).toHaveBeenCalledWith({
-        where: { id: popupId },
-        relations: ['translations', 'translations.language'],
+      expect(mainPopupRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'popup',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('popup.id = :id', {
+        id: popupId,
       });
       expect(result).toEqual(mockPopup);
     });
@@ -250,7 +316,20 @@ describe('MainPopupService', () => {
     it('존재하지 않는 ID로 조회 시 NotFoundException을 던져야 한다', async () => {
       // Given
       const popupId = 'non-existent';
-      mockMainPopupRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [],
+          raw: [],
+        }),
+      };
+
+      mockMainPopupRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
 
       // When & Then
       await expect(
@@ -272,6 +351,7 @@ describe('MainPopupService', () => {
         id: popupId,
         isPublic: true,
         order: 0,
+        category: { name: '공지사항' },
       } as MainPopup;
 
       const updatedPopup = {
@@ -279,7 +359,20 @@ describe('MainPopupService', () => {
         ...updateData,
       } as MainPopup;
 
-      mockMainPopupRepository.findOne.mockResolvedValue(existingPopup);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [existingPopup],
+          raw: [{ category_name: '공지사항' }],
+        }),
+      };
+
+      mockMainPopupRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockMainPopupRepository.save.mockResolvedValue(updatedPopup);
 
       // When
@@ -289,11 +382,60 @@ describe('MainPopupService', () => {
       );
 
       // Then
-      expect(mainPopupRepository.findOne).toHaveBeenCalled();
+      expect(mainPopupRepository.createQueryBuilder).toHaveBeenCalled();
       expect(mainPopupRepository.save).toHaveBeenCalledWith(
         expect.objectContaining(updateData),
       );
       expect(result).toEqual(updatedPopup);
+    });
+
+    it('카테고리 ID를 업데이트해야 한다', async () => {
+      // Given
+      const popupId = 'popup-1';
+      const updateData = {
+        categoryId: 'category-2',
+      };
+
+      const existingPopup = {
+        id: popupId,
+        isPublic: true,
+        order: 0,
+        categoryId: 'category-1',
+        category: { name: '공지사항' },
+      } as MainPopup;
+
+      const updatedPopup = {
+        ...existingPopup,
+        ...updateData,
+      } as MainPopup;
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [existingPopup],
+          raw: [{ category_name: '공지사항' }],
+        }),
+      };
+
+      mockMainPopupRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
+      mockMainPopupRepository.save.mockResolvedValue(updatedPopup);
+
+      // When
+      const result = await service.메인_팝업을_업데이트한다(
+        popupId,
+        updateData,
+      );
+
+      // Then
+      expect(mainPopupRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ categoryId: 'category-2' }),
+      );
+      expect(result.categoryId).toBe('category-2');
     });
   });
 
@@ -304,16 +446,30 @@ describe('MainPopupService', () => {
       const mockPopup = {
         id: popupId,
         isPublic: true,
+        category: { name: '공지사항' },
       } as MainPopup;
 
-      mockMainPopupRepository.findOne.mockResolvedValue(mockPopup);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [mockPopup],
+          raw: [{ category_name: '공지사항' }],
+        }),
+      };
+
+      mockMainPopupRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder as any,
+      );
       mockMainPopupRepository.softRemove.mockResolvedValue(mockPopup);
 
       // When
       const result = await service.메인_팝업을_삭제한다(popupId);
 
       // Then
-      expect(mainPopupRepository.findOne).toHaveBeenCalled();
+      expect(mainPopupRepository.createQueryBuilder).toHaveBeenCalled();
       expect(mainPopupRepository.softRemove).toHaveBeenCalledWith(mockPopup);
       expect(result).toBe(true);
     });

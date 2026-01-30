@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,7 +27,11 @@ import { CurrentUser } from '@interface/common/decorators/current-user.decorator
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { ShareholdersMeetingBusinessService } from '@business/shareholders-meeting-business/shareholders-meeting-business.service';
 import { ShareholdersMeeting } from '@domain/core/shareholders-meeting/shareholders-meeting.entity';
-import { UpdateShareholdersMeetingCategoryDto, UpdateShareholdersMeetingCategoryOrderDto } from '@interface/common/dto/shareholders-meeting/update-shareholders-meeting.dto';
+import {
+  UpdateShareholdersMeetingCategoryDto,
+  UpdateShareholdersMeetingCategoryOrderDto,
+} from '@interface/common/dto/shareholders-meeting/update-shareholders-meeting.dto';
+import { ShareholdersMeetingResponseDto } from '@interface/common/dto/shareholders-meeting/shareholders-meeting-response.dto';
 
 @ApiTags('A-5. 관리자 - 주주총회')
 @ApiBearerAuth('Bearer')
@@ -89,6 +94,12 @@ export class ShareholdersMeetingController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 주주총회_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'meetingDate' | 'createdAt',
@@ -96,6 +107,7 @@ export class ShareholdersMeetingController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<any> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -110,6 +122,7 @@ export class ShareholdersMeetingController {
         limitNum,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
+        categoryId || undefined,
       );
 
     return result;
@@ -167,7 +180,7 @@ export class ShareholdersMeetingController {
   @ApiResponse({
     status: 200,
     description: '주주총회 상세 조회 성공',
-    type: ShareholdersMeeting,
+    type: ShareholdersMeetingResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -175,13 +188,14 @@ export class ShareholdersMeetingController {
   })
   async 주주총회_상세를_조회한다(
     @Param('id') id: string,
-  ): Promise<ShareholdersMeeting> {
+  ): Promise<ShareholdersMeetingResponseDto> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     return await this.shareholdersMeetingBusinessService.주주총회_상세를_조회한다(
       id,
     );
@@ -222,11 +236,13 @@ export class ShareholdersMeetingController {
   @ApiOperation({
     summary: '주주총회 생성',
     description:
-      '새로운 주주총회를 생성합니다. 제목, 설명, 장소, 일시와 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 주주총회를 생성합니다. 제목, 설명, 장소, 일시와 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
       '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
+      '- **categoryId**: 주주총회 카테고리 ID (선택사항)\n' +
       '- **translations**: JSON 문자열 (CreateShareholdersMeetingTranslationDto[])\n' +
       '- **location**: 주주총회 장소\n' +
       '- **meetingDate**: 주주총회 일시\n' +
@@ -235,6 +251,12 @@ export class ShareholdersMeetingController {
     schema: {
       type: 'object',
       properties: {
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '주주총회 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         translations: {
           type: 'string',
           description:
@@ -282,8 +304,7 @@ export class ShareholdersMeetingController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations', 'location', 'meetingDate'],
@@ -292,7 +313,7 @@ export class ShareholdersMeetingController {
   @ApiResponse({
     status: 201,
     description: '주주총회 생성 성공 (비공개, DRAFT 상태로 생성됨)',
-    type: ShareholdersMeeting,
+    type: ShareholdersMeetingResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -302,7 +323,7 @@ export class ShareholdersMeetingController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
-  ): Promise<ShareholdersMeeting> {
+  ): Promise<ShareholdersMeetingResponseDto> {
     // translations가 JSON 문자열로 전달될 수 있으므로 파싱
     let translations = body.translations;
 
@@ -358,6 +379,7 @@ export class ShareholdersMeetingController {
     }
 
     const meetingData = {
+      categoryId: body.categoryId || null,
       location: body.location,
       meetingDate,
     };
@@ -421,7 +443,10 @@ export class ShareholdersMeetingController {
           }
 
           // translations 검증
-          if (!Array.isArray(voteResult.translations) || voteResult.translations.length === 0) {
+          if (
+            !Array.isArray(voteResult.translations) ||
+            voteResult.translations.length === 0
+          ) {
             throw new BadRequestException(
               'voteResults의 각 항목은 비어있지 않은 translations 배열이 필수입니다.',
             );
@@ -444,13 +469,36 @@ export class ShareholdersMeetingController {
       }
     }
 
-    return await this.shareholdersMeetingBusinessService.주주총회를_생성한다(
-      translations,
-      meetingData,
-      voteResults,
-      user.id,
-      files,
-    );
+    const shareholdersMeeting =
+      await this.shareholdersMeetingBusinessService.주주총회를_생성한다(
+        translations,
+        meetingData,
+        voteResults,
+        user.id,
+        files,
+      );
+
+    const { category, ...result } = shareholdersMeeting;
+    return {
+      ...result,
+      categoryName: category?.name,
+      voteResults:
+        shareholdersMeeting.voteResults?.map((vr) => ({
+          id: vr.id,
+          agendaNumber: vr.agendaNumber,
+          totalVote: vr.totalVote,
+          yesVote: vr.yesVote,
+          noVote: vr.noVote,
+          approvalRating: vr.approvalRating,
+          result: vr.result,
+          favorVotes: vr.yesVote,
+          oppositionVotes: vr.noVote,
+          abstentionVotes: vr.totalVote - vr.yesVote - vr.noVote,
+          translations: vr.translations,
+          createdAt: vr.createdAt,
+          updatedAt: vr.updatedAt,
+        })) || [],
+    };
   }
 
   /**
@@ -490,31 +538,45 @@ export class ShareholdersMeetingController {
     if (!updateDto) {
       throw new BadRequestException('요청 본문이 비어있습니다.');
     }
-    
+
     // shareholdersMeetings 필드 검증
     if (!updateDto.shareholdersMeetings) {
       throw new BadRequestException('shareholdersMeetings 필드는 필수입니다.');
     }
     if (!Array.isArray(updateDto.shareholdersMeetings)) {
-      throw new BadRequestException('shareholdersMeetings는 배열이어야 합니다.');
+      throw new BadRequestException(
+        'shareholdersMeetings는 배열이어야 합니다.',
+      );
     }
     if (updateDto.shareholdersMeetings.length === 0) {
-      throw new BadRequestException('shareholdersMeetings는 비어있을 수 없습니다.');
+      throw new BadRequestException(
+        'shareholdersMeetings는 비어있을 수 없습니다.',
+      );
     }
-    
+
     // 각 항목 검증
     for (const item of updateDto.shareholdersMeetings) {
       if (!item || typeof item !== 'object') {
-        throw new BadRequestException('shareholdersMeetings의 각 항목은 객체여야 합니다.');
+        throw new BadRequestException(
+          'shareholdersMeetings의 각 항목은 객체여야 합니다.',
+        );
       }
       if (!item.id || typeof item.id !== 'string') {
-        throw new BadRequestException('shareholdersMeetings의 각 항목은 id(문자열)가 필수입니다.');
+        throw new BadRequestException(
+          'shareholdersMeetings의 각 항목은 id(문자열)가 필수입니다.',
+        );
       }
-      if (item.order === undefined || item.order === null || typeof item.order !== 'number') {
-        throw new BadRequestException(`shareholdersMeetings의 각 항목은 order(숫자)가 필수입니다. 현재 값: ${JSON.stringify(item)}`);
+      if (
+        item.order === undefined ||
+        item.order === null ||
+        typeof item.order !== 'number'
+      ) {
+        throw new BadRequestException(
+          `shareholdersMeetings의 각 항목은 order(숫자)가 필수입니다. 현재 값: ${JSON.stringify(item)}`,
+        );
       }
     }
-    
+
     return await this.shareholdersMeetingBusinessService.주주총회_오더를_일괄_수정한다(
       updateDto.shareholdersMeetings,
       user.id,
@@ -555,7 +617,11 @@ export class ShareholdersMeetingController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '주주총회 수정',
-    description: '주주총회의 번역 정보, 의결 결과 및 파일을 수정합니다.',
+    description:
+      '주주총회의 번역 정보, 의결 결과 및 파일을 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -571,6 +637,12 @@ export class ShareholdersMeetingController {
     schema: {
       type: 'object',
       properties: {
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '주주총회 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         translations: {
           type: 'string',
           description:
@@ -643,23 +715,24 @@ export class ShareholdersMeetingController {
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ShareholdersMeeting> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     // body 검증
     if (!body) {
       throw new BadRequestException('요청 본문이 비어있습니다.');
     }
-    
+
     // translations 파싱
     let translations = body.translations;
-    
+
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
     }
-    
+
     if (typeof translations === 'string') {
       try {
         translations = JSON.parse(translations);
@@ -676,24 +749,30 @@ export class ShareholdersMeetingController {
         'translations는 비어있지 않은 배열이어야 합니다.',
       );
     }
-    
+
     // translations 각 항목의 title 검증
     for (const translation of translations) {
       if (translation.title !== undefined && translation.title !== null) {
-        if (typeof translation.title !== 'string' || translation.title.trim() === '') {
+        if (
+          typeof translation.title !== 'string' ||
+          translation.title.trim() === ''
+        ) {
           throw new BadRequestException(
             'translations의 title은 비어있지 않은 문자열이어야 합니다.',
           );
         }
       }
-      if (translation.languageId && typeof translation.languageId !== 'string') {
+      if (
+        translation.languageId &&
+        typeof translation.languageId !== 'string'
+      ) {
         throw new BadRequestException(
           'translations의 languageId는 문자열이어야 합니다.',
         );
       }
     }
 
-    // meetingData 준비 및 검증
+    // meetingData 준비 및 검증 (location, meetingDate만 포함)
     const meetingData: any = {};
     if (body.location) {
       meetingData.location = body.location;
@@ -781,7 +860,10 @@ export class ShareholdersMeetingController {
             // voteResult translations 각 항목의 title 검증
             for (const trans of voteResult.translations) {
               if (trans.title !== undefined && trans.title !== null) {
-                if (typeof trans.title !== 'string' || trans.title.trim() === '') {
+                if (
+                  typeof trans.title !== 'string' ||
+                  trans.title.trim() === ''
+                ) {
                   throw new BadRequestException(
                     'voteResults translations의 title은 비어있지 않은 문자열이어야 합니다.',
                   );
@@ -801,9 +883,10 @@ export class ShareholdersMeetingController {
     return await this.shareholdersMeetingBusinessService.주주총회를_수정한다(
       id,
       translations,
-      meetingData,
-      voteResults,
       user.id,
+      body.categoryId || null,
+      Object.keys(meetingData).length > 0 ? meetingData : undefined,
+      voteResults,
       files,
     );
   }
@@ -814,12 +897,14 @@ export class ShareholdersMeetingController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '주주총회 공개 상태 수정',
-    description: '주주총회의 공개 상태를 수정합니다.',
+    description:
+      '주주총회의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
     description: '주주총회 공개 상태 수정 성공',
-    type: ShareholdersMeeting,
+    type: ShareholdersMeetingResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -829,26 +914,52 @@ export class ShareholdersMeetingController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() body: { isPublic: boolean },
-  ): Promise<ShareholdersMeeting> {
+  ): Promise<ShareholdersMeetingResponseDto> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     // isPublic 필드 검증
     if (body.isPublic === undefined || body.isPublic === null) {
       throw new BadRequestException('isPublic 필드는 필수입니다.');
     }
     if (typeof body.isPublic !== 'boolean') {
-      throw new BadRequestException('isPublic 필드는 boolean 타입이어야 합니다.');
+      throw new BadRequestException(
+        'isPublic 필드는 boolean 타입이어야 합니다.',
+      );
     }
-    
-    return await this.shareholdersMeetingBusinessService.주주총회_공개를_수정한다(
-      id,
-      body.isPublic,
-      user.id,
-    );
+
+    const shareholdersMeeting =
+      await this.shareholdersMeetingBusinessService.주주총회_공개를_수정한다(
+        id,
+        body.isPublic,
+        user.id,
+      );
+
+    const { category, ...result } = shareholdersMeeting;
+    return {
+      ...result,
+      categoryName: category?.name,
+      voteResults:
+        shareholdersMeeting.voteResults?.map((vr) => ({
+          id: vr.id,
+          agendaNumber: vr.agendaNumber,
+          totalVote: vr.totalVote,
+          yesVote: vr.yesVote,
+          noVote: vr.noVote,
+          approvalRating: vr.approvalRating,
+          result: vr.result,
+          favorVotes: vr.yesVote,
+          oppositionVotes: vr.noVote,
+          abstentionVotes: vr.totalVote - vr.yesVote - vr.noVote,
+          translations: vr.translations,
+          createdAt: vr.createdAt,
+          updatedAt: vr.updatedAt,
+        })) || [],
+    };
   }
 
   /**
@@ -871,11 +982,12 @@ export class ShareholdersMeetingController {
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     const result =
       await this.shareholdersMeetingBusinessService.주주총회를_삭제한다(id);
     return { success: result };
@@ -887,22 +999,65 @@ export class ShareholdersMeetingController {
   @Post('categories')
   @ApiOperation({
     summary: '주주총회 카테고리 생성',
-    description: '새로운 주주총회 카테고리를 생성합니다.',
+    description:
+      '새로운 주주총회 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiBody({
+    description: '주주총회 카테고리 생성 정보',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: {
+          type: 'string',
+          description: '카테고리 이름 (필수)',
+          example: '정기 주주총회',
+        },
+        description: {
+          type: 'string',
+          description: '카테고리 설명 (선택)',
+          example: '연례 정기 주주총회 자료',
+        },
+        isActive: {
+          type: 'boolean',
+          description: '활성화 여부 (선택, 기본값: true)',
+          default: true,
+        },
+        order: {
+          type: 'number',
+          description: '정렬 순서 (선택, 기본값: 0)',
+          default: 0,
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 201,
     description: '주주총회 카테고리 생성 성공',
   })
   async 주주총회_카테고리를_생성한다(
-    @Body() createDto: { name: string; description?: string; isActive?: boolean; order?: number },
+    @CurrentUser() user: AuthenticatedUser,
+    @Body()
+    createDto: {
+      name: string;
+      description?: string;
+      isActive?: boolean;
+      order?: number;
+    },
   ): Promise<any> {
     // name 필드 검증
     if (!createDto.name || createDto.name.trim() === '') {
-      throw new BadRequestException('name 필드는 필수이며 비어있을 수 없습니다.');
+      throw new BadRequestException(
+        'name 필드는 필수이며 비어있을 수 없습니다.',
+      );
     }
-    
+
     return await this.shareholdersMeetingBusinessService.주주총회_카테고리를_생성한다(
-      createDto,
+      {
+        ...createDto,
+        createdBy: user.id,
+      },
     );
   }
 
@@ -912,7 +1067,9 @@ export class ShareholdersMeetingController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '주주총회 카테고리 수정',
-    description: '주주총회 카테고리를 수정합니다.',
+    description:
+      '주주총회 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -928,11 +1085,12 @@ export class ShareholdersMeetingController {
     @Body() updateDto: UpdateShareholdersMeetingCategoryDto,
   ): Promise<any> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     return await this.shareholdersMeetingBusinessService.주주총회_카테고리를_수정한다(
       id,
       {
@@ -948,7 +1106,9 @@ export class ShareholdersMeetingController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '주주총회 카테고리 오더 변경',
-    description: '주주총회 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '주주총회 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -964,11 +1124,12 @@ export class ShareholdersMeetingController {
     @Body() updateDto: UpdateShareholdersMeetingCategoryOrderDto,
   ): Promise<any> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     const result =
       await this.shareholdersMeetingBusinessService.주주총회_카테고리_오더를_변경한다(
         id,
@@ -1000,11 +1161,12 @@ export class ShareholdersMeetingController {
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
       throw new BadRequestException('올바른 UUID 형식이 아닙니다.');
     }
-    
+
     const result =
       await this.shareholdersMeetingBusinessService.주주총회_카테고리를_삭제한다(
         id,

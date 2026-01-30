@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -15,11 +16,14 @@ import { ElectronicDisclosureListItemDto } from '@interface/common/dto/electroni
  */
 @Injectable()
 export class ElectronicDisclosureBusinessService {
-  private readonly logger = new Logger(ElectronicDisclosureBusinessService.name);
+  private readonly logger = new Logger(
+    ElectronicDisclosureBusinessService.name,
+  );
 
   constructor(
     private readonly electronicDisclosureContextService: ElectronicDisclosureContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -33,7 +37,9 @@ export class ElectronicDisclosureBusinessService {
     const disclosures =
       await this.electronicDisclosureContextService.전자공시_전체_목록을_조회한다();
 
-    this.logger.log(`전자공시 전체 목록 조회 완료 - 총 ${disclosures.length}개`);
+    this.logger.log(
+      `전자공시 전체 목록 조회 완료 - 총 ${disclosures.length}개`,
+    );
 
     return disclosures;
   }
@@ -41,15 +47,23 @@ export class ElectronicDisclosureBusinessService {
   /**
    * 전자공시 상세를 조회한다
    */
-  async 전자공시_상세를_조회한다(id: string): Promise<ElectronicDisclosure> {
+  async 전자공시_상세를_조회한다(id: string): Promise<any> {
     this.logger.log(`전자공시 상세 조회 시작 - ID: ${id}`);
 
     const disclosure =
-      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(id);
+      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(
+        id,
+      );
 
     this.logger.log(`전자공시 상세 조회 완료 - ID: ${id}`);
 
-    return disclosure;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...disclosureData } = disclosure as any;
+
+    return {
+      ...disclosureData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -88,7 +102,6 @@ export class ElectronicDisclosureBusinessService {
     return disclosure;
   }
 
-
   /**
    * 전자공시를 생성한다 (파일 업로드 포함)
    */
@@ -98,6 +111,7 @@ export class ElectronicDisclosureBusinessService {
       title: string;
       description?: string;
     }>,
+    categoryId: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
   ): Promise<ElectronicDisclosure> {
@@ -132,6 +146,7 @@ export class ElectronicDisclosureBusinessService {
     const result =
       await this.electronicDisclosureContextService.전자공시를_생성한다(
         translations,
+        categoryId,
         createdBy,
         attachments,
       );
@@ -152,7 +167,8 @@ export class ElectronicDisclosureBusinessService {
       title: string;
       description?: string;
     }>,
-    updatedBy?: string,
+    updatedBy: string,
+    categoryId: string | null,
     files?: Express.Multer.File[],
   ): Promise<ElectronicDisclosure> {
     this.logger.log(
@@ -161,16 +177,19 @@ export class ElectronicDisclosureBusinessService {
 
     // 1. 기존 전자공시 조회
     const disclosure =
-      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(id);
+      await this.electronicDisclosureContextService.전자공시_상세를_조회한다(
+        id,
+      );
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = disclosure.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -178,6 +197,7 @@ export class ElectronicDisclosureBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -191,8 +211,12 @@ export class ElectronicDisclosureBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -205,14 +229,21 @@ export class ElectronicDisclosureBusinessService {
       `전자공시 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
-    const result = await this.electronicDisclosureContextService.전자공시를_수정한다(
-      id,
-      {
+    // 5. categoryId 업데이트
+    await this.electronicDisclosureContextService.전자공시를_수정한다(id, {
+      categoryId,
+      updatedBy,
+    });
+    this.logger.log(
+      `전자공시 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`,
+    );
+
+    // 6. 번역 수정
+    const result =
+      await this.electronicDisclosureContextService.전자공시를_수정한다(id, {
         translations,
         updatedBy,
-      },
-    );
+      });
 
     this.logger.log(`전자공시 수정 완료 - ID: ${id}`);
 
@@ -253,6 +284,7 @@ export class ElectronicDisclosureBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: ElectronicDisclosureListItemDto[];
     total: number;
@@ -261,7 +293,7 @@ export class ElectronicDisclosureBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `전자공시 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `전자공시 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result =
@@ -272,23 +304,30 @@ export class ElectronicDisclosureBusinessService {
         limit,
         startDate,
         endDate,
+        categoryId,
       );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // ElectronicDisclosure 엔티티를 ElectronicDisclosureListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
     const items: ElectronicDisclosureListItemDto[] = result.items.map(
       (disclosure) => {
-        const koreanTranslation = disclosure.translations?.find(
-          (t) => t.language?.code === 'ko'
-        ) || disclosure.translations?.[0];
+        const defaultTranslation =
+          disclosure.translations?.find(
+            (t) => t.language?.code === defaultLanguageCode,
+          ) || disclosure.translations?.[0];
 
         return {
           id: disclosure.id,
           isPublic: disclosure.isPublic,
           order: disclosure.order,
-          title: koreanTranslation?.title || '',
-          description: koreanTranslation?.description || null,
+          title: defaultTranslation?.title || '',
+          description: defaultTranslation?.description || null,
+          categoryName: disclosure.category?.name || '',
           createdAt: disclosure.createdAt,
           updatedAt: disclosure.updatedAt,
         };

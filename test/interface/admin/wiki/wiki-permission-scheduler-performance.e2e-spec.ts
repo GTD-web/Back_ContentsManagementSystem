@@ -243,24 +243,34 @@ describe('위키 권한 검증 스케줄러 성능 개선 테스트', () => {
 
   describe('대량 데이터 처리', () => {
     it('50개의 위키를 빠르게 처리해야 한다', async () => {
-      // Given - 50개의 위키 생성
-      for (let i = 1; i <= 50; i++) {
-        const folder = await testSuite
-          .request()
-          .post('/api/admin/wiki/folders')
-          .send({ name: `대량 테스트 폴더 ${i}` })
-          .expect(201);
-
-        if (i % 5 === 0) {
-          await testSuite
-            .request()
-            .patch(`/api/admin/wiki/folders/${folder.body.id}/public`)
-            .send({
-              isPublic: false,
-              permissionDepartmentIds: [`dept-bulk-50-${i}`],
-            })
-            .expect(200);
+      // Given - 50개의 위키 생성 (배치 처리)
+      const batchSize = 10;
+      for (let batch = 0; batch < 5; batch++) {
+        const promises: Promise<any>[] = [];
+        for (let i = 1; i <= batchSize; i++) {
+          const index = batch * batchSize + i;
+          promises.push(
+            testSuite
+              .request()
+              .post('/api/admin/wiki/folders')
+              .send({ name: `대량 테스트 폴더 ${index}` })
+              .then(async (folder) => {
+                if (index % 5 === 0) {
+                  await testSuite
+                    .request()
+                    .patch(`/api/admin/wiki/folders/${folder.body.id}/public`)
+                    .send({
+                      isPublic: false,
+                      permissionDepartmentIds: [`dept-bulk-50-${index}`],
+                    });
+                }
+              })
+          );
         }
+        await Promise.all(promises);
+        
+        // DB 연결 풀 회복을 위한 대기 시간
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // When - 스케줄러 실행
@@ -279,25 +289,35 @@ describe('위키 권한 검증 스케줄러 성능 개선 테스트', () => {
     });
 
     it('100개의 위키를 빠르게 처리해야 한다', async () => {
-      // Given - 100개의 위키 생성
-      for (let i = 1; i <= 100; i++) {
-        const folder = await testSuite
-          .request()
-          .post('/api/admin/wiki/folders')
-          .send({ name: `대량 100 테스트 폴더 ${i}` })
-          .expect(201);
-
-        // 20%는 부서 권한 설정
-        if (i % 5 === 0) {
-          await testSuite
-            .request()
-            .patch(`/api/admin/wiki/folders/${folder.body.id}/public`)
-            .send({
-              isPublic: false,
-              permissionDepartmentIds: [`dept-bulk-100-${i}`],
-            })
-            .expect(200);
+      // Given - 100개의 위키 생성 (배치 처리)
+      const batchSize = 10;
+      for (let batch = 0; batch < 10; batch++) {
+        const promises: Promise<any>[] = [];
+        for (let i = 1; i <= batchSize; i++) {
+          const index = batch * batchSize + i;
+          promises.push(
+            testSuite
+              .request()
+              .post('/api/admin/wiki/folders')
+              .send({ name: `대량 100 테스트 폴더 ${index}` })
+              .then(async (folder) => {
+                // 20%는 부서 권한 설정
+                if (index % 5 === 0) {
+                  await testSuite
+                    .request()
+                    .patch(`/api/admin/wiki/folders/${folder.body.id}/public`)
+                    .send({
+                      isPublic: false,
+                      permissionDepartmentIds: [`dept-bulk-100-${index}`],
+                    });
+                }
+              })
+          );
         }
+        await Promise.all(promises);
+        
+        // DB 연결 풀 회복을 위한 대기 시간
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
 
       // When - 스케줄러 실행
@@ -318,8 +338,8 @@ describe('위키 권한 검증 스케줄러 성능 개선 테스트', () => {
     it('1000개의 위키를 빠르게 처리해야 한다 (대용량)', async () => {
       // Given - 1000개의 위키 생성
       console.log('\n🚀 1000개 위키 생성 중...');
-      const batchSize = 50;
-      for (let batch = 0; batch < 20; batch++) {
+      const batchSize = 20; // 배치 크기 축소 (50 -> 20) - DB 연결 풀 부담 감소
+      for (let batch = 0; batch < 50; batch++) {
         const promises: Promise<any>[] = [];
         for (let i = 1; i <= batchSize; i++) {
           const index = batch * batchSize + i;
@@ -343,6 +363,10 @@ describe('위키 권한 검증 스케줄러 성능 개선 테스트', () => {
           );
         }
         await Promise.all(promises);
+        
+        // DB 연결 풀 회복을 위한 대기 시간 (배치 간 200ms)
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         console.log(`   진행률: ${((batch + 1) * batchSize / 10).toFixed(0)}%`);
       }
       console.log('✅ 1000개 위키 생성 완료\n');

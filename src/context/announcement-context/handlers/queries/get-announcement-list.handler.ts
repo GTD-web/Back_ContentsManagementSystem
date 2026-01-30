@@ -17,6 +17,7 @@ export class GetAnnouncementListQuery {
     public readonly limit: number = 10,
     public readonly startDate?: Date,
     public readonly endDate?: Date,
+    public readonly categoryId?: string,
   ) {}
 }
 
@@ -35,10 +36,19 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
   async execute(
     query: GetAnnouncementListQuery,
   ): Promise<AnnouncementListResult> {
-    const { isPublic, isFixed, orderBy, page, limit, startDate, endDate } = query;
+    const {
+      isPublic,
+      isFixed,
+      orderBy,
+      page,
+      limit,
+      startDate,
+      endDate,
+      categoryId,
+    } = query;
 
     this.logger.debug(
-      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const queryBuilder =
@@ -60,18 +70,37 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
       }
     }
 
+    if (categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('announcement.categoryId = :categoryId', {
+          categoryId,
+        });
+      } else {
+        queryBuilder.where('announcement.categoryId = :categoryId', {
+          categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('announcement.createdAt >= :startDate', { startDate });
+        queryBuilder.andWhere('announcement.createdAt >= :startDate', {
+          startDate,
+        });
       } else {
-        queryBuilder.where('announcement.createdAt >= :startDate', { startDate });
+        queryBuilder.where('announcement.createdAt >= :startDate', {
+          startDate,
+        });
         hasWhere = true;
       }
     }
 
     if (endDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('announcement.createdAt <= :endDate', { endDate });
+        queryBuilder.andWhere('announcement.createdAt <= :endDate', {
+          endDate,
+        });
       } else {
         queryBuilder.where('announcement.createdAt <= :endDate', { endDate });
         hasWhere = true;
@@ -93,6 +122,9 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
 
     // Survey 관계 조인 (설문조사 포함 여부 확인용)
     queryBuilder.leftJoinAndSelect('announcement.survey', 'survey');
+
+    // Category 관계 조인 (카테고리 이름 조회용)
+    queryBuilder.leftJoinAndSelect('announcement.category', 'category');
 
     const [items, total] = await queryBuilder.getManyAndCount();
 

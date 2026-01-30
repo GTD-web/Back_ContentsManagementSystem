@@ -8,6 +8,8 @@ import {
   GetDepartmentListHandler,
   GetRankListHandler,
   GetPositionListHandler,
+  GetEmployeeHandler,
+  GetEmployeeListHandler,
 } from './handlers';
 
 const QueryHandlers = [
@@ -15,6 +17,8 @@ const QueryHandlers = [
   GetDepartmentListHandler,
   GetRankListHandler,
   GetPositionListHandler,
+  GetEmployeeHandler,
+  GetEmployeeListHandler,
 ];
 
 /**

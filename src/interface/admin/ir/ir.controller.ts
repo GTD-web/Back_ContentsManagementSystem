@@ -35,7 +35,10 @@ import {
 } from '@interface/common/dto/ir/ir-response.dto';
 import { UpdateIRBatchOrderDto } from '@interface/common/dto/ir/update-ir-batch-order.dto';
 import { CreateIRDto } from '@interface/common/dto/ir/create-ir.dto';
-import { UpdateIRCategoryDto, UpdateIRCategoryOrderDto } from '@interface/common/dto/ir/update-ir.dto';
+import {
+  UpdateIRCategoryDto,
+  UpdateIRCategoryOrderDto,
+} from '@interface/common/dto/ir/update-ir.dto';
 
 @ApiTags('A-3. 관리자 - IR')
 @ApiBearerAuth('Bearer')
@@ -96,6 +99,12 @@ export class IRController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async IR_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -103,6 +112,7 @@ export class IRController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<IRListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -116,6 +126,7 @@ export class IRController {
       limitNum,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
+      categoryId || undefined,
     );
 
     return result;
@@ -173,7 +184,7 @@ export class IRController {
   @ApiResponse({
     status: 200,
     description: 'IR 상세 조회 성공',
-    type: IR,
+    type: IRResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -183,7 +194,9 @@ export class IRController {
     status: 400,
     description: '잘못된 UUID 형식',
   })
-  async IR_상세를_조회한다(@Param('id', ParseUUIDPipe) id: string): Promise<IR> {
+  async IR_상세를_조회한다(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<IRResponseDto> {
     return await this.irBusinessService.IR_상세를_조회한다(id);
   }
 
@@ -223,12 +236,20 @@ export class IRController {
   @ApiOperation({
     summary: 'IR 생성',
     description:
-      '새로운 IR을 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 IR을 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: IR 카테고리 ID (UUID)\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
       '⚠️ **중요**: multipart/form-data 형식으로 전송해야 합니다.\n\n' +
       '- **translations**: JSON 문자열로 전송 (아래 스키마 참고)\n' +
+      '- **categoryId**: IR 카테고리 ID (선택사항)\n' +
       '- **files**: 파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)',
     schema: {
       type: 'object',
@@ -245,11 +266,15 @@ export class IRController {
             },
           ]),
         },
+        categoryId: {
+          type: 'string',
+          description: 'IR 카테고리 ID (UUID, 선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
+          description: '첨부파일 목록 (PDF/JPG/PNG/WEBP/XLSX/DOCX만 가능)',
         },
       },
       required: ['translations'],
@@ -295,7 +320,7 @@ export class IRController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}].languageId는 필수 필드입니다.`,
@@ -313,19 +338,24 @@ export class IRController {
       translations,
       user.id,
       files,
+      body?.categoryId || null,
     );
   }
 
   /**
    * IR 오더를 일괄 수정한다
-   * 
+   *
    * 주의: 이 라우트는 :id 라우트보다 앞에 와야 합니다.
    */
   @Put('batch-order')
   @ApiOperation({
     summary: 'IR 오더 일괄 수정',
     description:
-      '여러 IR의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 IR 목록을 전달하면 됩니다.',
+      '여러 IR의 정렬 순서를 한번에 수정합니다. ' +
+      '프론트엔드에서 변경된 순서대로 IR 목록을 전달하면 됩니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `irs`: IR ID와 order를 포함한 객체 배열\n' +
+      '  - 각 객체: `{ id: string, order: number }`',
   })
   @ApiResponse({
     status: 200,
@@ -362,11 +392,9 @@ export class IRController {
     // 각 항목의 필수 필드 검증
     for (let i = 0; i < updateDto.irs.length; i++) {
       const item = updateDto.irs[i];
-      
+
       if (!item.id || typeof item.id !== 'string') {
-        throw new BadRequestException(
-          `irs[${i}].id는 필수 문자열 필드입니다.`,
-        );
+        throw new BadRequestException(`irs[${i}].id는 필수 문자열 필드입니다.`);
       }
 
       if (typeof item.order !== 'number' || item.order < 0) {
@@ -417,7 +445,21 @@ export class IRController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'IR 수정',
-    description: 'IR의 번역 정보 및 파일을 수정합니다.',
+    description:
+      'IR의 번역 정보 및 파일을 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string (필수), title: string (필수), description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: IR 카테고리 ID (UUID)\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP/XLSX/DOCX)\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: IR ID (UUID, 필수)\n\n' +
+      '⚠️ **파일 관리 방식**:\n' +
+      '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
+      '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -440,6 +482,12 @@ export class IRController {
               description: '투자자 정보 자료입니다.',
             },
           ]),
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: 'IR 카테고리 ID (필수)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
         },
         files: {
           type: 'array',
@@ -472,7 +520,7 @@ export class IRController {
   ): Promise<IRResponseDto> {
     // translations 파싱
     let translations = body?.translations;
-    
+
     if (!translations) {
       throw new BadRequestException('translations 필드는 필수입니다.');
     }
@@ -496,7 +544,7 @@ export class IRController {
     // 각 translation 항목의 필수 필드 검증
     for (let i = 0; i < translations.length; i++) {
       const translation = translations[i];
-      
+
       if (!translation.languageId) {
         throw new BadRequestException(
           `translations[${i}].languageId는 필수 필드입니다.`,
@@ -514,6 +562,7 @@ export class IRController {
       id,
       translations,
       user.id,
+      body.categoryId || null,
       files,
     );
   }
@@ -524,7 +573,15 @@ export class IRController {
   @Patch(':id/public')
   @ApiOperation({
     summary: 'IR 공개 상태 수정',
-    description: 'IR의 공개 상태를 수정합니다.',
+    description:
+      'IR의 공개 상태를 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `isPublic`: 공개 여부 (boolean)\n' +
+      '  - `true`: 공개\n' +
+      '  - `false`: 비공개\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: IR ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -571,7 +628,9 @@ export class IRController {
     status: 400,
     description: '잘못된 UUID 형식',
   })
-  async IR을_삭제한다(@Param('id', ParseUUIDPipe) id: string): Promise<{ success: boolean }> {
+  async IR을_삭제한다(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ success: boolean }> {
     const result = await this.irBusinessService.IR을_삭제한다(id);
     return { success: result };
   }
@@ -582,7 +641,32 @@ export class IRController {
   @Post('categories')
   @ApiOperation({
     summary: 'IR 카테고리 생성',
-    description: '새로운 IR 카테고리를 생성합니다.',
+    description:
+      '새로운 IR 카테고리를 생성합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `name`: 카테고리 이름\n\n' +
+      '**선택 필드:**\n' +
+      '- `description`: 카테고리 설명\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiBody({
+    description: 'IR 카테고리 생성 정보',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: {
+          type: 'string',
+          description: '카테고리 이름 (필수)',
+          example: '재무제표',
+        },
+        description: {
+          type: 'string',
+          description: '카테고리 설명 (선택)',
+          example: '분기별 재무제표 및 감사보고서',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 201,
@@ -594,6 +678,7 @@ export class IRController {
     description: '잘못된 요청 (name 필수 필드 누락)',
   })
   async IR_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: { name: string; description?: string },
   ): Promise<IRCategoryResponseDto> {
     // 필수 필드 검증
@@ -601,7 +686,10 @@ export class IRController {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
 
-    return await this.irBusinessService.IR_카테고리를_생성한다(createDto);
+    return await this.irBusinessService.IR_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -610,7 +698,15 @@ export class IRController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: 'IR 카테고리 수정',
-    description: 'IR 카테고리를 수정합니다.',
+    description:
+      'IR 카테고리를 수정합니다.\n\n' +
+      '**선택 필드 (모두 선택):**\n' +
+      '- `name`: 카테고리 이름\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `order`: 정렬 순서\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -642,7 +738,13 @@ export class IRController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: 'IR 카테고리 오더 변경',
-    description: 'IR 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      'IR 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -662,10 +764,13 @@ export class IRController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateIRCategoryOrderDto,
   ): Promise<IRCategoryResponseDto> {
-    const result = await this.irBusinessService.IR_카테고리_오더를_변경한다(id, {
-      order: updateDto.order,
-      updatedBy: user.id,
-    });
+    const result = await this.irBusinessService.IR_카테고리_오더를_변경한다(
+      id,
+      {
+        order: updateDto.order,
+        updatedBy: user.id,
+      },
+    );
     return result;
   }
 

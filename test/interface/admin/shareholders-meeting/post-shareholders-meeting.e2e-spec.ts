@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -26,12 +27,27 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
     it('유효한 데이터로 주주총회를 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -53,12 +69,15 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
       // Then
       expect(response.body).toMatchObject({
         id: expect.any(String),
+        categoryId,
         isPublic: true, // 기본값 확인
         location: createDto.location,
         meetingDate: expect.any(String),
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
       });
+
+      expect(response.body.categoryName).toBeDefined();
 
       // 자동 번역 동기화로 인해 4개 언어 모두 번역이 생성됨
       expect(response.body.translations).toHaveLength(4);
@@ -98,6 +117,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
       const enLanguageId = englishLanguage.id;
 
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -141,6 +161,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('의결 결과를 포함한 주주총회를 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -217,6 +238,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('description 없이 주주총회를 생성해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -247,10 +269,37 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     });
   });
 
-  describe('실패 케이스 - 필수 필드 누락', () => {
-    it('translations가 누락된 경우 400 에러가 발생해야 한다', async () => {
+  describe('선택적 필드 - categoryId', () => {
+    it('categoryId가 누락되어도 주주총회를 생성할 수 있어야 한다', async () => {
       // Given
       const createDto = {
+        translations: [
+          {
+            languageId,
+            title: '제38기 정기 주주총회',
+          },
+        ],
+        location: '서울 강남구',
+        meetingDate: '2024-03-15T10:00:00.000Z',
+      };
+
+      // When & Then
+      const response = await testSuite
+        .request()
+        .post('/api/admin/shareholders-meetings')
+        .send(createDto)
+        .expect(201);
+
+      expect(response.body.id).toBeDefined();
+      expect(response.body.location).toBe('서울 강남구');
+      expect(response.body.categoryId).toBeNull();
+    });
+  });
+
+  describe('실패 케이스 - 필수 필드 누락', () => {    it('translations가 누락된 경우 400 에러가 발생해야 한다', async () => {
+      // Given
+      const createDto = {
+        categoryId,
         location: '서울 강남구',
         meetingDate: '2024-03-15T10:00:00.000Z',
       };
@@ -266,6 +315,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('location이 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -286,6 +336,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('meetingDate가 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -306,6 +357,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('translation의 title이 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given - title 없이 생성 시도
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -330,6 +382,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('존재하지 않는 languageId로 생성 시 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId: '00000000-0000-0000-0000-000000000001',
@@ -349,9 +402,33 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
       expect([400, 404, 500]).toContain(response.status);
     });
 
+    it('존재하지 않는 categoryId로 생성 시 에러가 발생해야 한다', async () => {
+      // Given
+      const createDto = {
+        categoryId: '00000000-0000-0000-0000-000000000002',
+        translations: [
+          {
+            languageId,
+            title: '테스트',
+          },
+        ],
+        location: '서울 강남구',
+        meetingDate: '2024-03-15T10:00:00.000Z',
+      };
+
+      // When & Then
+      const response = await testSuite
+        .request()
+        .post('/api/admin/shareholders-meetings')
+        .send(createDto);
+
+      expect([400, 404, 500]).toContain(response.status);
+    });
+
     it('잘못된 날짜 형식으로 생성 시 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -373,6 +450,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('의결 결과의 필수 필드가 누락된 경우 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -406,6 +484,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
     it('잘못된 의결 결과 타입으로 생성 시 400 에러가 발생해야 한다', async () => {
       // Given
       const createDto = {
+        categoryId,
         translations: [
           {
             languageId,
@@ -460,6 +539,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .field('location', '서울 강남구')
         .field('meetingDate', '2024-03-15T10:00:00.000Z')
         .attach('files', fileBuffer, 'meeting-minutes.pdf')
@@ -495,6 +575,7 @@ describe('POST /api/admin/shareholders-meetings (주주총회 생성)', () => {
             },
           ]),
         )
+        .field('categoryId', categoryId)
         .field('location', '서울 강남구')
         .field('meetingDate', '2024-03-15T10:00:00.000Z')
         .attach('files', file1Buffer, 'minutes.pdf')

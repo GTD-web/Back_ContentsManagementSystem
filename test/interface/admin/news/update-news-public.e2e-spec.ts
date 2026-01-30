@@ -2,6 +2,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 
 describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -13,6 +14,17 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
 
   beforeEach(async () => {
     await testSuite.cleanupSpecificTables(['news']);
+
+    // 테스트용 뉴스 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/news/categories')
+      .send({
+        name: '테스트 뉴스 카테고리',
+        description: '테스트용 뉴스 카테고리',
+        order: 0,
+      });
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -23,6 +35,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
         .field('description', '테스트 설명')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -46,6 +59,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         id: newsId,
         isPublic: true,
       });
+      expect(response.body.categoryName).toBeDefined();
 
       // 조회하여 확인
       const getResponse = await testSuite
@@ -62,6 +76,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -79,6 +94,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         id: newsId,
         isPublic: false,
       });
+      expect(response.body.categoryName).toBeDefined();
 
       // 조회하여 확인
       const getResponse = await testSuite
@@ -95,6 +111,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -122,18 +139,21 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스1')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const news2 = await testSuite
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스2')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const news3 = await testSuite
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스3')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // When - 각각 다른 상태로 변경
@@ -188,6 +208,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -206,6 +227,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -226,6 +248,7 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '토글 테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -270,18 +293,21 @@ describe('PATCH /api/admin/news/:id/public (뉴스 공개 상태 수정)', () =>
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스1')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const news2 = await testSuite
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스2')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       await testSuite
         .request()
         .post('/api/admin/news')
         .field('title', '뉴스3')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // When - 2개를 비공개로 변경

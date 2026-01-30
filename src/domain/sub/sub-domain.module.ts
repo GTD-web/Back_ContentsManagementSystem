@@ -1,11 +1,7 @@
 import { Module } from '@nestjs/common';
 import { WikiFileSystemModule } from './wiki-file-system/wiki-file-system.module';
-// TODO: 모듈들 추가
-// import { MainPopupModule } from './main-popup/main-popup.module';
-// import { LumirStoryModule } from './lumir-story/lumir-story.module';
-// import { VideoGalleryModule } from './video-gallery/video-gallery.module';
-// import { SurveyModule } from './survey/survey.module';
-// import { EducationManagementModule } from './education-management/education-management.module';
+import { PageViewModule } from './analytics/page-view.module';
+import { MigrationUserModule } from './migration-user/migration-user.module';
 
 /**
  * Sub Domain 통합 모듈
@@ -14,11 +10,13 @@ import { WikiFileSystemModule } from './wiki-file-system/wiki-file-system.module
 @Module({
   imports: [
     WikiFileSystemModule,
-    // TODO: 모듈들 추가
+    PageViewModule,
+    MigrationUserModule,
   ],
   exports: [
     WikiFileSystemModule,
-    // TODO: 모듈들 추가
+    PageViewModule,
+    MigrationUserModule,
   ],
 })
 export class SubDomainModule {}

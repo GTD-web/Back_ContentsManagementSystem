@@ -33,6 +33,9 @@ export class LumirStoryResponseDto {
   @ApiProperty({ description: '내용', example: '루미르는...' })
   content: string;
 
+  @ApiProperty({ description: '카테고리 ID', nullable: true })
+  categoryId: string | null;
+
   @ApiProperty({
     description: '썸네일/대표 이미지 URL',
     required: false,
@@ -65,6 +68,9 @@ export class LumirStoryResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '혁신', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -89,6 +95,9 @@ export class LumirStoryListItemDto {
 
   @ApiProperty({ description: '정렬 순서', example: 1 })
   order: number;
+
+  @ApiProperty({ description: '카테고리 이름', example: '혁신' })
+  categoryName: string;
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;

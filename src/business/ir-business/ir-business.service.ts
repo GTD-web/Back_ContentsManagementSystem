@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IRContextService } from '@context/ir-context/ir-context.service';
 import { IR } from '@domain/core/ir/ir.entity';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -20,6 +21,7 @@ export class IRBusinessService {
   constructor(
     private readonly irContextService: IRContextService,
     private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -27,27 +29,42 @@ export class IRBusinessService {
   /**
    * IR 전체 목록을 조회한다
    */
-  async IR_전체_목록을_조회한다(): Promise<IR[]> {
+  async IR_전체_목록을_조회한다(): Promise<any[]> {
     this.logger.log('IR 전체 목록 조회 시작');
 
     const irs = await this.irContextService.IR_전체_목록을_조회한다();
 
+    // 모든 IR의 category 객체를 categoryName으로 변환
+    const irsWithCategoryName = irs.map((ir) => {
+      const { category, ...irData } = ir as any;
+      return {
+        ...irData,
+        categoryName: category?.name || null,
+      };
+    });
+
     this.logger.log(`IR 전체 목록 조회 완료 - 총 ${irs.length}개`);
 
-    return irs;
+    return irsWithCategoryName;
   }
 
   /**
    * IR 상세를 조회한다
    */
-  async IR_상세를_조회한다(id: string): Promise<IR> {
+  async IR_상세를_조회한다(id: string): Promise<any> {
     this.logger.log(`IR 상세 조회 시작 - ID: ${id}`);
 
     const ir = await this.irContextService.IR_상세를_조회한다(id);
 
     this.logger.log(`IR 상세 조회 완료 - ID: ${id}`);
 
-    return ir;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = ir as any;
+
+    return {
+      ...irData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -70,7 +87,7 @@ export class IRBusinessService {
     id: string,
     isPublic: boolean,
     updatedBy?: string,
-  ): Promise<IR> {
+  ): Promise<any> {
     this.logger.log(`IR 공개 수정 시작 - ID: ${id}, 공개: ${isPublic}`);
 
     const ir = await this.irContextService.IR_공개를_수정한다(
@@ -81,7 +98,13 @@ export class IRBusinessService {
 
     this.logger.log(`IR 공개 수정 완료 - ID: ${id}`);
 
-    return ir;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = ir as any;
+
+    return {
+      ...irData,
+      categoryName: category?.name || null,
+    };
   }
 
   /**
@@ -93,8 +116,9 @@ export class IRBusinessService {
       title: string;
       description?: string;
     }>,
-    createdBy?: string,
-    files?: Express.Multer.File[],
+    createdBy: string | undefined,
+    files: Express.Multer.File[] | undefined,
+    categoryId: string | null,
   ): Promise<IR> {
     this.logger.log(`IR 생성 시작 - 번역 수: ${translations.length}`);
 
@@ -125,11 +149,18 @@ export class IRBusinessService {
       translations,
       createdBy,
       attachments,
+      categoryId,
     );
 
     this.logger.log(`IR 생성 완료 - ID: ${result.id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = result as any;
+
+    return {
+      ...irData,
+      categoryName: category?.name || null,
+    } as any;
   }
 
   /**
@@ -143,22 +174,26 @@ export class IRBusinessService {
       title: string;
       description?: string;
     }>,
-    updatedBy?: string,
+    updatedBy: string,
+    categoryId: string | null,
     files?: Express.Multer.File[],
-  ): Promise<IR> {
-    this.logger.log(`IR 수정 시작 - ID: ${id}, 번역 수: ${translations.length}`);
+  ): Promise<any> {
+    this.logger.log(
+      `IR 수정 시작 - ID: ${id}, 번역 수: ${translations.length}`,
+    );
 
     // 1. 기존 IR 조회
     const ir = await this.irContextService.IR_상세를_조회한다(id);
 
-    // 2. 기존 파일 전부 삭제
+    // 2. 기존 파일에 deletedAt 설정 (소프트 삭제)
     const currentAttachments = ir.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(`스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`);
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = currentAttachments.map((att: any) => ({
+      ...att,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${currentAttachments.length}개의 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새 파일 업로드 처리
     let finalAttachments: Array<{
@@ -166,6 +201,7 @@ export class IRBusinessService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -176,8 +212,12 @@ export class IRBusinessService {
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
+        deletedAt: null,
       }));
       this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+    } else {
+      // files가 없으면 기존 파일만 소프트 삭제된 상태로 유지
+      finalAttachments = markedForDeletion;
     }
 
     // 4. 파일 정보 업데이트
@@ -190,7 +230,14 @@ export class IRBusinessService {
       `IR 파일 업데이트 완료 - 최종 파일 수: ${finalAttachments.length}개`,
     );
 
-    // 5. 번역 수정
+    // 5. categoryId 업데이트
+    await this.irContextService.IR을_수정한다(id, {
+      categoryId,
+      updatedBy,
+    });
+    this.logger.log(`IR 카테고리 업데이트 완료 - 카테고리 ID: ${categoryId}`);
+
+    // 6. 번역 수정
     const result = await this.irContextService.IR을_수정한다(id, {
       translations,
       updatedBy,
@@ -198,7 +245,13 @@ export class IRBusinessService {
 
     this.logger.log(`IR 수정 완료 - ID: ${id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...irData } = result as any;
+
+    return {
+      ...irData,
+      categoryName: category?.name || null,
+    };
   }
 
   /**
@@ -232,6 +285,7 @@ export class IRBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: IRListItemDto[];
     total: number;
@@ -240,7 +294,7 @@ export class IRBusinessService {
     totalPages: number;
   }> {
     this.logger.log(
-      `IR 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `IR 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const result = await this.irContextService.IR_목록을_조회한다(
@@ -250,22 +304,30 @@ export class IRBusinessService {
       limit,
       startDate,
       endDate,
+      categoryId,
     );
 
     const totalPages = Math.ceil(result.total / limit);
 
     // IR 엔티티를 IRListItemDto로 변환
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
+
     const items: IRListItemDto[] = result.items.map((ir) => {
-      const koreanTranslation =
-        ir.translations?.find((t) => t.language?.code === 'ko') ||
-        ir.translations?.[0];
+      const defaultTranslation =
+        ir.translations?.find(
+          (t) => t.language?.code === defaultLanguageCode,
+        ) || ir.translations?.[0];
 
       return {
         id: ir.id,
         isPublic: ir.isPublic,
         order: ir.order,
-        title: koreanTranslation?.title || '',
-        description: koreanTranslation?.description || null,
+        title: defaultTranslation?.title || '',
+        description: defaultTranslation?.description || null,
+        categoryName: ir.category?.name || null,
         createdAt: ir.createdAt,
         updatedAt: ir.updatedAt,
       };

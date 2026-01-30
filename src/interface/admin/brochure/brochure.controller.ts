@@ -29,7 +29,7 @@ import { BrochureBusinessService } from '@business/brochure-business/brochure-bu
 import {
   UpdateBrochurePublicDto,
   CreateBrochureCategoryDto,
-  UpdateBrochureCategoryDto,
+  UpdateBrochureCategoryEntityDto,
   UpdateBrochureCategoryOrderDto,
 } from '@interface/common/dto/brochure/update-brochure.dto';
 import { UpdateBrochureBatchOrderDto } from '@interface/common/dto/brochure/update-brochure-batch-order.dto';
@@ -101,6 +101,12 @@ export class BrochureController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 브로슈어_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -108,6 +114,7 @@ export class BrochureController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<BrochureListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -121,6 +128,7 @@ export class BrochureController {
       limitNum,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
+      categoryId || undefined,
     );
 
     return result;
@@ -177,7 +185,14 @@ export class BrochureController {
   @ApiOperation({
     summary: '브로슈어 생성',
     description:
-      '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 공개',
+      '새로운 브로슈어를 생성합니다. 제목, 설명과 함께 생성됩니다. 기본값: 공개\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 브로슈어 카테고리 ID (UUID)\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -199,6 +214,12 @@ export class BrochureController {
             '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]',
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '브로슈어 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
         },
         files: {
           type: 'array',
@@ -248,6 +269,7 @@ export class BrochureController {
 
     return await this.brochureBusinessService.브로슈어를_생성한다(
       translations,
+      body.categoryId || null,
       user.id,
       files,
     );
@@ -331,7 +353,13 @@ export class BrochureController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '브로슈어 공개 상태 수정',
-    description: '브로슈어의 공개 상태를 수정합니다.',
+    description:
+      '브로슈어의 공개 상태를 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `isPublic`: 공개 여부 (boolean)\n' +
+      '  - `true`: 공개\n' +
+      '  - `false`: 비공개\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -343,13 +371,14 @@ export class BrochureController {
     description: '브로슈어를 찾을 수 없음',
   })
   async 브로슈어_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochurePublicDto,
   ): Promise<BrochureResponseDto> {
-    return await this.brochureBusinessService.브로슈어_공개를_수정한다(
-      id,
-      updateDto,
-    );
+    return await this.brochureBusinessService.브로슈어_공개를_수정한다(id, {
+      ...updateDto,
+      updatedBy: user.id,
+    });
   }
 
   /**
@@ -362,7 +391,11 @@ export class BrochureController {
   @ApiOperation({
     summary: '브로슈어 오더 일괄 수정',
     description:
-      '여러 브로슈어의 정렬 순서를 한번에 수정합니다. 프론트엔드에서 변경된 순서대로 브로슈어 목록을 전달하면 됩니다.',
+      '여러 브로슈어의 정렬 순서를 한번에 수정합니다. ' +
+      '프론트엔드에서 변경된 순서대로 브로슈어 목록을 전달하면 됩니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `brochures`: 브로슈어 ID와 order를 포함한 객체 배열\n' +
+      '  - 각 객체: `{ id: string, order: number }`',
   })
   @ApiResponse({
     status: 200,
@@ -420,10 +453,17 @@ export class BrochureController {
     summary: '브로슈어 수정',
     description:
       '브로슈어의 번역 정보를 수정하고 첨부파일을 관리합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `translations`: JSON 배열 문자열 (다국어 정보)\n' +
+      '  - 각 객체: `{ languageId: string, title: string, description?: string }`\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 브로슈어 카테고리 ID (UUID)\n' +
+      '- `files`: 첨부파일 배열 (PDF/JPG/PNG/WEBP)\n\n' +
       '⚠️ **파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
-      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
+      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -441,6 +481,12 @@ export class BrochureController {
             '번역 목록 (JSON 배열 문자열) - 반드시 대괄호 []로 감싸야 합니다!',
           example:
             '[{"languageId":"31e6bbc6-2839-4477-9672-bb4b381e8914","title":"회사 소개 브로슈어","description":"루미르 회사 소개 자료입니다."}]',
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '브로슈어 카테고리 ID (선택사항)',
+          example: '31e6bbc6-2839-4477-9672-bb4b381e8914',
         },
         files: {
           type: 'array',
@@ -499,6 +545,7 @@ export class BrochureController {
       id,
       translations,
       user.id,
+      body.categoryId || null,
       files,
     );
   }
@@ -527,38 +574,19 @@ export class BrochureController {
   }
 
   /**
-   * 브로슈어 카테고리를 수정한다
-   */
-  @Patch(':id/categories')
-  @ApiOperation({
-    summary: '브로슈어 카테고리 수정',
-    description: '브로슈어의 카테고리를 수정합니다.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: '브로슈어 카테고리 수정 성공',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '브로슈어를 찾을 수 없음',
-  })
-  async 브로슈어_카테고리를_수정한다(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateBrochureCategoryDto,
-  ): Promise<BrochureCategoryResponseDto> {
-    return await this.brochureBusinessService.브로슈어_카테고리를_수정한다(
-      id,
-      updateDto,
-    );
-  }
-
-  /**
    * 브로슈어 카테고리를 생성한다
    */
   @Post('categories')
   @ApiOperation({
     summary: '브로슈어 카테고리 생성',
-    description: '새로운 브로슈어 카테고리를 생성합니다.',
+    description:
+      '새로운 브로슈어 카테고리를 생성합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `name`: 카테고리 이름\n\n' +
+      '**선택 필드:**\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `order`: 정렬 순서 (기본값: 0)\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -566,10 +594,51 @@ export class BrochureController {
     type: BrochureCategoryResponseDto,
   })
   async 브로슈어_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateBrochureCategoryDto,
   ): Promise<BrochureCategoryResponseDto> {
-    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다(
-      createDto,
+    return await this.brochureBusinessService.브로슈어_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
+  }
+
+  /**
+   * 브로슈어 카테고리를 수정한다
+   */
+  @Patch('categories/:id')
+  @ApiOperation({
+    summary: '브로슈어 카테고리 수정',
+    description:
+      '브로슈어 카테고리를 수정합니다.\n\n' +
+      '**선택 필드 (모두 선택):**\n' +
+      '- `name`: 카테고리 이름\n' +
+      '- `description`: 카테고리 설명\n' +
+      '- `isActive`: 활성화 여부\n\n' +
+      '**파라미터:**\n' +
+      '- `id`: 카테고리 ID (UUID, 필수)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '브로슈어 카테고리 수정 성공',
+    type: BrochureCategoryResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '카테고리를 찾을 수 없음',
+  })
+  async 브로슈어_카테고리_엔티티를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() updateDto: UpdateBrochureCategoryEntityDto,
+  ): Promise<BrochureCategoryResponseDto> {
+    return await this.brochureBusinessService.브로슈어_카테고리_엔티티를_수정한다(
+      id,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -579,7 +648,11 @@ export class BrochureController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '브로슈어 카테고리 오더 변경',
-    description: '브로슈어 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '브로슈어 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -590,14 +663,15 @@ export class BrochureController {
     description: '카테고리를 찾을 수 없음',
   })
   async 브로슈어_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateBrochureCategoryOrderDto,
   ): Promise<BrochureCategoryResponseDto> {
     const result =
-      await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(
-        id,
-        updateDto,
-      );
+      await this.brochureBusinessService.브로슈어_카테고리_오더를_변경한다(id, {
+        ...updateDto,
+        updatedBy: user.id,
+      });
     return result;
   }
 

@@ -45,6 +45,7 @@ export class IRService {
     orderBy?: 'order' | 'createdAt';
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<IR[]> {
     this.logger.debug(`IR 목록 조회`);
 
@@ -52,6 +53,14 @@ export class IRService {
       .createQueryBuilder('ir')
       .leftJoinAndSelect('ir.translations', 'translations')
       .leftJoinAndSelect('translations.language', 'language');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'ir.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
@@ -62,20 +71,41 @@ export class IRService {
       hasWhere = true;
     }
 
+    if (options?.categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('ir.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      } else {
+        queryBuilder.where('ir.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+        hasWhere = true;
+      }
+    }
+
     if (options?.startDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('ir.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.andWhere('ir.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
       } else {
-        queryBuilder.where('ir.createdAt >= :startDate', { startDate: options.startDate });
+        queryBuilder.where('ir.createdAt >= :startDate', {
+          startDate: options.startDate,
+        });
         hasWhere = true;
       }
     }
 
     if (options?.endDate) {
       if (hasWhere) {
-        queryBuilder.andWhere('ir.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.andWhere('ir.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
       } else {
-        queryBuilder.where('ir.createdAt <= :endDate', { endDate: options.endDate });
+        queryBuilder.where('ir.createdAt <= :endDate', {
+          endDate: options.endDate,
+        });
         hasWhere = true;
       }
     }
@@ -87,7 +117,23 @@ export class IRService {
       queryBuilder.orderBy('ir.createdAt', 'DESC');
     }
 
-    return await queryBuilder.getMany();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    // 주의: translations를 leftJoinAndSelect하면 각 IR마다 여러 row가 생기므로
+    // ir.id를 기준으로 raw 데이터를 찾아야 함
+    items.forEach((ir) => {
+      const matchingRaw = raw.find((r) => r.ir_id === ir.id);
+      if (matchingRaw && matchingRaw.category_name) {
+        ir.category = {
+          name: matchingRaw.category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**
@@ -96,13 +142,33 @@ export class IRService {
   async ID로_IR을_조회한다(id: string): Promise<IR> {
     this.logger.debug(`IR 조회 - ID: ${id}`);
 
-    const ir = await this.irRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.irRepository
+      .createQueryBuilder('ir')
+      .leftJoinAndSelect('ir.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'ir.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('ir.id = :id', { id });
 
-    if (!ir) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`IR을 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const ir = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      ir.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(`IR ${ir.id}: 카테고리명 = ${raw.category_name}`);
+    } else {
+      this.logger.warn(
+        `IR ${ir.id}: 카테고리명을 찾을 수 없음. categoryId: ${ir.categoryId}`,
+      );
     }
 
     return ir;

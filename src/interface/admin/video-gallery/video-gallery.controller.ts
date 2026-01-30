@@ -13,6 +13,7 @@ import {
   UploadedFiles,
   UsePipes,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -102,6 +103,12 @@ export class VideoGalleryController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 비디오갤러리_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -109,6 +116,7 @@ export class VideoGalleryController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<VideoGalleryListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -123,6 +131,7 @@ export class VideoGalleryController {
         limitNum,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
+        categoryId || undefined,
       );
 
     return result;
@@ -181,11 +190,12 @@ export class VideoGalleryController {
   @ApiOperation({
     summary: '비디오갤러리 생성',
     description:
-      '새로운 비디오갤러리를 생성합니다. 제목과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 비디오갤러리를 생성합니다. 제목과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목과 카테고리는 필수입니다.\n\n' +
       '**비디오 소스 (여러 개 가능)**:\n' +
       '- `youtubeUrls`: YouTube 비디오 URL 배열 (여러 개 가능)\n' +
       '- `files`: 직접 비디오 파일 업로드 (여러 개 가능)\n' +
@@ -198,6 +208,11 @@ export class VideoGalleryController {
           type: 'string',
           description: '제목',
           example: '회사 소개 영상',
+        },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (선택)',
+          example: '550e8400-e29b-41d4-a716-446655440000',
         },
         description: {
           type: 'string',
@@ -233,7 +248,7 @@ export class VideoGalleryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<VideoGalleryResponseDto> {
-    const { title, description, youtubeUrls } = body;
+    const { title, categoryId, description, youtubeUrls } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -255,13 +270,21 @@ export class VideoGalleryController {
       }
     }
 
-    return await this.videoGalleryBusinessService.비디오갤러리를_생성한다(
-      title,
-      description || null,
-      parsedYoutubeUrls,
-      user.id,
-      files,
-    );
+    const videoGallery =
+      await this.videoGalleryBusinessService.비디오갤러리를_생성한다(
+        title,
+        categoryId || null,
+        description || null,
+        parsedYoutubeUrls,
+        user.id,
+        files,
+      );
+
+    const { category, ...result } = videoGallery;
+    return {
+      ...result,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -362,11 +385,20 @@ export class VideoGalleryController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '비디오갤러리 수정',
-    description: '비디오갤러리의 정보 및 파일을 수정합니다.',
+    description:
+      '비디오갤러리의 정보 및 파일을 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `title`: 제목\n\n' +
+      '**선택 필드:**\n' +
+      '- `categoryId`: 카테고리 ID (UUID)\n' +
+      '- `description`: 설명\n' +
+      '- `youtubeUrls`: YouTube URL 목록\n' +
+      '- `files`: 첨부파일\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목과 카테고리 ID는 필수입니다.\n\n' +
       '**비디오 소스 (여러 개 가능)**:\n' +
       '- `youtubeUrls`: YouTube 비디오 URL 배열 (여러 개 가능)\n' +
       '- `files`: 직접 비디오 파일 업로드 (여러 개 가능)\n' +
@@ -383,6 +415,11 @@ export class VideoGalleryController {
           description: '제목',
           example: '회사 소개 영상',
         },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (선택)',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
         description: {
           type: 'string',
           description: '설명 (선택)',
@@ -397,8 +434,7 @@ export class VideoGalleryController {
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
-          description:
-            '비디오 파일 목록 - 전송한 것으로 완전히 교체됩니다',
+          description: '비디오 파일 목록 - 전송한 것으로 완전히 교체됩니다',
         },
       },
       required: ['title'],
@@ -419,7 +455,7 @@ export class VideoGalleryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<any> {
-    const { title, description, youtubeUrls } = body;
+    const { title, categoryId, description, youtubeUrls } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -444,9 +480,10 @@ export class VideoGalleryController {
     return await this.videoGalleryBusinessService.비디오갤러리를_수정한다(
       id,
       title,
+      user.id,
+      categoryId || null,
       description || null,
       parsedYoutubeUrls,
-      user.id,
       files,
     );
   }
@@ -485,7 +522,9 @@ export class VideoGalleryController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '비디오갤러리 공개 상태 수정',
-    description: '비디오갤러리의 공개 상태를 수정합니다.',
+    description:
+      '비디오갤러리의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -497,13 +536,21 @@ export class VideoGalleryController {
     description: '비디오갤러리를 찾을 수 없음',
   })
   async 비디오갤러리_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateVideoGalleryPublicDto,
   ): Promise<VideoGalleryResponseDto> {
-    return await this.videoGalleryBusinessService.비디오갤러리_공개를_수정한다(
-      id,
-      updateDto,
-    );
+    const videoGallery =
+      await this.videoGalleryBusinessService.비디오갤러리_공개를_수정한다(id, {
+        ...updateDto,
+        updatedBy: user.id,
+      });
+
+    const { category, ...result } = videoGallery;
+    return {
+      ...result,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -536,7 +583,9 @@ export class VideoGalleryController {
   @Post('categories')
   @ApiOperation({
     summary: '비디오갤러리 카테고리 생성',
-    description: '새로운 비디오갤러리 카테고리를 생성합니다.',
+    description:
+      '새로운 비디오갤러리 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -544,10 +593,14 @@ export class VideoGalleryController {
     type: VideoGalleryCategoryResponseDto,
   })
   async 비디오갤러리_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateVideoGalleryCategoryDto,
   ): Promise<VideoGalleryCategoryResponseDto> {
     return await this.videoGalleryBusinessService.비디오갤러리_카테고리를_생성한다(
-      createDto,
+      {
+        ...createDto,
+        createdBy: user.id,
+      },
     );
   }
 
@@ -557,7 +610,9 @@ export class VideoGalleryController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '비디오갤러리 카테고리 수정',
-    description: '비디오갤러리의 카테고리를 수정합니다.',
+    description:
+      '비디오갤러리의 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -568,12 +623,16 @@ export class VideoGalleryController {
     description: '비디오갤러리를 찾을 수 없음',
   })
   async 비디오갤러리_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateVideoGalleryCategoryDto,
   ): Promise<VideoGalleryCategoryResponseDto> {
     return await this.videoGalleryBusinessService.비디오갤러리_카테고리를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -583,7 +642,9 @@ export class VideoGalleryController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '비디오갤러리 카테고리 오더 변경',
-    description: '비디오갤러리 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '비디오갤러리 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -594,13 +655,17 @@ export class VideoGalleryController {
     description: '카테고리를 찾을 수 없음',
   })
   async 비디오갤러리_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateVideoGalleryCategoryOrderDto,
   ): Promise<VideoGalleryCategoryResponseDto> {
     const result =
       await this.videoGalleryBusinessService.비디오갤러리_카테고리_오더를_변경한다(
         id,
-        updateDto,
+        {
+          ...updateDto,
+          updatedBy: user.id,
+        },
       );
     return result;
   }

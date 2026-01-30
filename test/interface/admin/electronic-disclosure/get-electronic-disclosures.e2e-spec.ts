@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -26,6 +27,19 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 전자공시 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/electronic-disclosures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('GET /api/admin/electronic-disclosures (목록 조회)', () => {
@@ -43,6 +57,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
         .request()
         .post('/api/admin/electronic-disclosures')
         .field('translations', JSON.stringify(translationsData))
+        .field('categoryId', categoryId)
         .expect(201);
 
       // When - 목록 조회
@@ -94,6 +109,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const createResponse1 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData1))
         .expect(201);
 
@@ -117,6 +133,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData2))
         .expect(201);
 
@@ -138,6 +155,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
         testSuite
           .request()
           .post('/api/admin/electronic-disclosures')
+          .field('categoryId', categoryId)
           .field(
             'translations',
             JSON.stringify([
@@ -183,12 +201,14 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData1))
         .expect(201);
 
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData2))
         .expect(201);
 
@@ -215,6 +235,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const firstResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData1))
         .expect(201);
 
@@ -226,6 +247,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const secondResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData2))
         .expect(201);
 
@@ -239,10 +261,10 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
 
       // Then - 최근 생성된 것이 먼저 와야 함 (DESC)
       expect(response.body.items.length).toBeGreaterThan(0);
-      
+
       // createdAt으로 정렬되었는지 확인 (DESC)
       expect(secondCreatedAt >= firstCreatedAt).toBe(true);
-      
+
       // 첫 번째 항목이 가장 최근에 생성된 것이어야 함
       const firstItemCreatedAt = new Date(response.body.items[0].createdAt);
       expect(firstItemCreatedAt >= firstCreatedAt).toBe(true);
@@ -260,12 +282,13 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData))
         .expect(201);
 
       const createdDisclosureId = createResponse.body.id;
       const createdDate = new Date(createResponse.body.createdAt);
-      
+
       // When - 생성된 날짜로 필터링 (전날부터 다음날까지)
       const startDate = new Date(createdDate);
       startDate.setDate(startDate.getDate() - 1);
@@ -295,6 +318,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
         testSuite
           .request()
           .post('/api/admin/electronic-disclosures')
+          .field('categoryId', categoryId)
           .field(
             'translations',
             JSON.stringify([
@@ -334,6 +358,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData))
         .expect(201);
 
@@ -368,6 +393,7 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translationsData))
         .attach('files', Buffer.from('PDF content'), 'test.pdf')
         .expect(201);
@@ -395,7 +421,9 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       // When & Then
       await testSuite
         .request()
-        .get('/api/admin/electronic-disclosures/00000000-0000-0000-0000-000000000001')
+        .get(
+          '/api/admin/electronic-disclosures/00000000-0000-0000-0000-000000000001',
+        )
         .expect(404);
     });
 
@@ -434,25 +462,30 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       const disclosure1 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translations1))
         .expect(201);
 
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translations2))
         .expect(201);
 
       const disclosure3 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify(translations3))
         .expect(201);
 
       // 비공개로 변경
       await testSuite
         .request()
-        .patch(`/api/admin/electronic-disclosures/${disclosure3.body.id}/public`)
+        .patch(
+          `/api/admin/electronic-disclosures/${disclosure3.body.id}/public`,
+        )
         .send({ isPublic: false })
         .expect(200);
 
@@ -480,6 +513,72 @@ describe('GET /api/admin/electronic-disclosures (전자공시 조회)', () => {
       );
       expect(privateDisclosure).toBeDefined();
       expect(privateDisclosure.isPublic).toBe(false);
+    });
+
+    it('categoryId 필터가 동작해야 한다', async () => {
+      // Given - 두 번째 카테고리 생성
+      const secondCategoryResponse = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures/categories')
+        .send({
+          name: '테스트 카테고리 2',
+          description: 'E2E 테스트용 카테고리 2',
+          order: 1,
+        })
+        .expect(201);
+      const secondCategoryId = secondCategoryResponse.body.id;
+
+      // 첫 번째 카테고리의 전자공시 2개 생성
+      await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field(
+          'translations',
+          JSON.stringify([{ languageId, title: '카테고리1-전자공시1' }]),
+        )
+        .field('categoryId', categoryId)
+        .expect(201);
+
+      await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field(
+          'translations',
+          JSON.stringify([{ languageId, title: '카테고리1-전자공시2' }]),
+        )
+        .field('categoryId', categoryId)
+        .expect(201);
+
+      // 두 번째 카테고리의 전자공시 3개 생성
+      for (let i = 1; i <= 3; i++) {
+        await testSuite
+          .request()
+          .post('/api/admin/electronic-disclosures')
+          .field(
+            'translations',
+            JSON.stringify([{ languageId, title: `카테고리2-전자공시${i}` }]),
+          )
+          .field('categoryId', secondCategoryId)
+          .expect(201);
+      }
+
+      // When - 첫 번째 카테고리로 필터링
+      const response1 = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures?categoryId=${categoryId}`)
+        .expect(200);
+
+      // Then - 첫 번째 카테고리의 전자공시만 2개
+      expect(response1.body.total).toBe(2);
+
+      // When - 두 번째 카테고리로 필터링
+      const response2 = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures?categoryId=${secondCategoryId}`)
+        .expect(200);
+
+      // Then - 두 번째 카테고리의 전자공시만 3개
+      expect(response2.body.total).toBe(3);
     });
   });
 });

@@ -5,6 +5,7 @@ import * as fs from 'fs';
 describe('전자공시 파일 관리 API', () => {
   const testSuite = new BaseE2ETest();
   let koreanLanguageId: string;
+  let categoryId: string;
 
   // 테스트용 파일 경로
   const testFilesDir = path.join(__dirname, '../../../fixtures');
@@ -58,6 +59,19 @@ describe('전자공시 파일 관리 API', () => {
     koreanLanguageId = languages.find((l: any) => l.code === 'ko')?.id;
 
     expect(koreanLanguageId).toBeDefined();
+
+    // 전자공시 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/electronic-disclosures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('POST /api/admin/electronic-disclosures (파일 업로드)', () => {
@@ -66,6 +80,7 @@ describe('전자공시 파일 관리 API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -97,6 +112,7 @@ describe('전자공시 파일 관리 API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -123,6 +139,7 @@ describe('전자공시 파일 관리 API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -145,6 +162,7 @@ describe('전자공시 파일 관리 API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -165,6 +183,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -188,6 +207,7 @@ describe('전자공시 파일 관리 API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -208,6 +228,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -229,6 +250,7 @@ describe('전자공시 파일 관리 API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -248,6 +270,7 @@ describe('전자공시 파일 관리 API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -277,6 +300,7 @@ describe('전자공시 파일 관리 API', () => {
         const response = await testSuite
           .request()
           .post('/api/admin/electronic-disclosures')
+          .field('categoryId', categoryId)
           .field(
             'translations',
             JSON.stringify([
@@ -317,6 +341,7 @@ describe('전자공시 파일 관리 API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -355,6 +380,7 @@ describe('전자공시 파일 관리 API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -391,6 +417,7 @@ describe('전자공시 파일 관리 API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([

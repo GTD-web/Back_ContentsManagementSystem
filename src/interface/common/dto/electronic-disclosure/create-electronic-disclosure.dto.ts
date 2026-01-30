@@ -84,9 +84,4 @@ export class CreateElectronicDisclosureDto {
   @ValidateNested({ each: true })
   @Type(() => CreateElectronicDisclosureTranslationDto)
   translations: CreateElectronicDisclosureTranslationDto[];
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }

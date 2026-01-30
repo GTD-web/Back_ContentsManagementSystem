@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('루미르스토리 수정/삭제 (E2E)', () => {
   const testSuite = new BaseE2ETest();
   let lumirStoryId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -15,6 +16,16 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
   beforeEach(async () => {
     await testSuite.cleanupBeforeTest();
 
+    // 카테고리 먼저 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/lumir-stories/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+      });
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 루미르스토리 생성
     const createResponse = await testSuite
       .request()
@@ -22,6 +33,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
       .send({
         title: '테스트 루미르 스토리',
         content: '테스트 내용',
+        categoryId,
       });
     lumirStoryId = createResponse.body.id;
   });
@@ -35,6 +47,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '수정된 제목',
           content: '수정된 내용',
+          categoryId,
         })
         .expect(200);
 
@@ -54,6 +67,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '수정된 제목',
           content: '기존 내용 유지',
+          categoryId,
         })
         .expect(200);
 
@@ -70,6 +84,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '수정 시도',
           content: '수정 내용',
+          categoryId,
         })
         .expect(404);
     });
@@ -86,6 +101,8 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('루미르스토리를 공개로 변경할 수 있어야 한다', async () => {
@@ -104,6 +121,8 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('존재하지 않는 루미르스토리의 공개 상태를 변경하면 404 에러가 발생해야 한다', async () => {
@@ -191,6 +210,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '스토리 1',
           content: '내용 1',
+          categoryId,
         });
 
       const createResponse2 = await testSuite
@@ -199,6 +219,7 @@ describe('루미르스토리 수정/삭제 (E2E)', () => {
         .send({
           title: '스토리 2',
           content: '내용 2',
+          categoryId,
         });
 
       const id1 = createResponse1.body.id;

@@ -15,6 +15,7 @@ import { existsSync } from 'fs';
 describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
   let testHelper: BaseE2ETest;
   let languageId: string;
+  let categoryId: string;
   let createdIRId: string;
 
   // 간단한 PDF 파일 생성 (최소 PDF 헤더)
@@ -43,6 +44,18 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
     }
 
     languageId = koreanLanguage.id;
+
+    // IR 카테고리 생성
+    const categoryResponse = await testHelper
+      .request()
+      .post('/api/admin/irs/categories')
+      .send({
+        name: '재무제표',
+        description: '재무제표 카테고리',
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   afterAll(async () => {
@@ -74,6 +87,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
           title: '파일 테스트 IR',
           description: '파일 업로드 테스트용 IR입니다',
         }]))
+        .field('categoryId', categoryId)
         .attach('files', pdfBuffer, { filename: testFileName, contentType: 'application/pdf' })
         .expect(201);
 
@@ -90,16 +104,25 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
       
       const attachment = ir.attachments[0];
       expect(attachment.fileName).toBe(testFileName);
-      expect(attachment.fileUrl).toContain('/uploads/irs/');
+      
+      // URL에 환경별 prefix(test)와 폴더(irs)가 포함되어 있는지 확인
+      // 로컬 스토리지: http://localhost:4001/uploads/test/irs/uuid.pdf
+      // S3 (USE_REAL_S3_IN_TEST=true): https://bucket.s3.region.amazonaws.com/test/irs/uuid.pdf
+      expect(attachment.fileUrl).toContain('test/irs/');
+      expect(attachment.fileUrl).toMatch(/\.pdf$/); // .pdf로 끝나는지 확인
+      
       expect(attachment.fileSize).toBe(pdfBuffer.length);
       expect(attachment.mimeType).toBe('application/pdf');
 
-      // 로컬 스토리지에 파일이 실제로 존재하는지 확인
-      const urlParts = attachment.fileUrl.split('/uploads/');
-      if (urlParts.length === 2) {
-        const filePath = join(process.cwd(), 'uploads', urlParts[1]);
-        const fileExists = existsSync(filePath);
-        expect(fileExists).toBe(true);
+      // 로컬 스토리지 사용 시에만 파일 존재 확인
+      // S3 사용 시에는 파일 존재 확인을 스킵 (S3 API 호출 비용 절약)
+      if (attachment.fileUrl.includes('localhost')) {
+        const urlParts = attachment.fileUrl.split('/uploads/');
+        if (urlParts.length === 2) {
+          const filePath = join(process.cwd(), 'uploads', urlParts[1]);
+          const fileExists = existsSync(filePath);
+          expect(fileExists).toBe(true);
+        }
       }
     });
 
@@ -117,6 +140,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
           title: '다중 파일 테스트 IR',
           description: '여러 파일 업로드 테스트',
         }]))
+        .field('categoryId', categoryId)
         .attach('files', file1Buffer, { filename: file1Name, contentType: 'application/pdf' })
         .attach('files', file2Buffer, { filename: file2Name, contentType: 'application/pdf' })
         .expect(201);
@@ -149,6 +173,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
           languageId,
           title: '파일 추가 테스트 IR',
         }]))
+        .field('categoryId', categoryId)
         .expect(201);
 
       const irId = createResponse.body.id;
@@ -163,6 +188,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
       const updateResponse = await testHelper
         .request()
         .put(`/api/admin/irs/${irId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify([{
           languageId,
           title: '파일 추가 테스트 IR',
@@ -204,6 +230,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
           languageId,
           title: '파일 삭제 테스트 IR',
         }]))
+        .field('categoryId', categoryId)
         .attach('files', pdfBuffer, { filename: fileName, contentType: 'application/pdf' })
         .expect(201);
 
@@ -213,6 +240,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
       await testHelper
         .request()
         .put(`/api/admin/irs/${irId}`)
+        .field('categoryId', categoryId)
         .field('translations', JSON.stringify([{
           languageId,
           title: '파일 삭제 테스트 IR',
@@ -250,6 +278,7 @@ describe('[E2E] POST /api/admin/irs - 파일 업로드', () => {
           languageId,
           title: '잘못된 파일 테스트',
         }]))
+        .field('categoryId', categoryId)
         .attach('files', executableContent, 'malicious.exe')
         .expect(400); // 클라이언트 검증 에러
 

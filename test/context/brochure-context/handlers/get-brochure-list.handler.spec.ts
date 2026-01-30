@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   GetBrochureListHandler,
   GetBrochureListQuery,
 } from '@context/brochure-context/handlers/queries/get-brochure-list.handler';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
-import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
 
 describe('GetBrochureListHandler', () => {
   let handler: GetBrochureListHandler;
@@ -16,6 +16,13 @@ describe('GetBrochureListHandler', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -23,6 +30,10 @@ describe('GetBrochureListHandler', () => {
         {
           provide: getRepositoryToken(Brochure),
           useValue: mockBrochureRepository,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -38,6 +49,8 @@ describe('GetBrochureListHandler', () => {
   const createMockQueryBuilder = (items: Partial<Brochure>[], total: number) => {
     const mockQueryBuilder = {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
@@ -48,7 +61,13 @@ describe('GetBrochureListHandler', () => {
       from: jest.fn().mockReturnThis(),
       innerJoin: jest.fn().mockReturnThis(),
       getQuery: jest.fn().mockReturnValue('subquery'),
-      getManyAndCount: jest.fn().mockResolvedValue([items, total]),
+      getRawAndEntities: jest.fn().mockResolvedValue({
+        entities: items,
+        raw: items.map((item) => ({
+          category_name: item.category?.name || '',
+        })),
+      }),
+      getCount: jest.fn().mockResolvedValue(total),
     };
     return mockQueryBuilder;
   };
@@ -70,6 +89,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko', name: '한국어' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
         {
           id: 'brochure-2',
@@ -82,6 +104,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko', name: '한국어' },
             },
           ],
+          category: {
+            name: '제품 소개',
+          },
         },
       ];
 
@@ -101,6 +126,12 @@ describe('GetBrochureListHandler', () => {
         'brochure.translations',
         'translations',
       );
+      expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith(
+        'categories',
+        'category',
+        'brochure.categoryId = category.id',
+      );
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(['category.name']);
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
         'brochure.order',
         'ASC',
@@ -127,6 +158,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
       ];
 
@@ -160,6 +194,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
       ];
 
@@ -192,6 +229,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
         {
           id: 'brochure-2',
@@ -201,6 +241,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '제품 소개',
+          },
         },
       ];
 
@@ -233,6 +276,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '카테고리',
+          },
         }));
 
       const mockQueryBuilder = createMockQueryBuilder(mockBrochures as any, 15);
@@ -276,6 +322,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'ko' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
       ];
 
@@ -299,7 +348,7 @@ describe('GetBrochureListHandler', () => {
       expect(result.total).toBe(1);
     });
 
-    it('한국어 번역만 필터링해야 한다', async () => {
+    it('기본 언어 번역만 필터링해야 한다', async () => {
       // Given
       const query = new GetBrochureListQuery(undefined, 'order', 1, 10);
 
@@ -319,6 +368,9 @@ describe('GetBrochureListHandler', () => {
               language: { code: 'en', name: 'English' },
             },
           ],
+          category: {
+            name: '회사 소개',
+          },
         },
       ];
 
@@ -331,9 +383,9 @@ describe('GetBrochureListHandler', () => {
       const result = await handler.execute(query);
 
       // Then
-      // 핸들러 내부에서 한국어만 필터링
+      // 핸들러 내부에서 기본 언어(en)만 필터링
       expect(result.items[0].translations).toHaveLength(1);
-      expect(result.items[0].translations[0].language.code).toBe('ko');
+      expect(result.items[0].translations[0].language.code).toBe('en');
     });
 
     it('결과가 없을 때 빈 배열을 반환해야 한다', async () => {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthContextModule } from '@context/auth-context';
 import { WikiBusinessModule } from '@business/wiki-business/wiki-business.module';
 import { WikiContextModule } from '@context/wiki-context/wiki-context.module';
 import { WikiController } from './wiki.controller';
@@ -8,6 +9,7 @@ import { DismissedPermissionLog } from '@domain/common/dismissed-permission-log/
 
 @Module({
   imports: [
+    AuthContextModule,
     WikiBusinessModule,
     WikiContextModule,
     TypeOrmModule.forFeature([WikiPermissionLog, DismissedPermissionLog]),

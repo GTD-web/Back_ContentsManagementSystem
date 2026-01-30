@@ -75,6 +75,12 @@ export class ElectronicDisclosureResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 ID', nullable: true })
+  categoryId: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '실적 공시', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -100,6 +106,9 @@ export class ElectronicDisclosureListItemDto {
     example: '2024년 1분기 실적 공시 자료',
   })
   description: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '실적 공시' })
+  categoryName: string;
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;

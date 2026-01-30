@@ -1,6 +1,7 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureListResult } from '../../interfaces/brochure-context.interface';
 import { Logger } from '@nestjs/common';
@@ -16,6 +17,7 @@ export class GetBrochureListQuery {
     public readonly limit: number = 10,
     public readonly startDate?: Date,
     public readonly endDate?: Date,
+    public readonly categoryId?: string,
   ) {}
 }
 
@@ -29,20 +31,29 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
   constructor(
     @InjectRepository(Brochure)
     private readonly brochureRepository: Repository<Brochure>,
+    private readonly configService: ConfigService,
   ) {}
 
   async execute(query: GetBrochureListQuery): Promise<BrochureListResult> {
-    const { isPublic, orderBy, page, limit, startDate, endDate } = query;
+    const { isPublic, orderBy, page, limit, startDate, endDate, categoryId } =
+      query;
 
     this.logger.debug(
-      `브로슈어 목록 조회 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `브로슈어 목록 조회 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+    );
+
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
     );
 
     const queryBuilder = this.brochureRepository
       .createQueryBuilder('brochure')
       .leftJoinAndSelect('brochure.translations', 'translations')
       .leftJoinAndSelect('translations.language', 'language')
-      // 한국어 번역이 있는 브로슈어만 조회 (EXISTS 서브쿼리 사용)
+      .leftJoin('categories', 'category', 'brochure.categoryId = category.id')
+      .addSelect(['category.name'])
+      // 기본 언어 번역이 있는 브로슈어만 조회 (EXISTS 서브쿼리 사용)
       .where((qb) => {
         const subQuery = qb
           .subQuery()
@@ -50,13 +61,19 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
           .from('brochure_translations', 'bt')
           .innerJoin('languages', 'lang', 'bt.languageId = lang.id')
           .where('bt.brochureId = brochure.id')
-          .andWhere("lang.code = 'ko'")
+          .andWhere('lang.code = :defaultLanguageCode', { defaultLanguageCode })
           .getQuery();
         return `EXISTS ${subQuery}`;
       });
 
     if (isPublic !== undefined) {
       queryBuilder.andWhere('brochure.isPublic = :isPublic', { isPublic });
+    }
+
+    if (categoryId) {
+      queryBuilder.andWhere('brochure.categoryId = :categoryId', {
+        categoryId,
+      });
     }
 
     if (startDate) {
@@ -77,13 +94,45 @@ export class GetBrochureListHandler implements IQueryHandler<GetBrochureListQuer
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
-    const [items, total] = await queryBuilder.getManyAndCount();
+    // getRawAndEntities를 사용하여 조인한 category 데이터도 함께 가져오기
+    const [rawAndEntities, total] = await Promise.all([
+      queryBuilder.getRawAndEntities(),
+      queryBuilder.getCount(),
+    ]);
 
-    // 목록 조회에서는 한국어 번역만 반환
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    this.logger.debug(
+      `조회된 브로슈어 수: ${items.length}, raw 데이터 수: ${raw.length}`,
+    );
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    items.forEach((brochure, index) => {
+      if (raw[index] && raw[index].category_name) {
+        brochure.category = {
+          name: raw[index].category_name,
+        };
+        this.logger.debug(
+          `브로슈어 ${brochure.id}: 카테고리명 = ${raw[index].category_name}`,
+        );
+      } else {
+        this.logger.warn(`브로슈어 ${brochure.id}: 카테고리명을 찾을 수 없음`);
+      }
+    });
+
+    // 목록 조회에서는 기본 언어 번역만 반환
     items.forEach((brochure) => {
       brochure.translations = brochure.translations.filter(
-        (translation) => translation.language.code === 'ko',
+        (translation) => translation.language.code === defaultLanguageCode,
       );
+
+      // deletedAt이 null인 파일만 반환
+      if (brochure.attachments) {
+        brochure.attachments = brochure.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
+      }
     });
 
     return { items, total, page, limit };

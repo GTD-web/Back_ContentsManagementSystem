@@ -38,16 +38,40 @@ export class BrochureService {
   async 모든_브로슈어를_조회한다(options?: {
     isPublic?: boolean;
     orderBy?: 'order' | 'createdAt';
+    categoryId?: string;
   }): Promise<Brochure[]> {
     this.logger.debug(`브로슈어 목록 조회`);
 
-    const queryBuilder =
-      this.brochureRepository.createQueryBuilder('brochure');
+    const queryBuilder = this.brochureRepository.createQueryBuilder('brochure');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'brochure.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
+
+    let hasWhere = false;
 
     if (options?.isPublic !== undefined) {
       queryBuilder.where('brochure.isPublic = :isPublic', {
         isPublic: options.isPublic,
       });
+      hasWhere = true;
+    }
+
+    if (options?.categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('brochure.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+      } else {
+        queryBuilder.where('brochure.categoryId = :categoryId', {
+          categoryId: options.categoryId,
+        });
+        hasWhere = true;
+      }
     }
 
     const orderBy = options?.orderBy || 'order';
@@ -57,7 +81,22 @@ export class BrochureService {
       queryBuilder.orderBy('brochure.createdAt', 'DESC');
     }
 
-    return await queryBuilder.getMany();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    // Brochure는 translations가 없지만, 일관성을 위해 id로 매핑
+    items.forEach((brochure) => {
+      const matchingRaw = raw.find((r) => r.brochure_id === brochure.id);
+      if (matchingRaw && matchingRaw.category_name) {
+        brochure.category = {
+          name: matchingRaw.category_name,
+        };
+      }
+    });
+
+    return items;
   }
 
   /**
@@ -66,13 +105,35 @@ export class BrochureService {
   async ID로_브로슈어를_조회한다(id: string): Promise<Brochure> {
     this.logger.debug(`브로슈어 조회 - ID: ${id}`);
 
-    const brochure = await this.brochureRepository.findOne({
-      where: { id },
-      relations: ['translations', 'translations.language'],
-    });
+    const queryBuilder = this.brochureRepository
+      .createQueryBuilder('brochure')
+      .leftJoinAndSelect('brochure.translations', 'translations')
+      .leftJoinAndSelect('translations.language', 'language')
+      .leftJoin('categories', 'category', 'brochure.categoryId = category.id')
+      .addSelect(['category.name'])
+      .where('brochure.id = :id', { id });
 
-    if (!brochure) {
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+
+    if (!rawAndEntities.entities || rawAndEntities.entities.length === 0) {
       throw new NotFoundException(`브로슈어를 찾을 수 없습니다. ID: ${id}`);
+    }
+
+    const brochure = rawAndEntities.entities[0];
+    const raw = rawAndEntities.raw[0];
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    if (raw && raw.category_name) {
+      brochure.category = {
+        name: raw.category_name,
+      };
+      this.logger.debug(
+        `브로슈어 ${brochure.id}: 카테고리명 = ${raw.category_name}`,
+      );
+    } else {
+      this.logger.warn(
+        `브로슈어 ${brochure.id}: 카테고리명을 찾을 수 없음. categoryId: ${brochure.categoryId}`,
+      );
     }
 
     return brochure;

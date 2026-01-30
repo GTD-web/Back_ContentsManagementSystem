@@ -76,14 +76,26 @@ describe('NewsBusinessService', () => {
         {
           id: 'news-1',
           title: '뉴스 1',
+          description: '설명 1',
+          url: 'https://news1.com',
+          categoryId: 'cat-1',
+          category: { name: '신제품' },
           isPublic: true,
           order: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         } as News,
         {
           id: 'news-2',
           title: '뉴스 2',
+          description: '설명 2',
+          url: 'https://news2.com',
+          categoryId: 'cat-2',
+          category: { name: '수상' },
           isPublic: true,
           order: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         } as News,
       ];
 
@@ -109,10 +121,68 @@ describe('NewsBusinessService', () => {
         10,
         undefined,
         undefined,
+        undefined,
       );
       expect(result.total).toBe(2);
       expect(result.totalPages).toBe(1);
-      expect(result.items).toEqual(mockNews);
+      expect(result.items[0].categoryName).toBe('신제품');
+      expect(result.items[1].categoryName).toBe('수상');
+      expect(result.items.length).toBe(2);
+    });
+
+    it('카테고리 ID로 필터링하여 조회해야 한다', async () => {
+      // Given
+      const categoryId = 'cat-1';
+      const mockNews = [
+        {
+          id: 'news-1',
+          title: '뉴스 1',
+          description: '설명 1',
+          url: 'https://news1.com',
+          categoryId: 'cat-1',
+          category: { name: '신제품' },
+          isPublic: true,
+          order: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as News,
+      ];
+
+      const contextResult = {
+        items: mockNews,
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockNewsContextService.뉴스_목록을_조회한다.mockResolvedValue(
+        contextResult,
+      );
+
+      // When
+      const result = await service.뉴스_목록을_조회한다(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(newsContextService.뉴스_목록을_조회한다).toHaveBeenCalledWith(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+      expect(result.items[0].categoryId).toBe('cat-1');
+      expect(result.items[0].categoryName).toBe('신제품');
+      expect(result.total).toBe(1);
     });
 
     it('날짜 범위로 필터링하여 조회해야 한다', async () => {
@@ -149,6 +219,7 @@ describe('NewsBusinessService', () => {
         10,
         startDate,
         endDate,
+        undefined,
       );
     });
   });
@@ -188,6 +259,7 @@ describe('NewsBusinessService', () => {
       const title = '루미르 신제품 출시';
       const description = '혁신적인 신제품이 출시되었습니다';
       const url = 'https://news.example.com/lumir';
+      const categoryId = 'category-1';
       const createdBy = 'user-1';
 
       const mockNews = {
@@ -195,9 +267,10 @@ describe('NewsBusinessService', () => {
         title,
         description,
         url,
+        categoryId,
         isPublic: true,
         order: 0,
-      } as News;
+      } as any as News;
 
       mockNewsContextService.뉴스를_생성한다.mockResolvedValue(mockNews);
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(mockNews);
@@ -207,6 +280,7 @@ describe('NewsBusinessService', () => {
         title,
         description,
         url,
+        categoryId,
         createdBy,
       );
 
@@ -215,6 +289,7 @@ describe('NewsBusinessService', () => {
         title,
         description,
         url,
+        categoryId,
         attachments: undefined,
         createdBy,
       });
@@ -225,6 +300,7 @@ describe('NewsBusinessService', () => {
     it('파일과 함께 뉴스를 생성해야 한다', async () => {
       // Given
       const title = '뉴스 제목';
+      const categoryId = 'category-2';
       const createdBy = 'user-1';
       const files = [
         {
@@ -247,6 +323,7 @@ describe('NewsBusinessService', () => {
       const mockNews = {
         id: 'news-1',
         title,
+        categoryId,
         attachments: [
           {
             fileName: 'news.pdf',
@@ -255,7 +332,7 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockNewsContextService.뉴스를_생성한다.mockResolvedValue(mockNews);
@@ -264,8 +341,9 @@ describe('NewsBusinessService', () => {
       // When
       const result = await service.뉴스를_생성한다(
         title,
-        undefined,
-        undefined,
+        null,
+        null,
+        categoryId,
         createdBy,
         files,
       );
@@ -274,8 +352,9 @@ describe('NewsBusinessService', () => {
       expect(storageService.uploadFiles).toHaveBeenCalledWith(files, 'news');
       expect(newsContextService.뉴스를_생성한다).toHaveBeenCalledWith({
         title,
-        description: undefined,
-        url: undefined,
+        description: null,
+        url: null,
+        categoryId,
         attachments: [
           {
             fileName: 'news.pdf',
@@ -332,10 +411,24 @@ describe('NewsBusinessService', () => {
 
       const mockNews = {
         id: newsId,
+        title: '뉴스 제목',
+        categoryId: 'category-2',
         isPublic: false,
-      } as News;
+        attachments: [
+          {
+            fileUrl: 'https://s3.aws.com/news.pdf',
+            fileName: 'news.pdf',
+            fileSize: 2048000,
+            mimeType: 'application/pdf',
+          },
+        ],
+        category: {
+          name: '신제품',
+        },
+      } as any as News;
 
       mockNewsContextService.뉴스_공개를_수정한다.mockResolvedValue(mockNews);
+      mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(mockNews);
 
       // When
       const result = await service.뉴스_공개를_수정한다(newsId, data);
@@ -345,7 +438,14 @@ describe('NewsBusinessService', () => {
         newsId,
         data,
       );
-      expect(result).toEqual(mockNews);
+      expect(newsContextService.뉴스_상세_조회한다).toHaveBeenCalledWith(
+        newsId,
+      );
+      expect(result).toEqual({
+        ...mockNews,
+        categoryName: '신제품',
+        category: undefined,
+      });
     });
   });
 
@@ -357,7 +457,11 @@ describe('NewsBusinessService', () => {
         id: newsId,
         title: '뉴스 1',
         description: '뉴스 설명',
-      } as News;
+        categoryId: 'category-1',
+        category: {
+          name: '신제품',
+        },
+      } as any as News;
 
       mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(mockNews);
 
@@ -368,7 +472,9 @@ describe('NewsBusinessService', () => {
       expect(newsContextService.뉴스_상세_조회한다).toHaveBeenCalledWith(
         newsId,
       );
-      expect(result).toEqual(mockNews);
+      expect(result).toHaveProperty('categoryId', 'category-1');
+      expect(result).toHaveProperty('categoryName', '신제품');
+      expect(result).not.toHaveProperty('category');
     });
   });
 
@@ -529,12 +635,12 @@ describe('NewsBusinessService', () => {
       const result = await service.뉴스_오더를_일괄_수정한다(news, updatedBy);
 
       // Then
-      expect(
-        newsContextService.뉴스_오더를_일괄_수정한다,
-      ).toHaveBeenCalledWith({
-        news,
-        updatedBy,
-      });
+      expect(newsContextService.뉴스_오더를_일괄_수정한다).toHaveBeenCalledWith(
+        {
+          news,
+          updatedBy,
+        },
+      );
       expect(result).toEqual(mockResult);
     });
   });
@@ -545,23 +651,41 @@ describe('NewsBusinessService', () => {
       const newsId = 'news-1';
       const title = '수정된 제목';
       const description = '수정된 설명';
+      const categoryId = 'category-2';
       const updatedBy = 'user-1';
 
       const existingNews = {
         id: newsId,
         title: '기존 제목',
+        description: null,
+        url: null,
+        isPublic: false,
+        order: 0,
+        categoryId: 'old-category',
         attachments: [],
-      } as News;
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        createdBy: 'user-1',
+        updatedBy: null,
+        version: 1,
+      } as any as News;
 
       const updatedNews = {
         ...existingNews,
         title,
         description,
-      } as News;
+        categoryId,
+        category: {
+          name: '카테고리명',
+        },
+      } as any as News;
 
-      mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
-        existingNews,
-      );
+      // 첫 번째 호출: 기존 뉴스 조회
+      // 두 번째 호출: 수정 후 재조회
+      mockNewsContextService.뉴스_상세_조회한다
+        .mockResolvedValueOnce(existingNews)
+        .mockResolvedValueOnce(updatedNews);
       mockNewsContextService.뉴스_파일을_수정한다.mockResolvedValue(
         existingNews,
       );
@@ -572,7 +696,8 @@ describe('NewsBusinessService', () => {
         newsId,
         title,
         description,
-        undefined,
+        null,
+        categoryId,
         updatedBy,
       );
 
@@ -580,21 +705,28 @@ describe('NewsBusinessService', () => {
       expect(newsContextService.뉴스_상세_조회한다).toHaveBeenCalledWith(
         newsId,
       );
+      expect(newsContextService.뉴스_상세_조회한다).toHaveBeenCalledTimes(2);
       expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(newsContextService.뉴스를_수정한다).toHaveBeenCalledWith(newsId, {
         title,
         description,
-        url: undefined,
+        url: null,
+        categoryId,
         updatedBy,
       });
-      expect(result).toEqual(updatedNews);
+      expect(result).toEqual({
+        ...updatedNews,
+        categoryName: '카테고리명',
+        category: undefined,
+      });
     });
 
     it('기존 파일을 삭제하고 새 파일로 교체해야 한다', async () => {
       // Given
       const newsId = 'news-1';
       const title = '수정된 제목';
+      const categoryId = 'category-3';
       const updatedBy = 'user-1';
       const newFiles = [
         {
@@ -616,7 +748,7 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       const uploadedFiles = [
         {
@@ -636,14 +768,17 @@ describe('NewsBusinessService', () => {
             fileUrl: 'https://s3.aws.com/new-news.pdf',
             fileSize: 3048000,
             mimeType: 'application/pdf',
+            deletedAt: null,
           },
         ],
-      } as News;
+        category: {
+          name: '카테고리명',
+        },
+      } as any as News;
 
-      mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
-        existingNews,
-      );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
+      mockNewsContextService.뉴스_상세_조회한다
+        .mockResolvedValueOnce(existingNews)
+        .mockResolvedValueOnce(updatedNews);
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockNewsContextService.뉴스_파일을_수정한다.mockResolvedValue(
         updatedNews,
@@ -654,41 +789,41 @@ describe('NewsBusinessService', () => {
       const result = await service.뉴스를_수정한다(
         newsId,
         title,
-        undefined,
-        undefined,
+        null,
+        null,
+        categoryId,
         updatedBy,
         newFiles,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-news.pdf',
-      ]);
-      expect(storageService.uploadFiles).toHaveBeenCalledWith(
-        newFiles,
-        'news',
-      );
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
+      expect(storageService.uploadFiles).toHaveBeenCalledWith(newFiles, 'news');
       expect(newsContextService.뉴스_파일을_수정한다).toHaveBeenCalledWith(
         newsId,
         {
-          attachments: [
-            {
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
               fileName: 'new-news.pdf',
-              fileUrl: 'https://s3.aws.com/new-news.pdf',
-              fileSize: 3048000,
-              mimeType: 'application/pdf',
-            },
-          ],
+              deletedAt: null,
+            }),
+          ]),
           updatedBy,
         },
       );
-      expect(result).toEqual(updatedNews);
+      expect(result).toEqual({
+        ...updatedNews,
+        categoryName: '카테고리명',
+        category: undefined,
+      });
     });
 
     it('기존 파일만 삭제하고 새 파일을 업로드하지 않아야 한다', async () => {
       // Given
       const newsId = 'news-1';
       const title = '수정된 제목';
+      const categoryId = 'category-4';
       const updatedBy = 'user-1';
 
       const existingNews = {
@@ -702,18 +837,28 @@ describe('NewsBusinessService', () => {
             mimeType: 'application/pdf',
           },
         ],
-      } as News;
+      } as any as News;
 
       const updatedNews = {
         ...existingNews,
         title,
-        attachments: [],
-      } as News;
+        attachments: [
+          {
+            fileName: 'old-news.pdf',
+            fileUrl: 'https://s3.aws.com/old-news.pdf',
+            fileSize: 2048000,
+            mimeType: 'application/pdf',
+            deletedAt: expect.any(Date),
+          },
+        ],
+        category: {
+          name: '카테고리명',
+        },
+      } as any as News;
 
-      mockNewsContextService.뉴스_상세_조회한다.mockResolvedValue(
-        existingNews,
-      );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
+      mockNewsContextService.뉴스_상세_조회한다
+        .mockResolvedValueOnce(existingNews)
+        .mockResolvedValueOnce(updatedNews);
       mockNewsContextService.뉴스_파일을_수정한다.mockResolvedValue(
         updatedNews,
       );
@@ -723,24 +868,33 @@ describe('NewsBusinessService', () => {
       const result = await service.뉴스를_수정한다(
         newsId,
         title,
-        undefined,
-        undefined,
+        null,
+        null,
+        categoryId,
         updatedBy,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-news.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(newsContextService.뉴스_파일을_수정한다).toHaveBeenCalledWith(
         newsId,
         {
-          attachments: [],
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
+              fileName: 'old-news.pdf',
+              deletedAt: expect.any(Date),
+            }),
+          ]),
           updatedBy,
         },
       );
-      expect(result).toEqual(updatedNews);
+      expect(result).toEqual({
+        ...updatedNews,
+        categoryName: '카테고리명',
+        category: undefined,
+      });
     });
   });
 });

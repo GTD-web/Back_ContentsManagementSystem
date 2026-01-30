@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { faker } from '@faker-js/faker/locale/ko';
 
 // Domain Entities
@@ -44,7 +45,6 @@ import { WikiContextService } from '@context/wiki-context/wiki-context.service';
 
 // Types
 import { SeedScenario } from '@interface/common/dto/seed-data/seed-data-config.dto';
-import { LanguageCode } from '@domain/common/language/language-code.types';
 import { CategoryEntityType } from '@domain/common/category/category-entity-type.types';
 import { GetSeedDataStatusDto } from '@interface/common/dto/seed-data';
 import { InqueryType } from '@domain/sub/survey/inquery-type.types';
@@ -113,6 +113,7 @@ export class SeedDataContextService {
     private readonly lumirStoryContextService: LumirStoryContextService,
     private readonly videoGalleryContextService: VideoGalleryContextService,
     private readonly wikiContextService: WikiContextService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -151,6 +152,10 @@ export class SeedDataContextService {
       const newsCount = await this.뉴스_시드_데이터를_생성한다(10);
       results.news = newsCount;
 
+      // 브로슈어 카테고리
+      const brochureCategoryCount = await this.브로슈어_카테고리_시드_데이터를_생성한다();
+      results.brochureCategories = brochureCategoryCount;
+
       // 브로셔 5개
       const brochureCount = await this.브로셔_시드_데이터를_생성한다(5);
       results.brochures = brochureCount;
@@ -170,14 +175,26 @@ export class SeedDataContextService {
       const newsCount = await this.뉴스_시드_데이터를_생성한다(10);
       results.news = newsCount;
 
+      // 브로슈어 카테고리
+      const brochureCategoryCount = await this.브로슈어_카테고리_시드_데이터를_생성한다();
+      results.brochureCategories = brochureCategoryCount;
+
       const brochureCount = await this.브로셔_시드_데이터를_생성한다(5);
       results.brochures = brochureCount;
 
       // 추가 다국어 엔티티들
       this.logger.log('추가 다국어 엔티티 데이터 생성 중...');
       
+      // 전자공시 카테고리
+      const electronicDisclosureCategoryCount = await this.전자공시_카테고리_시드_데이터를_생성한다();
+      results.electronicDisclosureCategories = electronicDisclosureCategoryCount;
+      
       const electronicDisclosureCount = await this.전자공시_시드_데이터를_생성한다(10);
       results.electronicDisclosures = electronicDisclosureCount;
+
+      // IR 카테고리
+      const irCategoryCount = await this.IR_카테고리_시드_데이터를_생성한다();
+      results.irCategories = irCategoryCount;
 
       const irCount = await this.IR_시드_데이터를_생성한다(10);
       results.irs = irCount;
@@ -214,11 +231,11 @@ export class SeedDataContextService {
   private async 언어_시드_데이터를_생성한다(): Promise<number> {
     this.logger.log(`언어 시드 데이터 생성 시작`);
 
-    const languages: Array<{ code: LanguageCode; name: string }> = [
-      { code: 'ko' as LanguageCode, name: '한국어' },
-      { code: 'en' as LanguageCode, name: 'English' },
-      { code: 'ja' as LanguageCode, name: '日本語' },
-      { code: 'zh' as LanguageCode, name: '中文' },
+    const languages: Array<{ code: string; name: string }> = [
+      { code: 'ko', name: '한국어' },
+      { code: 'en', name: 'English' },
+      { code: 'ja', name: '日本語' },
+      { code: 'zh', name: '中文' },
     ];
 
     let created = 0;
@@ -278,12 +295,121 @@ export class SeedDataContextService {
   }
 
   /**
+   * 브로슈어 카테고리 시드 데이터를 생성한다
+   */
+  private async 브로슈어_카테고리_시드_데이터를_생성한다(): Promise<number> {
+    this.logger.log(`브로슈어 카테고리 시드 데이터 생성 시작`);
+
+    const categories = [
+      { name: '회사 소개', description: '회사 소개 관련 브로슈어' },
+      { name: '제품 소개', description: '제품 소개 관련 브로슈어' },
+      { name: '기술 문서', description: '기술 문서 관련 브로슈어' },
+    ];
+
+    let created = 0;
+
+    for (let i = 0; i < categories.length; i++) {
+      await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.BROCHURE,
+        name: categories[i].name,
+        description: categories[i].description,
+        isActive: true,
+        order: i,
+        createdBy: 'seed',
+      });
+      created++;
+    }
+
+    this.logger.log(
+      `브로슈어 카테고리 시드 데이터 생성 완료 - 생성된 개수: ${created}`,
+    );
+    return created;
+  }
+
+  /**
+   * 전자공시 카테고리 시드 데이터를 생성한다
+   */
+  private async 전자공시_카테고리_시드_데이터를_생성한다(): Promise<number> {
+    this.logger.log(`전자공시 카테고리 시드 데이터 생성 시작`);
+
+    const categories = [
+      { name: '분기보고서', description: '분기별 실적 보고서' },
+      { name: '반기보고서', description: '반기별 실적 보고서' },
+      { name: '사업보고서', description: '연간 사업 보고서' },
+      { name: '주요사항보고서', description: '주요 사항 보고서' },
+    ];
+
+    let created = 0;
+
+    for (let i = 0; i < categories.length; i++) {
+      await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.ELECTRONIC_DISCLOSURE,
+        name: categories[i].name,
+        description: categories[i].description,
+        isActive: true,
+        order: i,
+        createdBy: 'seed',
+      });
+      created++;
+    }
+
+    this.logger.log(
+      `전자공시 카테고리 시드 데이터 생성 완료 - 생성된 개수: ${created}`,
+    );
+    return created;
+  }
+
+  /**
+   * IR 카테고리 시드 데이터를 생성한다
+   */
+  private async IR_카테고리_시드_데이터를_생성한다(): Promise<number> {
+    this.logger.log(`IR 카테고리 시드 데이터 생성 시작`);
+
+    const categories = [
+      { name: '재무제표', description: '재무제표 관련 자료' },
+      { name: '사업보고서', description: '사업보고서 관련 자료' },
+      { name: '경영설명회', description: '경영설명회 자료' },
+      { name: '애널리스트 리포트', description: '애널리스트 리포트' },
+    ];
+
+    let created = 0;
+
+    for (let i = 0; i < categories.length; i++) {
+      await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.IR,
+        name: categories[i].name,
+        description: categories[i].description,
+        isActive: true,
+        order: i,
+        createdBy: 'seed',
+      });
+      created++;
+    }
+
+    this.logger.log(
+      `IR 카테고리 시드 데이터 생성 완료 - 생성된 개수: ${created}`,
+    );
+    return created;
+  }
+
+  /**
    * 공지사항 시드 데이터를 생성한다
    */
   private async 공지사항_시드_데이터를_생성한다(
     count: number,
   ): Promise<number> {
     this.logger.log(`공지사항 시드 데이터 생성 시작 - 개수: ${count}`);
+
+    // 공지사항 카테고리 조회
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.ANNOUNCEMENT,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.warn('공지사항 카테고리가 없습니다. 공지사항 생성을 건너뜁니다.');
+      return 0;
+    }
 
     // SSO에서 회사 정보 가져오기 (권한 설정용)
     let departments: string[] = [];
@@ -327,6 +453,7 @@ export class SeedDataContextService {
     for (let i = 0; i < count; i++) {
       const isFixed = i < 3; // 처음 3개는 고정
       const mustRead = i < 3; // 처음 3개는 필독
+      const category = categories[i % categories.length]; // 카테고리 순환 할당
 
       // 공지사항 권한 설정 패턴
       let permissionEmployeeIds: string[] | null = null;
@@ -351,20 +478,41 @@ export class SeedDataContextService {
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.min(3, departments.length));
         permissionDepartmentIds = selectedDepts;
-      } else if (i >= 9 && i < 12 && rankCodes.length > 0) {
-        // 10~12번: 특정 직급만 (제한 공개)
+      } else if (i >= 9 && i < 11 && rankCodes.length > 0) {
+        // 10~11번: 특정 직급만 (제한 공개)
         isPublic = false;
         const selectedRanks = rankCodes
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.min(2, rankCodes.length));
         permissionRankCodes = selectedRanks;
-      } else if (i >= 12 && positionCodes.length > 0) {
-        // 13번 이후: 특정 직책만 (제한 공개)
+      } else if (i >= 11 && i < 13 && positionCodes.length > 0) {
+        // 12~13번: 특정 직책만 (제한 공개)
         isPublic = false;
         const selectedPositions = positionCodes
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.min(2, positionCodes.length));
         permissionPositionCodes = selectedPositions;
+      } else if (i >= 13 && employeeIds.length > 0 && departments.length > 0) {
+        // 14번 이후: 여러 권한 조합 (OR 조건 테스트)
+        isPublic = false;
+        // 직원 ID 일부 + 부서 ID 일부 조합
+        const selectedEmployees = employeeIds
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.min(3, employeeIds.length));
+        const selectedDepts = departments
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.min(2, departments.length));
+        
+        permissionEmployeeIds = selectedEmployees;
+        permissionDepartmentIds = selectedDepts;
+        
+        // 일부는 직급도 추가 (OR 조건 3개)
+        if (i % 2 === 0 && rankCodes.length > 0) {
+          const selectedRanks = rankCodes
+            .sort(() => 0.5 - Math.random())
+            .slice(0, Math.min(1, rankCodes.length));
+          permissionRankCodes = selectedRanks;
+        }
       }
 
       // 첨부파일 더미 데이터 (일부 공지사항에만)
@@ -398,6 +546,7 @@ export class SeedDataContextService {
       }
 
       const announcement = await this.announcementService.공지사항을_생성한다({
+        categoryId: category.id,
         title: `${faker.lorem.sentence()} - 공지사항 ${i + 1}`,
         content: faker.lorem.paragraphs(3),
         isFixed,
@@ -864,13 +1013,44 @@ export class SeedDataContextService {
   private async 뉴스_시드_데이터를_생성한다(count: number): Promise<number> {
     this.logger.log(`뉴스 시드 데이터 생성 시작 - 개수: ${count}`);
 
+    // 뉴스 카테고리 조회 또는 생성
+    let categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.NEWS,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.log('뉴스 카테고리가 없어 기본 카테고리 생성');
+      const newsCategories = [
+        { name: '신제품', description: '신제품 관련 뉴스' },
+        { name: '수상', description: '수상 관련 뉴스' },
+        { name: '사회공헌', description: '사회공헌 활동 뉴스' },
+      ];
+
+      for (let i = 0; i < newsCategories.length; i++) {
+        const category = await this.categoryService.카테고리를_생성한다({
+          entityType: CategoryEntityType.NEWS,
+          name: newsCategories[i].name,
+          description: newsCategories[i].description,
+          isActive: true,
+          order: i,
+          createdBy: 'seed',
+        });
+        categories.push(category);
+      }
+      this.logger.log(`뉴스 카테고리 ${categories.length}개 생성 완료`);
+    }
+
     let created = 0;
 
     for (let i = 0; i < count; i++) {
+      const category = categories[i % categories.length];
+      
       await this.newsService.뉴스를_생성한다({
         title: `${faker.lorem.sentence()} - 뉴스 ${i + 1}`,
         description: faker.lorem.paragraph(),
         url: faker.internet.url(),
+        categoryId: category.id,
         isPublic: true,
         attachments: null,
         order: count - i,
@@ -894,27 +1074,43 @@ export class SeedDataContextService {
       `브로셔 시드 데이터 생성 시작 - 개수: ${count} (다국어 자동 생성)`,
     );
 
-    // 한국어 조회 (기준 언어)
+    // 기본 언어 조회 (기준 언어)
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 브로셔 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 브로셔 생성을 건너뜁니다.`);
+      return 0;
+    }
+
+    // 브로슈어 카테고리 조회
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.BROCHURE,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.warn('브로슈어 카테고리가 없습니다. 브로셔 생성을 건너뜁니다.');
       return 0;
     }
 
     let created = 0;
 
     for (let i = 0; i < count; i++) {
-      // 한국어로 기본 번역 생성 (나머지 언어는 자동으로 동기화됨)
+      // 랜덤 카테고리 선택
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+
+      // 기본 언어로 번역 생성 (나머지 언어는 자동으로 동기화됨)
       await this.brochureContextService.브로슈어를_생성한다({
         translations: [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${faker.company.catchPhrase()} - 브로셔 ${i + 1}`,
             description: faker.lorem.paragraphs(2),
           },
         ],
+        categoryId: randomCategory.id,
         attachments: [
           {
             fileName: `brochure_${i + 1}.pdf`,
@@ -946,10 +1142,22 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 전자공시 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 전자공시 생성을 건너뜁니다.`);
+      return 0;
+    }
+
+    // 전자공시 카테고리 조회
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.ELECTRONIC_DISCLOSURE,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.warn('전자공시 카테고리가 없습니다. 전자공시 생성을 건너뜁니다.');
       return 0;
     }
 
@@ -970,14 +1178,18 @@ export class SeedDataContextService {
       const quarter = quarters[i % quarters.length];
       const year = currentYear - Math.floor(i / 4);
 
+      // 랜덤 카테고리 선택
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+
       await this.electronicDisclosureContextService.전자공시를_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${year}년 ${quarter} ${type}`,
             description: `${year}년 ${quarter} ${type} 공시 내용입니다. 회사의 재무상태, 경영성과 및 주요 사업 현황을 포함하고 있습니다.`,
           },
         ],
+        randomCategory.id,
         'seed',
         [
           {
@@ -1007,10 +1219,21 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. IR 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. IR 생성을 건너뜁니다.`);
+      return 0;
+    }
+
+    // IR 카테고리 조회
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.IR,
+    );
+    
+    if (categories.length === 0) {
+      this.logger.warn('IR 카테고리가 없습니다. IR 생성을 건너뜁니다.');
       return 0;
     }
 
@@ -1026,10 +1249,12 @@ export class SeedDataContextService {
 
     for (let i = 0; i < count; i++) {
       const type = irTypes[i % irTypes.length];
+      const category = categories[i % categories.length];
+      
       await this.irContextService.IR을_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${new Date().getFullYear()}년 ${type} - IR ${i + 1}`,
             description: faker.lorem.paragraphs(2),
           },
@@ -1043,6 +1268,7 @@ export class SeedDataContextService {
             mimeType: 'application/pdf',
           },
         ],
+        category.id,
       );
 
       created++;
@@ -1065,11 +1291,33 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 주주총회 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 주주총회 생성을 건너뜁니다.`);
       return 0;
+    }
+
+    // 주주총회 카테고리 조회 또는 생성
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.SHAREHOLDERS_MEETING,
+      true,
+    );
+
+    let defaultCategory = categories.find(c => c.isActive);
+    
+    if (!defaultCategory) {
+      // 기본 카테고리 생성
+      defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.SHAREHOLDERS_MEETING,
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      this.logger.log(`주주총회 기본 카테고리 생성됨 - ID: ${defaultCategory.id}`);
     }
 
     let created = 0;
@@ -1082,12 +1330,13 @@ export class SeedDataContextService {
       await this.shareholdersMeetingContextService.주주총회를_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `제${60 - i}기 정기 주주총회`,
             description: `${year}년 제${60 - i}기 정기 주주총회를 개최합니다. 재무제표 승인, 이사 선임 등 주요 안건을 결의할 예정입니다.`,
           },
         ],
         {
+          categoryId: defaultCategory.id,
           location: `서울시 강남구 루미르빌딩 ${i + 1}층 대회의실`,
           meetingDate,
         },
@@ -1101,7 +1350,7 @@ export class SeedDataContextService {
             result: 'accepted' as any,
             translations: [
               {
-                languageId: koreanLang.id,
+                languageId: defaultLang.id,
                 title: '재무제표 승인의 건',
               },
             ],
@@ -1115,7 +1364,7 @@ export class SeedDataContextService {
             result: 'accepted' as any,
             translations: [
               {
-                languageId: koreanLang.id,
+                languageId: defaultLang.id,
                 title: '이사 선임의 건',
               },
             ],
@@ -1152,11 +1401,34 @@ export class SeedDataContextService {
     );
 
     const languages = await this.languageService.모든_언어를_조회한다(false);
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    const defaultLanguageCode = this.configService.get<string>('DEFAULT_LANGUAGE_CODE', 'en');
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
 
-    if (!koreanLang) {
-      this.logger.warn('한국어를 찾을 수 없습니다. 메인 팝업 생성을 건너뜁니다.');
+    if (!defaultLang) {
+      this.logger.warn(`기본 언어(${defaultLanguageCode})를 찾을 수 없습니다. 메인 팝업 생성을 건너뜁니다.`);
       return 0;
+    }
+
+    // 메인 팝업 카테고리 생성 (없으면 생성)
+    const categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.MAIN_POPUP,
+      false,
+    );
+    
+    let defaultCategory;
+    if (categories.length === 0) {
+      defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.MAIN_POPUP,
+        name: '이벤트',
+        description: '이벤트 및 프로모션',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      this.logger.log(`메인 팝업 카테고리 생성 완료 - ID: ${defaultCategory.id}`);
+    } else {
+      defaultCategory = categories[0];
+      this.logger.log(`기존 메인 팝업 카테고리 사용 - ID: ${defaultCategory.id}`);
     }
 
     let created = 0;
@@ -1165,11 +1437,12 @@ export class SeedDataContextService {
       await this.mainPopupContextService.메인_팝업을_생성한다(
         [
           {
-            languageId: koreanLang.id,
+            languageId: defaultLang.id,
             title: `${faker.company.catchPhrase()} - 이벤트 ${i + 1}`,
             description: faker.lorem.paragraph(),
           },
         ],
+        defaultCategory.id,
         'seed',
         [
           {
@@ -1210,11 +1483,33 @@ export class SeedDataContextService {
       '기술',
     ];
 
+    // 루미르스토리 카테고리 조회 또는 생성
+    let categories = await this.categoryService.엔티티_타입별_카테고리를_조회한다(
+      CategoryEntityType.LUMIR_STORY,
+      false,
+    );
+
+    if (categories.length === 0) {
+      this.logger.log('루미르스토리 카테고리가 없어 기본 카테고리 생성');
+      const defaultCategory = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.LUMIR_STORY,
+        name: '일반',
+        description: '일반 루미르스토리',
+        isActive: true,
+        order: 0,
+        createdBy: 'seed',
+      });
+      categories = [defaultCategory];
+    }
+
     for (let i = 0; i < count; i++) {
       const theme = storyThemes[i % storyThemes.length];
+      const category = categories[i % categories.length];
+      
       await this.lumirStoryContextService.루미르스토리를_생성한다({
         title: `루미르의 ${theme} 이야기 - Story ${i + 1}`,
         content: `루미르는 ${theme}을(를) 통해 끊임없이 발전하고 있습니다. ${faker.lorem.paragraphs(3)}`,
+        categoryId: category.id,
         imageUrl: `https://example.com/images/story_${i + 1}.jpg`,
         attachments: [
           {
@@ -1244,7 +1539,7 @@ export class SeedDataContextService {
   ): Promise<number> {
     this.logger.log(`비디오갤러리 시드 데이터 생성 시작 - 개수: ${count}`);
 
-    let created = 0;
+    // 먼저 카테고리를 생성
     const videoCategories = [
       '회사 소개',
       '제품 소개',
@@ -1254,8 +1549,23 @@ export class SeedDataContextService {
       '이벤트',
     ];
 
+    const createdCategories: Category[] = [];
+    for (const categoryName of videoCategories) {
+      const category = await this.categoryService.카테고리를_생성한다({
+        entityType: CategoryEntityType.VIDEO_GALLERY,
+        name: categoryName,
+        description: `${categoryName} 관련 영상`,
+        isActive: true,
+        order: createdCategories.length,
+        createdBy: 'seed',
+      });
+      createdCategories.push(category);
+    }
+
+    let created = 0;
+
     for (let i = 0; i < count; i++) {
-      const category = videoCategories[i % videoCategories.length];
+      const category = createdCategories[i % createdCategories.length];
       const videoIds = [
         'dQw4w9WgXcQ',
         'jNQXAC9IVRw',
@@ -1266,8 +1576,9 @@ export class SeedDataContextService {
       const videoId = videoIds[i % videoIds.length];
 
       await this.videoGalleryContextService.비디오갤러리를_생성한다({
-        title: `${category} - 영상 ${i + 1}`,
-        description: `${category}에 관한 영상입니다. 루미르의 다양한 활동과 성과를 소개합니다.`,
+        title: `${category.name} - 영상 ${i + 1}`,
+        description: `${category.name}에 관한 영상입니다. 루미르의 다양한 활동과 성과를 소개합니다.`,
+        categoryId: category.id,
         videoSources: [
           {
             type: 'youtube',
@@ -1467,15 +1778,20 @@ export class SeedDataContextService {
       
       // Survey는 Announcement CASCADE로 자동 삭제되므로 명시적 삭제 불필요
       await this.announcementRepository.createQueryBuilder().delete().execute();
+      
+      // Category를 참조하는 엔티티들을 먼저 삭제
       await this.newsRepository.createQueryBuilder().delete().execute();
       await this.brochureRepository.createQueryBuilder().delete().execute();
-      await this.categoryRepository.createQueryBuilder().delete().execute();
       await this.electronicDisclosureRepository.createQueryBuilder().delete().execute();
       await this.irRepository.createQueryBuilder().delete().execute();
       await this.shareholdersMeetingRepository.createQueryBuilder().delete().execute();
       await this.mainPopupRepository.createQueryBuilder().delete().execute();
       await this.lumirStoryRepository.createQueryBuilder().delete().execute();
       await this.videoGalleryRepository.createQueryBuilder().delete().execute();
+      
+      // 마지막으로 Category 삭제 (외래키로 참조되므로)
+      await this.categoryRepository.createQueryBuilder().delete().execute();
+      
       await this.wikiFileSystemRepository.createQueryBuilder().delete().execute();
       // Language는 삭제하지 않음 (시스템 기본 데이터)
     } else {
@@ -1484,15 +1800,19 @@ export class SeedDataContextService {
       
       // QueryBuilder를 사용하여 soft delete
       await this.announcementRepository.createQueryBuilder().softDelete().execute();
+      
+      // Category를 참조하는 엔티티들을 먼저 soft delete
       await this.newsRepository.createQueryBuilder().softDelete().execute();
       await this.brochureRepository.createQueryBuilder().softDelete().execute();
-      await this.categoryRepository.createQueryBuilder().softDelete().execute();
       await this.electronicDisclosureRepository.createQueryBuilder().softDelete().execute();
       await this.irRepository.createQueryBuilder().softDelete().execute();
       await this.shareholdersMeetingRepository.createQueryBuilder().softDelete().execute();
       await this.mainPopupRepository.createQueryBuilder().softDelete().execute();
       await this.lumirStoryRepository.createQueryBuilder().softDelete().execute();
       await this.videoGalleryRepository.createQueryBuilder().softDelete().execute();
+      
+      // 마지막으로 Category soft delete
+      await this.categoryRepository.createQueryBuilder().softDelete().execute();
       await this.wikiFileSystemRepository.createQueryBuilder().softDelete().execute();
     }
 

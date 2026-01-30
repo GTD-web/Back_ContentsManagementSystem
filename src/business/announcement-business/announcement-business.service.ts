@@ -1,6 +1,11 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, In, Not, DataSource } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { AnnouncementContextService } from '@context/announcement-context/announcement-context.service';
@@ -27,6 +32,7 @@ import {
   PositionListResult,
 } from '@context/company-context/interfaces/company-context.interface';
 import { ReplaceAnnouncementPermissionsDto } from '@interface/admin/announcement/dto/replace-announcement-permissions.dto';
+import { AnnouncementListItemDto } from '@interface/common/dto/announcement/announcement-response.dto';
 
 /**
  * 공지사항 비즈니스 서비스
@@ -77,8 +83,9 @@ export class AnnouncementBusinessService {
     limit?: number;
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<{
-    items: Announcement[];
+    items: AnnouncementListItemDto[];
     total: number;
     page: number;
     limit: number;
@@ -88,9 +95,31 @@ export class AnnouncementBusinessService {
     const result =
       await this.announcementContextService.공지사항_목록을_조회한다(params);
 
+    // 엔티티를 DTO로 변환
+    const items: AnnouncementListItemDto[] = result.items.map(
+      (announcement) => ({
+        id: announcement.id,
+        categoryId: announcement.categoryId,
+        categoryName: announcement.category?.name || '',
+        title: announcement.title,
+        isFixed: announcement.isFixed,
+        isPublic: announcement.isPublic,
+        mustRead: announcement.mustRead,
+        order: announcement.order,
+        createdAt: announcement.createdAt,
+        updatedAt: announcement.updatedAt,
+        hasSurvey: !!announcement.survey,
+      }),
+    );
+
     this.logger.log(`공지사항 목록 조회 완료 - 총 ${result.total}개`);
 
-    return result;
+    return {
+      items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    };
   }
 
   /**
@@ -103,8 +132,9 @@ export class AnnouncementBusinessService {
     limit?: number;
     startDate?: Date;
     endDate?: Date;
+    categoryId?: string;
   }): Promise<{
-    items: Announcement[];
+    items: AnnouncementListItemDto[];
     total: number;
     page: number;
     limit: number;
@@ -117,15 +147,37 @@ export class AnnouncementBusinessService {
         isFixed: true, // 고정 공지만 조회
       });
 
+    // 엔티티를 DTO로 변환
+    const items: AnnouncementListItemDto[] = result.items.map(
+      (announcement) => ({
+        id: announcement.id,
+        categoryId: announcement.categoryId,
+        categoryName: announcement.category?.name || '',
+        title: announcement.title,
+        isFixed: announcement.isFixed,
+        isPublic: announcement.isPublic,
+        mustRead: announcement.mustRead,
+        order: announcement.order,
+        createdAt: announcement.createdAt,
+        updatedAt: announcement.updatedAt,
+        hasSurvey: !!announcement.survey,
+      }),
+    );
+
     this.logger.log(`고정 공지사항 목록 조회 완료 - 총 ${result.total}개`);
 
-    return result;
+    return {
+      items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+    };
   }
 
   /**
    * 공지사항 전체 목록을 조회한다 (페이지네이션 없음)
    */
-  async 공지사항_전체_목록을_조회한다(): Promise<Announcement[]> {
+  async 공지사항_전체_목록을_조회한다(): Promise<AnnouncementListItemDto[]> {
     this.logger.log('공지사항 전체 목록 조회 시작');
 
     // 매우 큰 limit을 사용하여 전체 목록 조회
@@ -134,9 +186,26 @@ export class AnnouncementBusinessService {
         limit: 10000,
       });
 
+    // 엔티티를 DTO로 변환
+    const items: AnnouncementListItemDto[] = result.items.map(
+      (announcement) => ({
+        id: announcement.id,
+        categoryId: announcement.categoryId,
+        categoryName: announcement.category?.name || '',
+        title: announcement.title,
+        isFixed: announcement.isFixed,
+        isPublic: announcement.isPublic,
+        mustRead: announcement.mustRead,
+        order: announcement.order,
+        createdAt: announcement.createdAt,
+        updatedAt: announcement.updatedAt,
+        hasSurvey: !!announcement.survey,
+      }),
+    );
+
     this.logger.log(`공지사항 전체 목록 조회 완료 - 총 ${result.total}개`);
 
-    return result.items;
+    return items;
   }
 
   /**
@@ -157,7 +226,7 @@ export class AnnouncementBusinessService {
   /**
    * 공지사항을 조회한다
    */
-  async 공지사항을_조회한다(id: string): Promise<Announcement> {
+  async 공지사항을_조회한다(id: string): Promise<any> {
     this.logger.log(`공지사항 조회 시작 - ID: ${id}`);
 
     const announcement =
@@ -165,7 +234,13 @@ export class AnnouncementBusinessService {
 
     this.logger.log(`공지사항 조회 완료 - ID: ${id}`);
 
-    return announcement;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...announcementData } = announcement as any;
+
+    return {
+      ...announcementData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -419,6 +494,36 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 직원 정보를 조회한다 (단건)
+   */
+  async 직원_정보를_조회한다(employeeId: string): Promise<any> {
+    this.logger.log(`직원 정보 조회 시작 (SSO) - ID: ${employeeId}`);
+
+    const result =
+      await this.companyContextService.직원_정보를_조회한다(employeeId);
+
+    this.logger.log(`직원 정보 조회 완료 (SSO) - ID: ${employeeId}`);
+
+    return result;
+  }
+
+  /**
+   * 직원 목록을 조회한다 (복수)
+   */
+  async 직원_목록을_조회한다(employeeIds: string[]): Promise<any[]> {
+    this.logger.log(
+      `직원 목록 조회 시작 (SSO) - 요청 수: ${employeeIds.length}명`,
+    );
+
+    const result =
+      await this.companyContextService.직원_목록을_조회한다(employeeIds);
+
+    this.logger.log(`직원 목록 조회 완료 (SSO) - 조회 수: ${result.length}명`);
+
+    return result;
+  }
+
+  /**
    * 공지사항 카테고리 목록을 조회한다
    */
   async 공지사항_카테고리_목록을_조회한다(): Promise<Category[]> {
@@ -472,7 +577,6 @@ export class AnnouncementBusinessService {
       name?: string;
       description?: string;
       isActive?: boolean;
-      order?: number;
       updatedBy?: string;
     },
   ): Promise<Category> {
@@ -847,11 +951,7 @@ export class AnnouncementBusinessService {
     const extractFromDept = (dept: any) => {
       if (dept.employees) {
         dept.employees.forEach((emp: any) => {
-          if (
-            emp.employeeNumber &&
-            emp.rankId &&
-            rankIdSet.has(emp.rankId)
-          ) {
+          if (emp.employeeNumber && emp.rankId && rankIdSet.has(emp.rankId)) {
             employeeIds.push(emp.employeeNumber);
           }
         });
@@ -915,8 +1015,7 @@ export class AnnouncementBusinessService {
     const departmentIdSet = new Set(departmentIds);
 
     const extractFromDept = (dept: any) => {
-      const isDepartmentMatch =
-        dept.id && departmentIdSet.has(dept.id);
+      const isDepartmentMatch = dept.id && departmentIdSet.has(dept.id);
 
       if (isDepartmentMatch && dept.employees) {
         dept.employees.forEach((emp: any) => {
@@ -1021,7 +1120,7 @@ export class AnnouncementBusinessService {
 
   /**
    * 공지사항의 무효한 권한 ID를 새로운 ID로 교체한다
-   * 
+   *
    * 트랜잭션과 비관적 잠금을 사용하여 동시성 문제 방지:
    * - SELECT ... FOR UPDATE로 row-level 잠금 획득
    * - 권한 교체와 로그 생성이 원자적으로 수행
@@ -1036,7 +1135,9 @@ export class AnnouncementBusinessService {
     replacedDepartments: number;
     replacedEmployees: number;
   }> {
-    this.logger.log(`공지사항 권한 교체 시작 (트랜잭션) - ID: ${announcementId}`);
+    this.logger.log(
+      `공지사항 권한 교체 시작 (트랜잭션) - ID: ${announcementId}`,
+    );
 
     // 트랜잭션 내에서 모든 작업 수행
     return await this.dataSource.transaction(async (manager) => {
@@ -1070,9 +1171,7 @@ export class AnnouncementBusinessService {
             newDepartmentIds[index] = mapping.newId;
             replacedDepartments++;
             changes.push(`부서 ${mapping.oldId} → ${mapping.newId}`);
-            this.logger.log(
-              `부서 교체: ${mapping.oldId} → ${mapping.newId}`,
-            );
+            this.logger.log(`부서 교체: ${mapping.oldId} → ${mapping.newId}`);
           }
         }
 
@@ -1138,7 +1237,9 @@ export class AnnouncementBusinessService {
    * 공지사항의 설문조사 통계를 조회한다
    */
   async 공지사항의_설문조사_통계를_조회한다(announcementId: string) {
-    this.logger.log(`공지사항의 설문조사 통계 조회 시작 - 공지사항 ID: ${announcementId}`);
+    this.logger.log(
+      `공지사항의 설문조사 통계 조회 시작 - 공지사항 ID: ${announcementId}`,
+    );
 
     // 공지사항 존재 여부 확인
     await this.announcementContextService.공지사항을_조회한다(announcementId);
@@ -1149,7 +1250,9 @@ export class AnnouncementBusinessService {
         announcementId,
       );
 
-    this.logger.log(`공지사항의 설문조사 통계 조회 완료 - 공지사항 ID: ${announcementId}`);
+    this.logger.log(
+      `공지사항의 설문조사 통계 조회 완료 - 공지사항 ID: ${announcementId}`,
+    );
 
     return statistics;
   }

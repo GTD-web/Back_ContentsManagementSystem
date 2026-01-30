@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 수정)', () => {
   const testSuite = new BaseE2ETest();
   let testLanguageId: string;
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -30,6 +31,20 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
     );
 
     testLanguageId = koreanLanguage.id;
+
+    // 테스트용 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/main-popups/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: '테스트용 카테고리',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+    
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
@@ -49,7 +64,8 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
                 description: `설명${i}`,
               },
             ]),
-          );
+          )
+          .field('categoryId', testCategoryId);
 
         if (response.status !== 201) {
           console.error(
@@ -120,6 +136,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
               },
             ]),
           )
+          .field('categoryId', testCategoryId)
           .expect(201);
         popups.push(response.body);
       }
@@ -161,6 +178,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;
@@ -208,6 +226,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
               },
             ]),
           )
+          .field('categoryId', testCategoryId)
           .expect(201);
         popups.push(response.body);
       }
@@ -288,6 +307,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const updateDto = {
@@ -320,6 +340,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const updateDto = {
@@ -365,6 +386,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const updateDto = {
@@ -394,6 +416,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const updateDto = {
@@ -425,6 +448,7 @@ describe('PUT /api/admin/main-popups/batch-order (메인 팝업 순서 일괄 �
             },
           ]),
         )
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const mainPopupId = createResponse.body.id;

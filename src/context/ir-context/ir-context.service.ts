@@ -1,7 +1,11 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventBus } from '@nestjs/cqrs';
 import { IRService } from '@domain/core/ir/ir.service';
 import { LanguageService } from '@domain/common/language/language.service';
+import { CategoryService } from '@domain/common/category/category.service';
 import { IR } from '@domain/core/ir/ir.entity';
+import { IRTranslationUpdatedEvent } from './events/ir-translation-updated.event';
 
 /**
  * IR 컨텍스트 서비스
@@ -15,22 +19,41 @@ export class IRContextService {
   constructor(
     private readonly irService: IRService,
     private readonly languageService: LanguageService,
+    private readonly categoryService: CategoryService,
+    private readonly configService: ConfigService,
+    private readonly eventBus: EventBus,
   ) {}
 
   /**
    * IR 전체 목록을 조회한다
    */
   async IR_전체_목록을_조회한다(): Promise<IR[]> {
-    return await this.irService.모든_IR을_조회한다({
+    const irs = await this.irService.모든_IR을_조회한다({
       orderBy: 'order',
     });
+
+    // 각 IR에서 deletedAt이 null인 파일만 반환
+    irs.forEach((ir) => {
+      if (ir.attachments) {
+        ir.attachments = ir.attachments.filter((att: any) => !att.deletedAt);
+      }
+    });
+
+    return irs;
   }
 
   /**
    * IR 상세를 조회한다
    */
   async IR_상세를_조회한다(id: string): Promise<IR> {
-    return await this.irService.ID로_IR을_조회한다(id);
+    const ir = await this.irService.ID로_IR을_조회한다(id);
+
+    // deletedAt이 null인 파일만 반환
+    if (ir.attachments) {
+      ir.attachments = ir.attachments.filter((att: any) => !att.deletedAt);
+    }
+
+    return ir;
   }
 
   /**
@@ -76,7 +99,7 @@ export class IRContextService {
 
   /**
    * IR을 생성한다
-   * 
+   *
    * 브로슈어와 동일한 다국어 전략 적용:
    * 1. 전달받은 언어: isSynced = false (사용자 입력)
    * 2. 나머지 활성 언어: isSynced = true (자동 동기화)
@@ -87,13 +110,16 @@ export class IRContextService {
       title: string;
       description?: string;
     }>,
-    createdBy?: string,
-    attachments?: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileSize: number;
-      mimeType: string;
-    }>,
+    createdBy: string | undefined,
+    attachments:
+      | Array<{
+          fileName: string;
+          fileUrl: string;
+          fileSize: number;
+          mimeType: string;
+        }>
+      | undefined,
+    categoryId: string | null,
   ): Promise<IR> {
     this.logger.log(`IR 생성 시작 - 번역 수: ${translations.length}`);
 
@@ -109,21 +135,27 @@ export class IRContextService {
       throw new BadRequestException('중복된 언어 ID가 있습니다.');
     }
 
-    // 3. 모든 활성 언어 조회 (자동 동기화용)
+    // 3. 카테고리 ID 검증 (categoryId가 있는 경우에만)
+    if (categoryId) {
+      await this.categoryService.ID로_카테고리를_조회한다(categoryId);
+    }
+
+    // 4. 모든 활성 언어 조회 (자동 동기화용)
     const allLanguages = await this.languageService.모든_언어를_조회한다(false);
 
-    // 4. 다음 순서 계산
+    // 5. 다음 순서 계산
     const nextOrder = await this.irService.다음_순서를_계산한다();
 
-    // 5. IR 생성 (기본값: 공개)
+    // 6. IR 생성 (기본값: 공개)
     const ir = await this.irService.IR을_생성한다({
       isPublic: true,
       order: nextOrder,
+      categoryId,
       attachments: attachments || null,
       createdBy,
     });
 
-    // 6. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
+    // 7. 전달받은 언어들에 대한 번역 생성 (isSynced: false, 개별 설정됨)
     await this.irService.IR_번역을_생성한다(
       ir.id,
       translations.map((t) => ({
@@ -135,13 +167,17 @@ export class IRContextService {
       createdBy,
     );
 
-    // 7. 기준 번역 선정 (한국어 우선, 없으면 첫 번째)
-    const koreanLang = languages.find((l) => l.code === 'ko');
+    // 8. 기준 번역 선정 (기본 언어 우선, 없으면 첫 번째)
+    const defaultLanguageCode = this.configService.get<string>(
+      'DEFAULT_LANGUAGE_CODE',
+      'en',
+    );
+    const defaultLang = languages.find((l) => l.code === defaultLanguageCode);
     const baseTranslation =
-      translations.find((t) => t.languageId === koreanLang?.id) ||
+      translations.find((t) => t.languageId === defaultLang?.id) ||
       translations[0];
 
-    // 8. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)
+    // 9. 전달되지 않은 나머지 활성 언어들에 대한 번역 생성 (isSynced: true, 자동 동기화)
     const remainingLanguages = allLanguages.filter(
       (lang) => !languageIds.includes(lang.id),
     );
@@ -161,11 +197,11 @@ export class IRContextService {
 
     const totalTranslations = translations.length + remainingLanguages.length;
     this.logger.log(
-      `IR 생성 완료 - ID: ${ir.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})`,
+      `IR 생성 완료 - ID: ${ir.id}, 전체 번역 수: ${totalTranslations} (개별: ${translations.length}, 자동: ${remainingLanguages.length})${categoryId ? `, 카테고리 ID: ${categoryId}` : ''}`,
     );
 
-    // 9. 번역 포함하여 재조회
-    return await this.irService.ID로_IR을_조회한다(ir.id);
+    // 10. 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.IR_상세를_조회한다(ir.id);
   }
 
   /**
@@ -176,6 +212,7 @@ export class IRContextService {
     data: {
       isPublic?: boolean;
       order?: number;
+      categoryId?: string | null;
       translations?: Array<{
         id?: string;
         languageId: string;
@@ -191,11 +228,15 @@ export class IRContextService {
     const updateData: any = {};
     if (data.isPublic !== undefined) updateData.isPublic = data.isPublic;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.updatedBy) updateData.updatedBy = data.updatedBy;
 
     if (Object.keys(updateData).length > 0) {
       await this.irService.IR을_업데이트한다(id, updateData);
     }
+
+    // 기본 언어 조회 (이벤트 발행용)
+    const baseLanguage = await this.languageService.기본_언어를_조회한다();
 
     // 번역 업데이트 (제공된 경우)
     if (data.translations && data.translations.length > 0) {
@@ -208,6 +249,20 @@ export class IRContextService {
             isSynced: false, // 수정되었으므로 동기화 중단
             updatedBy: data.updatedBy,
           });
+
+          // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
+          if (baseLanguage && translation.languageId === baseLanguage.id) {
+            this.logger.debug('기본 언어 번역 수정 감지 - 동기화 이벤트 발행');
+            this.eventBus.publish(
+              new IRTranslationUpdatedEvent(
+                id,
+                translation.languageId,
+                translation.title,
+                translation.description,
+                data.updatedBy,
+              ),
+            );
+          }
         } else {
           // 해당 언어의 번역이 이미 있는지 확인
           const existingTranslations =
@@ -227,6 +282,22 @@ export class IRContextService {
                 updatedBy: data.updatedBy,
               },
             );
+
+            // 기본 언어 번역이 수정된 경우 이벤트 발행 (동기화 트리거)
+            if (baseLanguage && translation.languageId === baseLanguage.id) {
+              this.logger.debug(
+                '기본 언어 번역 수정 감지 - 동기화 이벤트 발행',
+              );
+              this.eventBus.publish(
+                new IRTranslationUpdatedEvent(
+                  id,
+                  translation.languageId,
+                  translation.title,
+                  translation.description,
+                  data.updatedBy,
+                ),
+              );
+            }
           } else {
             // 새 번역 생성
             await this.irService.IR_번역을_생성한다(
@@ -246,8 +317,8 @@ export class IRContextService {
       }
     }
 
-    // 번역 포함하여 재조회
-    return await this.irService.ID로_IR을_조회한다(id);
+    // 번역 포함하여 재조회 (deletedAt 필터링 포함)
+    return await this.IR_상세를_조회한다(id);
   }
 
   /**
@@ -281,6 +352,7 @@ export class IRContextService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
     items: IR[];
     total: number;
@@ -289,7 +361,7 @@ export class IRContextService {
     totalPages: number;
   }> {
     this.logger.log(
-      `IR 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}`,
+      `IR 목록 조회 - 페이지: ${page}, 개수: ${limit}, 공개: ${isPublic}, 카테고리: ${categoryId}`,
     );
 
     // 전체 목록 조회
@@ -298,6 +370,14 @@ export class IRContextService {
       orderBy,
       startDate,
       endDate,
+      categoryId,
+    });
+
+    // deletedAt이 null인 파일만 필터링
+    allIRs.forEach((ir) => {
+      if (ir.attachments) {
+        ir.attachments = ir.attachments.filter((att: any) => !att.deletedAt);
+      }
     });
 
     // 페이징 적용

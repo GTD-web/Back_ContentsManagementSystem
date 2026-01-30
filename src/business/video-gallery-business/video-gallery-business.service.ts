@@ -7,6 +7,7 @@ import { Category } from '@domain/common/category/category.entity';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
 import { VideoGalleryDetailResult } from '@context/video-gallery-context/interfaces/video-gallery-context.interface';
+import { VideoGalleryListItemDto } from '@interface/common/dto/video-gallery/video-gallery-response.dto';
 
 /**
  * 비디오갤러리 비즈니스 서비스
@@ -36,34 +37,51 @@ export class VideoGalleryBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
-    items: VideoGallery[];
+    items: VideoGalleryListItemDto[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }> {
     this.logger.log(
-      `비디오갤러리 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `비디오갤러리 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
-    const result = await this.videoGalleryContextService.비디오갤러리_목록을_조회한다(
-      isPublic,
-      orderBy,
-      page,
-      limit,
-      startDate,
-      endDate,
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리_목록을_조회한다(
+        isPublic,
+        orderBy,
+        page,
+        limit,
+        startDate,
+        endDate,
+        categoryId,
+      );
 
     const totalPages = Math.ceil(result.total / limit);
+
+    // 엔티티를 DTO로 변환
+    const items: VideoGalleryListItemDto[] = result.items.map((gallery) => ({
+      id: gallery.id,
+      title: gallery.title,
+      description: gallery.description,
+      categoryId: gallery.categoryId,
+      categoryName: gallery.category?.name || '',
+      category: gallery.category,
+      isPublic: gallery.isPublic,
+      order: gallery.order,
+      createdAt: gallery.createdAt,
+      updatedAt: gallery.updatedAt,
+    }));
 
     this.logger.log(
       `비디오갤러리 목록 조회 완료 - 총 ${result.total}개 (${page}/${totalPages} 페이지)`,
     );
 
     return {
-      items: result.items,
+      items,
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -74,15 +92,18 @@ export class VideoGalleryBusinessService {
   /**
    * 비디오갤러리 전체 목록을 조회한다 (페이징 없음)
    */
-  async 비디오갤러리_전체_목록을_조회한다(): Promise<VideoGalleryDetailResult[]> {
+  async 비디오갤러리_전체_목록을_조회한다(): Promise<
+    VideoGalleryDetailResult[]
+  > {
     this.logger.log('비디오갤러리 전체 목록 조회 시작');
 
-    const result = await this.videoGalleryContextService.비디오갤러리_목록을_조회한다(
-      undefined,
-      'order',
-      1,
-      1000, // 충분히 큰 숫자
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        1000, // 충분히 큰 숫자
+      );
 
     this.logger.log(
       `비디오갤러리 전체 목록 조회 완료 - 총 ${result.items.length}개`,
@@ -96,6 +117,7 @@ export class VideoGalleryBusinessService {
    */
   async 비디오갤러리를_생성한다(
     title: string,
+    categoryId: string | null,
     description?: string | null,
     youtubeUrls?: string[],
     createdBy?: string,
@@ -144,14 +166,14 @@ export class VideoGalleryBusinessService {
     // 생성 데이터 구성
     const createData = {
       title,
+      categoryId,
       description,
       videoSources: videoSources.length > 0 ? videoSources : undefined,
       createdBy,
     };
 
-    const result = await this.videoGalleryContextService.비디오갤러리를_생성한다(
-      createData,
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리를_생성한다(createData);
 
     this.logger.log(
       `비디오갤러리 생성 완료 - ID: ${result.id}, 총 비디오: ${videoSources.length}개`,
@@ -194,10 +216,11 @@ export class VideoGalleryBusinessService {
   ): Promise<VideoGallery> {
     this.logger.log(`비디오갤러리 공개 수정 시작 - ID: ${id}`);
 
-    const result = await this.videoGalleryContextService.비디오갤러리_공개를_수정한다(
-      id,
-      data,
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리_공개를_수정한다(
+        id,
+        data,
+      );
 
     this.logger.log(`비디오갤러리 공개 수정 완료 - ID: ${id}`);
 
@@ -207,18 +230,21 @@ export class VideoGalleryBusinessService {
   /**
    * 비디오갤러리 상세 조회한다
    */
-  async 비디오갤러리_상세_조회한다(
-    id: string,
-  ): Promise<VideoGalleryDetailResult> {
+  async 비디오갤러리_상세_조회한다(id: string): Promise<any> {
     this.logger.log(`비디오갤러리 상세 조회 시작 - ID: ${id}`);
 
-    const result = await this.videoGalleryContextService.비디오갤러리_상세_조회한다(
-      id,
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리_상세_조회한다(id);
 
     this.logger.log(`비디오갤러리 상세 조회 완료 - ID: ${id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...galleryData } = result as any;
+
+    return {
+      ...galleryData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -227,9 +253,8 @@ export class VideoGalleryBusinessService {
   async 비디오갤러리를_삭제한다(id: string): Promise<boolean> {
     this.logger.log(`비디오갤러리 삭제 시작 - ID: ${id}`);
 
-    const result = await this.videoGalleryContextService.비디오갤러리를_삭제한다(
-      id,
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리를_삭제한다(id);
 
     this.logger.log(`비디오갤러리 삭제 완료 - ID: ${id}`);
 
@@ -271,7 +296,6 @@ export class VideoGalleryBusinessService {
       name?: string;
       description?: string;
       isActive?: boolean;
-      order?: number;
       updatedBy?: string;
     },
   ): Promise<Category> {
@@ -352,12 +376,15 @@ export class VideoGalleryBusinessService {
   async 비디오갤러리를_수정한다(
     videoGalleryId: string,
     title: string,
+    updatedBy: string,
+    categoryId: string | null,
     description?: string | null,
     youtubeUrls?: string[],
-    updatedBy?: string,
     files?: Express.Multer.File[],
   ): Promise<VideoGallery> {
-    this.logger.log(`비디오갤러리 수정 시작 - 비디오갤러리 ID: ${videoGalleryId}`);
+    this.logger.log(
+      `비디오갤러리 수정 시작 - 비디오갤러리 ID: ${videoGalleryId}`,
+    );
 
     // 1. 기존 비디오갤러리 조회
     const videoGallery =
@@ -365,20 +392,19 @@ export class VideoGalleryBusinessService {
         videoGalleryId,
       );
 
-    // 2. 기존 업로드 파일 전부 삭제 (S3에서만 삭제, YouTube URL은 유지 안 함)
+    // 2. 기존 업로드 파일에 deletedAt 설정 (소프트 삭제, YouTube URL은 유지)
     const currentVideoSources = videoGallery.videoSources || [];
     const uploadedVideos = currentVideoSources.filter(
-      (source) => source.type === 'upload',
+      (source: any) => source.type === 'upload',
     );
 
-    if (uploadedVideos.length > 0) {
-      const filesToDelete = uploadedVideos.map((video) => video.url);
-      this.logger.log(
-        `스토리지에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`,
-      );
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`스토리지 파일 삭제 완료`);
-    }
+    const markedForDeletion = uploadedVideos.map((video: any) => ({
+      ...video,
+      deletedAt: new Date(),
+    }));
+    this.logger.log(
+      `기존 ${uploadedVideos.length}개의 업로드 파일을 소프트 삭제로 표시`,
+    );
 
     // 3. 새로운 비디오 소스 배열 구성
     const newVideoSources: Array<{
@@ -386,6 +412,7 @@ export class VideoGalleryBusinessService {
       type: 'upload' | 'youtube';
       title?: string;
       thumbnailUrl?: string;
+      deletedAt?: Date | null;
     }> = [];
 
     // 3-1. 새 파일 업로드 처리 → S3 URL 생성
@@ -401,9 +428,13 @@ export class VideoGalleryBusinessService {
           url: file.url,
           type: 'upload',
           title: file.fileName,
+          deletedAt: null,
         });
       });
       this.logger.log(`파일 업로드 완료: ${uploadedFiles.length}개`);
+    } else {
+      // files가 없으면 기존 업로드 파일만 소프트 삭제된 상태로 유지
+      newVideoSources.push(...markedForDeletion);
     }
 
     // 3-2. YouTube URL 추가
@@ -413,6 +444,7 @@ export class VideoGalleryBusinessService {
           newVideoSources.push({
             url: url.trim(),
             type: 'youtube',
+            deletedAt: null,
           });
         }
       });
@@ -432,16 +464,20 @@ export class VideoGalleryBusinessService {
     );
 
     // 5. 내용 수정
-    const result = await this.videoGalleryContextService.비디오갤러리를_수정한다(
-      videoGalleryId,
-      {
-        title,
-        description,
-        updatedBy,
-      },
-    );
+    const result =
+      await this.videoGalleryContextService.비디오갤러리를_수정한다(
+        videoGalleryId,
+        {
+          title,
+          categoryId,
+          description,
+          updatedBy,
+        },
+      );
 
-    this.logger.log(`비디오갤러리 수정 완료 - 비디오갤러리 ID: ${videoGalleryId}`);
+    this.logger.log(
+      `비디오갤러리 수정 완료 - 비디오갤러리 ID: ${videoGalleryId}`,
+    );
 
     return result;
   }

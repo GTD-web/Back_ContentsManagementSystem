@@ -52,22 +52,33 @@ describe('GetLumirStoryListHandler', () => {
           title: '스토리 1',
           isPublic: true,
           order: 0,
+          category: { name: '혁신' },
         },
         {
           id: 'lumir-story-2',
           title: '스토리 2',
           isPublic: true,
           order: 1,
+          category: { name: '성장' },
         },
       ] as LumirStory[];
 
       const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([mockLumirStories, 2]),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockLumirStories,
+          raw: [
+            { category_name: '혁신' },
+            { category_name: '성장' },
+          ],
+        }),
+        getCount: jest.fn().mockResolvedValue(2),
       };
 
       mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
@@ -81,6 +92,8 @@ describe('GetLumirStoryListHandler', () => {
       expect(lumirStoryRepository.createQueryBuilder).toHaveBeenCalledWith(
         'lumirStory',
       );
+      expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith('categories', 'category', 'lumirStory.categoryId = category.id');
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(['category.name']);
       expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
         'lumirStory.order',
         'ASC',
@@ -108,12 +121,18 @@ describe('GetLumirStoryListHandler', () => {
       ] as LumirStory[];
 
       const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([mockLumirStories, 1]),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: mockLumirStories,
+          raw: [{ category_name: '혁신' }],
+        }),
+        getCount: jest.fn().mockResolvedValue(1),
       };
 
       mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
@@ -140,12 +159,15 @@ describe('GetLumirStoryListHandler', () => {
       );
 
       const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+        getRawAndEntities: jest.fn().mockResolvedValue({ entities: [], raw: [] }),
+        getCount: jest.fn().mockResolvedValue(0),
       };
 
       mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
@@ -176,12 +198,15 @@ describe('GetLumirStoryListHandler', () => {
       );
 
       const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+        getRawAndEntities: jest.fn().mockResolvedValue({ entities: [], raw: [] }),
+        getCount: jest.fn().mockResolvedValue(0),
       };
 
       mockLumirStoryRepository.createQueryBuilder.mockReturnValue(
@@ -207,12 +232,15 @@ describe('GetLumirStoryListHandler', () => {
       const query = new GetLumirStoryListQuery(undefined, 'order', 2, 5);
 
       const mockQueryBuilder = {
+        leftJoin: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+        getRawAndEntities: jest.fn().mockResolvedValue({ entities: [], raw: [] }),
+        getCount: jest.fn().mockResolvedValue(0),
       };
 
       mockLumirStoryRepository.createQueryBuilder.mockReturnValue(

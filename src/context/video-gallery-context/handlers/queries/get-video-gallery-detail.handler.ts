@@ -32,6 +32,13 @@ export class GetVideoGalleryDetailHandler
       id,
     );
 
+    // deletedAt이 null인 파일만 반환 (videoSources)
+    if (videoGallery.videoSources) {
+      videoGallery.videoSources = videoGallery.videoSources.filter(
+        (source: any) => source.type === 'youtube' || !source.deletedAt,
+      );
+    }
+
     return videoGallery;
   }
 }

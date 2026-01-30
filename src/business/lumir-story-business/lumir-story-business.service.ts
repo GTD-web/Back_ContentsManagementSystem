@@ -7,6 +7,7 @@ import { Category } from '@domain/common/category/category.entity';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
 import { LumirStoryDetailResult } from '@context/lumir-story-context/interfaces/lumir-story-context.interface';
+import { LumirStoryListItemDto } from '@interface/common/dto/lumir-story/lumir-story-response.dto';
 
 /**
  * 루미르스토리 비즈니스 서비스
@@ -36,34 +37,49 @@ export class LumirStoryBusinessService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
+    categoryId?: string,
   ): Promise<{
-    items: LumirStory[];
+    items: LumirStoryListItemDto[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }> {
     this.logger.log(
-      `루미르스토리 목록 조회 시작 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `루미르스토리 목록 조회 시작 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
-    const result = await this.lumirStoryContextService.루미르스토리_목록을_조회한다(
-      isPublic,
-      orderBy,
-      page,
-      limit,
-      startDate,
-      endDate,
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리_목록을_조회한다(
+        isPublic,
+        orderBy,
+        page,
+        limit,
+        startDate,
+        endDate,
+        categoryId,
+      );
 
     const totalPages = Math.ceil(result.total / limit);
+
+    // 엔티티를 DTO로 변환
+    const items: LumirStoryListItemDto[] = result.items.map((story) => ({
+      id: story.id,
+      title: story.title,
+      imageUrl: story.imageUrl,
+      isPublic: story.isPublic,
+      order: story.order,
+      categoryName: story.category?.name || '',
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt,
+    }));
 
     this.logger.log(
       `루미르스토리 목록 조회 완료 - 총 ${result.total}개 (${page}/${totalPages} 페이지)`,
     );
 
     return {
-      items: result.items,
+      items,
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -77,12 +93,13 @@ export class LumirStoryBusinessService {
   async 루미르스토리_전체_목록을_조회한다(): Promise<LumirStoryDetailResult[]> {
     this.logger.log('루미르스토리 전체 목록 조회 시작');
 
-    const result = await this.lumirStoryContextService.루미르스토리_목록을_조회한다(
-      undefined,
-      'order',
-      1,
-      1000, // 충분히 큰 숫자
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        1000, // 충분히 큰 숫자
+      );
 
     this.logger.log(
       `루미르스토리 전체 목록 조회 완료 - 총 ${result.items.length}개`,
@@ -97,6 +114,7 @@ export class LumirStoryBusinessService {
   async 루미르스토리를_생성한다(
     title: string,
     content: string,
+    categoryId: string,
     imageUrl?: string | null,
     createdBy?: string,
     files?: Express.Multer.File[],
@@ -132,15 +150,15 @@ export class LumirStoryBusinessService {
     const createData = {
       title,
       content,
+      categoryId,
       imageUrl,
       attachments:
         attachments && attachments.length > 0 ? attachments : undefined,
       createdBy,
     };
 
-    const result = await this.lumirStoryContextService.루미르스토리를_생성한다(
-      createData,
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리를_생성한다(createData);
 
     this.logger.log(`루미르스토리 생성 완료 - ID: ${result.id}`);
 
@@ -181,10 +199,11 @@ export class LumirStoryBusinessService {
   ): Promise<LumirStory> {
     this.logger.log(`루미르스토리 공개 수정 시작 - ID: ${id}`);
 
-    const result = await this.lumirStoryContextService.루미르스토리_공개를_수정한다(
-      id,
-      data,
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리_공개를_수정한다(
+        id,
+        data,
+      );
 
     this.logger.log(`루미르스토리 공개 수정 완료 - ID: ${id}`);
 
@@ -194,18 +213,21 @@ export class LumirStoryBusinessService {
   /**
    * 루미르스토리 상세 조회한다
    */
-  async 루미르스토리_상세_조회한다(
-    id: string,
-  ): Promise<LumirStoryDetailResult> {
+  async 루미르스토리_상세_조회한다(id: string): Promise<any> {
     this.logger.log(`루미르스토리 상세 조회 시작 - ID: ${id}`);
 
-    const result = await this.lumirStoryContextService.루미르스토리_상세_조회한다(
-      id,
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리_상세_조회한다(id);
 
     this.logger.log(`루미르스토리 상세 조회 완료 - ID: ${id}`);
 
-    return result;
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...storyData } = result as any;
+
+    return {
+      ...storyData,
+      categoryName: category?.name,
+    };
   }
 
   /**
@@ -214,9 +236,8 @@ export class LumirStoryBusinessService {
   async 루미르스토리를_삭제한다(id: string): Promise<boolean> {
     this.logger.log(`루미르스토리 삭제 시작 - ID: ${id}`);
 
-    const result = await this.lumirStoryContextService.루미르스토리를_삭제한다(
-      id,
-    );
+    const result =
+      await this.lumirStoryContextService.루미르스토리를_삭제한다(id);
 
     this.logger.log(`루미르스토리 삭제 완료 - ID: ${id}`);
 
@@ -258,7 +279,6 @@ export class LumirStoryBusinessService {
       name?: string;
       description?: string;
       isActive?: boolean;
-      order?: number;
       updatedBy?: string;
     },
   ): Promise<Category> {
@@ -340,11 +360,14 @@ export class LumirStoryBusinessService {
     lumirStoryId: string,
     title: string,
     content: string,
+    updatedBy: string,
+    categoryId: string,
     imageUrl?: string | null,
-    updatedBy?: string,
     files?: Express.Multer.File[],
   ): Promise<LumirStory> {
-    this.logger.log(`루미르스토리 수정 시작 - 루미르스토리 ID: ${lumirStoryId}`);
+    this.logger.log(
+      `루미르스토리 수정 시작 - 루미르스토리 ID: ${lumirStoryId}`,
+    );
 
     // 1. 기존 루미르스토리 조회
     const lumirStory =
@@ -399,17 +422,22 @@ export class LumirStoryBusinessService {
     );
 
     // 5. 내용 수정
+    const updateData: any = {
+      title,
+      content,
+      categoryId,
+      imageUrl,
+      updatedBy,
+    };
+
     const result = await this.lumirStoryContextService.루미르스토리를_수정한다(
       lumirStoryId,
-      {
-        title,
-        content,
-        imageUrl,
-        updatedBy,
-      },
+      updateData,
     );
 
-    this.logger.log(`루미르스토리 수정 완료 - 루미르스토리 ID: ${lumirStoryId}`);
+    this.logger.log(
+      `루미르스토리 수정 완료 - 루미르스토리 ID: ${lumirStoryId}`,
+    );
 
     return result;
   }

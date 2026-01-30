@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import {
   CreateBrochureHandler,
   CreateBrochureCommand,
@@ -33,6 +34,13 @@ describe('CreateBrochureHandler', () => {
     save: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +52,10 @@ describe('CreateBrochureHandler', () => {
         {
           provide: LanguageService,
           useValue: mockLanguageService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: getRepositoryToken(BrochureTranslation),
@@ -73,6 +85,7 @@ describe('CreateBrochureHandler', () => {
             description: '루미르 회사 소개서',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -150,6 +163,7 @@ describe('CreateBrochureHandler', () => {
             title: '회사 소개 브로슈어',
           },
         ],
+        categoryId: 'category-1',
         attachments: [
           {
             fileName: 'brochure.pdf',
@@ -209,6 +223,7 @@ describe('CreateBrochureHandler', () => {
             description: 'English description',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -264,6 +279,7 @@ describe('CreateBrochureHandler', () => {
             title: '제목2',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -294,6 +310,7 @@ describe('CreateBrochureHandler', () => {
             description: '한국어 설명',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -380,6 +397,7 @@ describe('CreateBrochureHandler', () => {
             title: '회사 소개 브로슈어',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       });
 
@@ -414,6 +432,28 @@ describe('CreateBrochureHandler', () => {
         }),
       );
       expect(result.order).toBe(5);
+    });
+
+    it('categoryId가 없으면 BadRequestException을 던져야 한다', async () => {
+      // Given
+      const command = new CreateBrochureCommand({
+        translations: [
+          {
+            languageId: 'language-1',
+            title: '회사 소개 브로슈어',
+          },
+        ],
+        categoryId: '' as any, // 빈 문자열
+        createdBy: 'user-1',
+      });
+
+      // When & Then
+      await expect(handler.execute(command)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(handler.execute(command)).rejects.toThrow(
+        'categoryId는 필수입니다.',
+      );
     });
   });
 });

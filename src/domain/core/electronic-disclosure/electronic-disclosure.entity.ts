@@ -27,6 +27,13 @@ export class ElectronicDisclosure extends BaseEntity<ElectronicDisclosure> {
   order: number;
 
   @Column({
+    type: 'uuid',
+    nullable: true,
+    comment: '전자공시 카테고리 ID (선택)',
+  })
+  categoryId: string | null;
+
+  @Column({
     type: 'jsonb',
     nullable: true,
     comment: '첨부파일 목록 (AWS S3 URLs)',
@@ -44,6 +51,11 @@ export class ElectronicDisclosure extends BaseEntity<ElectronicDisclosure> {
     { cascade: true },
   )
   translations: ElectronicDisclosureTranslation[];
+
+  // TypeORM 조인 시 임시로 담기 위한 필드 (DB 컬럼이 아님)
+  category?: {
+    name: string;
+  };
 
   /**
    * 엔티티를 DTO로 변환한다

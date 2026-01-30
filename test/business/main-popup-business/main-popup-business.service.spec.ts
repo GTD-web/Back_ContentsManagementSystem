@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { MainPopupBusinessService } from '@business/main-popup-business/main-popup-business.service';
 import { MainPopupContextService } from '@context/main-popup-context/main-popup-context.service';
 import { CategoryService } from '@domain/common/category/category.service';
@@ -41,6 +42,13 @@ describe('MainPopupBusinessService', () => {
     getFileUrl: jest.fn(),
   };
 
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,6 +60,10 @@ describe('MainPopupBusinessService', () => {
         {
           provide: CategoryService,
           useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
         {
           provide: STORAGE_SERVICE,
@@ -109,6 +121,10 @@ describe('MainPopupBusinessService', () => {
         id: popupId,
         isPublic: true,
         translations: [],
+        categoryId: 'category-1',
+        category: {
+          name: '공지사항',
+        },
       } as Partial<MainPopup> as MainPopup;
 
       mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
@@ -122,7 +138,9 @@ describe('MainPopupBusinessService', () => {
       expect(
         mainPopupContextService.메인_팝업_상세를_조회한다,
       ).toHaveBeenCalledWith(popupId);
-      expect(result).toEqual(mockPopup);
+      expect(result).toHaveProperty('categoryId', 'category-1');
+      expect(result).toHaveProperty('categoryName', '공지사항');
+      expect(result).not.toHaveProperty('category');
     });
   });
 
@@ -185,11 +203,13 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
 
       const mockPopup = {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         translations: [],
       } as Partial<MainPopup> as MainPopup;
 
@@ -200,12 +220,15 @@ describe('MainPopupBusinessService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
+        undefined,
       );
 
       // Then
       expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
         undefined,
       );
@@ -223,6 +246,7 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const createdBy = 'user-1';
+      const categoryId = 'category-1';
       const files = [
         {
           originalname: 'popup.jpg',
@@ -245,6 +269,7 @@ describe('MainPopupBusinessService', () => {
         id: 'popup-1',
         isPublic: true,
         order: 0,
+        categoryId,
         attachments: [
           {
             fileName: 'popup.jpg',
@@ -263,6 +288,7 @@ describe('MainPopupBusinessService', () => {
       // When
       const result = await service.메인_팝업을_생성한다(
         translations,
+        categoryId,
         createdBy,
         files,
       );
@@ -274,6 +300,7 @@ describe('MainPopupBusinessService', () => {
       );
       expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
         translations,
+        categoryId,
         createdBy,
         [
           {
@@ -283,6 +310,48 @@ describe('MainPopupBusinessService', () => {
             mimeType: 'image/jpeg',
           },
         ],
+      );
+      expect(result).toEqual(mockPopup);
+    });
+
+    it('카테고리와 함께 메인 팝업을 생성해야 한다', async () => {
+      // Given
+      const translations = [
+        {
+          languageId: 'lang-ko',
+          title: '메인 팝업 제목',
+          description: '메인 팝업 설명',
+        },
+      ];
+      const createdBy = 'user-1';
+      const categoryId = 'category-1';
+
+      const mockPopup = {
+        id: 'popup-1',
+        isPublic: true,
+        order: 0,
+        categoryId,
+        translations: [],
+      } as Partial<MainPopup> as MainPopup;
+
+      mockMainPopupContextService.메인_팝업을_생성한다.mockResolvedValue(
+        mockPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_생성한다(
+        translations,
+        categoryId,
+        createdBy,
+        undefined,
+      );
+
+      // Then
+      expect(mainPopupContextService.메인_팝업을_생성한다).toHaveBeenCalledWith(
+        translations,
+        categoryId,
+        createdBy,
+        undefined,
       );
       expect(result).toEqual(mockPopup);
     });
@@ -300,10 +369,12 @@ describe('MainPopupBusinessService', () => {
         },
       ];
       const updatedBy = 'user-1';
+      const categoryId = 'category-1';
 
       const existingPopup = {
         id: popupId,
         isPublic: true,
+        categoryId,
         attachments: [],
       } as Partial<MainPopup> as MainPopup;
 
@@ -325,7 +396,9 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        categoryId,
         updatedBy,
+        undefined,
       );
 
       // Then
@@ -338,6 +411,7 @@ describe('MainPopupBusinessService', () => {
         popupId,
         {
           translations,
+          categoryId,
           updatedBy,
         },
       );
@@ -400,7 +474,6 @@ describe('MainPopupBusinessService', () => {
       mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
         existingPopup,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(uploadedFiles);
       mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
         updatedPopup,
@@ -413,14 +486,14 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        'category-1',
         updatedBy,
         newFiles,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-popup.jpg',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         newFiles,
         'main-popups',
@@ -429,14 +502,12 @@ describe('MainPopupBusinessService', () => {
         mainPopupContextService.메인_팝업_파일을_수정한다,
       ).toHaveBeenCalledWith(
         popupId,
-        [
-          {
+        expect.arrayContaining([
+          expect.objectContaining({
             fileName: 'new-popup.jpg',
-            fileUrl: 'https://s3.aws.com/new-popup.jpg',
-            fileSize: 2048000,
-            mimeType: 'image/jpeg',
-          },
-        ],
+            deletedAt: null,
+          }),
+        ]),
         updatedBy,
       );
       expect(result).toEqual(updatedPopup);
@@ -474,7 +545,6 @@ describe('MainPopupBusinessService', () => {
       mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
         existingPopup,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
         updatedPopup,
       );
@@ -486,17 +556,82 @@ describe('MainPopupBusinessService', () => {
       const result = await service.메인_팝업을_수정한다(
         popupId,
         translations,
+        'category-1',
         updatedBy,
+        undefined,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-popup.jpg',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
       expect(
         mainPopupContextService.메인_팝업_파일을_수정한다,
-      ).toHaveBeenCalledWith(popupId, [], updatedBy);
+      ).toHaveBeenCalledWith(
+        popupId,
+        expect.arrayContaining([
+          expect.objectContaining({
+            fileName: 'old-popup.jpg',
+            deletedAt: expect.any(Date),
+          }),
+        ]),
+        updatedBy,
+      );
+      expect(result).toEqual(updatedPopup);
+    });
+
+    it('카테고리와 함께 메인 팝업을 수정해야 한다', async () => {
+      // Given
+      const popupId = 'popup-1';
+      const translations = [
+        {
+          languageId: 'lang-ko',
+          title: '수정된 제목',
+        },
+      ];
+      const updatedBy = 'user-1';
+      const categoryId = 'category-1';
+
+      const existingPopup = {
+        id: popupId,
+        isPublic: true,
+        categoryId,
+        attachments: [],
+      } as Partial<MainPopup> as MainPopup;
+
+      const updatedPopup = {
+        ...existingPopup,
+        categoryId,
+      } as MainPopup;
+
+      mockMainPopupContextService.메인_팝업_상세를_조회한다.mockResolvedValue(
+        existingPopup,
+      );
+      mockMainPopupContextService.메인_팝업_파일을_수정한다.mockResolvedValue(
+        existingPopup,
+      );
+      mockMainPopupContextService.메인_팝업을_수정한다.mockResolvedValue(
+        updatedPopup,
+      );
+
+      // When
+      const result = await service.메인_팝업을_수정한다(
+        popupId,
+        translations,
+        categoryId,
+        updatedBy,
+        undefined,
+      );
+
+      // Then
+      expect(mainPopupContextService.메인_팝업을_수정한다).toHaveBeenCalledWith(
+        popupId,
+        {
+          translations,
+          categoryId,
+          updatedBy,
+        },
+      );
       expect(result).toEqual(updatedPopup);
     });
   });
@@ -551,6 +686,9 @@ describe('MainPopupBusinessService', () => {
               description: '설명 1',
             },
           ],
+          category: {
+            name: '공지사항',
+          },
         } as any as MainPopup,
         {
           id: 'popup-2',
@@ -565,6 +703,9 @@ describe('MainPopupBusinessService', () => {
               description: 'Description 2',
             },
           ],
+          category: {
+            name: '이벤트',
+          },
         } as any as MainPopup,
       ];
 
@@ -581,12 +722,28 @@ describe('MainPopupBusinessService', () => {
       );
 
       // When
-      const result = await service.메인_팝업_목록을_조회한다(true, 'order', 1, 10);
+      const result = await service.메인_팝업_목록을_조회한다(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(
         mainPopupContextService.메인_팝업_목록을_조회한다,
-      ).toHaveBeenCalledWith(true, 'order', 1, 10, undefined, undefined);
+      ).toHaveBeenCalledWith(
+        true,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
       expect(result.total).toBe(2);
       expect(result.items).toHaveLength(2);
       expect(result.items[0]).toMatchObject({
@@ -595,6 +752,7 @@ describe('MainPopupBusinessService', () => {
         order: 0,
         title: '메인 팝업 1',
         description: '설명 1',
+        categoryName: '공지사항',
       });
     });
 
@@ -630,7 +788,15 @@ describe('MainPopupBusinessService', () => {
       );
 
       // When
-      const result = await service.메인_팝업_목록을_조회한다();
+      const result = await service.메인_팝업_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
 
       // Then
       expect(result.items[0].title).toBe('Main Popup');
@@ -662,12 +828,84 @@ describe('MainPopupBusinessService', () => {
         10,
         startDate,
         endDate,
+        undefined,
       );
 
       // Then
       expect(
         mainPopupContextService.메인_팝업_목록을_조회한다,
-      ).toHaveBeenCalledWith(true, 'createdAt', 1, 10, startDate, endDate);
+      ).toHaveBeenCalledWith(
+        true,
+        'createdAt',
+        1,
+        10,
+        startDate,
+        endDate,
+        undefined,
+      );
+    });
+
+    it('카테고리 ID로 필터링하여 조회해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const mockPopups = [
+        {
+          id: 'popup-1',
+          isPublic: true,
+          order: 0,
+          categoryId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          translations: [
+            {
+              language: { code: 'ko' },
+              title: '카테고리1-팝업',
+              description: '설명',
+            },
+          ],
+          category: {
+            name: '공지사항',
+          },
+        } as any as MainPopup,
+      ];
+
+      const contextResult = {
+        items: mockPopups,
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      };
+
+      mockMainPopupContextService.메인_팝업_목록을_조회한다.mockResolvedValue(
+        contextResult,
+      );
+
+      // When
+      const result = await service.메인_팝업_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(
+        mainPopupContextService.메인_팝업_목록을_조회한다,
+      ).toHaveBeenCalledWith(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+      expect(result.total).toBe(1);
+      expect(result.items[0].categoryName).toBe('공지사항');
     });
   });
 

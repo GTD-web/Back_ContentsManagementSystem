@@ -88,6 +88,9 @@ describe('BrochureBusinessService', () => {
                 language: { code: 'ko' },
               },
             ],
+            category: {
+              name: '회사 소개',
+            },
           } as any,
         ],
         total: 1,
@@ -105,19 +108,26 @@ describe('BrochureBusinessService', () => {
         'order',
         1,
         10,
+        undefined,
+        undefined,
+        undefined,
       );
 
       // Then
-      expect(brochureContextService.브로슈어_목록을_조회한다).toHaveBeenCalledWith(
+      expect(
+        brochureContextService.브로슈어_목록을_조회한다,
+      ).toHaveBeenCalledWith(
         true,
         'order',
         1,
         10,
         undefined,
         undefined,
+        undefined,
       );
       expect(result.items).toHaveLength(1);
       expect(result.items[0].title).toBe('회사 소개');
+      expect(result.items[0].categoryName).toBe('회사 소개');
     });
 
     it('날짜 필터를 포함하여 조회해야 한다', async () => {
@@ -144,16 +154,20 @@ describe('BrochureBusinessService', () => {
         10,
         startDate,
         endDate,
+        undefined,
       );
 
       // Then
-      expect(brochureContextService.브로슈어_목록을_조회한다).toHaveBeenCalledWith(
+      expect(
+        brochureContextService.브로슈어_목록을_조회한다,
+      ).toHaveBeenCalledWith(
         undefined,
         'order',
         1,
         10,
         startDate,
         endDate,
+        undefined,
       );
       expect(result.total).toBe(0);
     });
@@ -177,10 +191,71 @@ describe('BrochureBusinessService', () => {
         'order',
         1,
         10,
+        undefined,
+        undefined,
+        undefined,
       );
 
       // Then
       expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
+    });
+
+    it('카테고리 ID로 필터링하여 조회해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const mockResult = {
+        items: [
+          {
+            id: 'brochure-1',
+            isPublic: true,
+            order: 0,
+            categoryId,
+            translations: [
+              {
+                title: '브로슈어 자료',
+                description: '설명',
+                language: { code: 'ko' },
+              },
+            ],
+            category: {
+              name: '회사 소개',
+            },
+          } as any,
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      };
+
+      mockBrochureContextService.브로슈어_목록을_조회한다.mockResolvedValue(
+        mockResult,
+      );
+
+      // When
+      const result = await service.브로슈어_목록을_조회한다(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+
+      // Then
+      expect(
+        brochureContextService.브로슈어_목록을_조회한다,
+      ).toHaveBeenCalledWith(
+        undefined,
+        'order',
+        1,
+        10,
+        undefined,
+        undefined,
+        categoryId,
+      );
+      expect(result.total).toBe(1);
+      expect(result.items[0].categoryName).toBe('회사 소개');
     });
   });
 
@@ -205,12 +280,9 @@ describe('BrochureBusinessService', () => {
       const result = await service.브로슈어_전체_목록을_조회한다();
 
       // Then
-      expect(brochureContextService.브로슈어_목록을_조회한다).toHaveBeenCalledWith(
-        undefined,
-        'order',
-        1,
-        1000,
-      );
+      expect(
+        brochureContextService.브로슈어_목록을_조회한다,
+      ).toHaveBeenCalledWith(undefined, 'order', 1, 1000);
       expect(result).toEqual(mockResult.items);
     });
   });
@@ -248,8 +320,10 @@ describe('BrochureBusinessService', () => {
       );
 
       // When
+      const categoryId = 'category-1';
       const result = await service.브로슈어를_생성한다(
         translations,
+        categoryId,
         createdBy,
         undefined,
       );
@@ -257,12 +331,13 @@ describe('BrochureBusinessService', () => {
       // Then
       expect(brochureContextService.브로슈어를_생성한다).toHaveBeenCalledWith({
         translations,
+        categoryId,
         attachments: undefined,
         createdBy,
       });
-      expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledWith(
-        'brochure-1',
-      );
+      expect(
+        brochureContextService.브로슈어_상세_조회한다,
+      ).toHaveBeenCalledWith('brochure-1');
       expect(result).toEqual(mockDetailResult);
     });
 
@@ -316,8 +391,10 @@ describe('BrochureBusinessService', () => {
       );
 
       // When
+      const categoryId = 'category-1';
       const result = await service.브로슈어를_생성한다(
         translations,
+        categoryId,
         createdBy,
         files,
       );
@@ -330,6 +407,7 @@ describe('BrochureBusinessService', () => {
       expect(brochureContextService.브로슈어를_생성한다).toHaveBeenCalledWith(
         expect.objectContaining({
           translations,
+          categoryId,
           attachments: expect.arrayContaining([
             expect.objectContaining({
               fileName: 'brochure.pdf',
@@ -375,13 +453,19 @@ describe('BrochureBusinessService', () => {
         updatedBy: 'user-1',
       };
 
-      const mockResult = {
+      const mockDetailResult = {
         id: brochureId,
         isPublic: false,
-      } as any as Brochure;
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
+        translations: [],
+      } as any;
 
       mockBrochureContextService.브로슈어_공개를_수정한다.mockResolvedValue(
-        mockResult,
+        undefined,
+      );
+      mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(
+        mockDetailResult,
       );
 
       // When
@@ -391,11 +475,13 @@ describe('BrochureBusinessService', () => {
       );
 
       // Then
-      expect(brochureContextService.브로슈어_공개를_수정한다).toHaveBeenCalledWith(
-        brochureId,
-        updateDto,
-      );
-      expect(result).toEqual(mockResult);
+      expect(
+        brochureContextService.브로슈어_공개를_수정한다,
+      ).toHaveBeenCalledWith(brochureId, updateDto);
+      expect(
+        brochureContextService.브로슈어_상세_조회한다,
+      ).toHaveBeenCalledWith(brochureId);
+      expect(result).toEqual(mockDetailResult);
     });
   });
 
@@ -406,6 +492,8 @@ describe('BrochureBusinessService', () => {
       const mockBrochure = {
         id: brochureId,
         isPublic: true,
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
         translations: [],
       } as any;
 
@@ -417,10 +505,12 @@ describe('BrochureBusinessService', () => {
       const result = await service.브로슈어_상세_조회한다(brochureId);
 
       // Then
-      expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledWith(
-        brochureId,
-      );
+      expect(
+        brochureContextService.브로슈어_상세_조회한다,
+      ).toHaveBeenCalledWith(brochureId);
       expect(result).toEqual(mockBrochure);
+      expect(result.categoryId).toBe('category-1');
+      expect(result.categoryName).toBe('테스트 카테고리');
     });
   });
 
@@ -450,9 +540,29 @@ describe('BrochureBusinessService', () => {
         { id: 'brochure-2' } as Brochure,
       ];
 
+      const mockDetailResults = [
+        {
+          id: 'brochure-1',
+          categoryId: 'category-1',
+          categoryName: '테스트 카테고리',
+          isPublic: true,
+          translations: [],
+        },
+        {
+          id: 'brochure-2',
+          categoryId: 'category-1',
+          categoryName: '테스트 카테고리',
+          isPublic: true,
+          translations: [],
+        },
+      ];
+
       mockBrochureContextService.기본_브로슈어들을_생성한다.mockResolvedValue(
         mockBrochures,
       );
+      mockBrochureContextService.브로슈어_상세_조회한다
+        .mockResolvedValueOnce(mockDetailResults[0])
+        .mockResolvedValueOnce(mockDetailResults[1]);
 
       // When
       const result = await service.기본_브로슈어들을_생성한다(createdBy);
@@ -461,7 +571,10 @@ describe('BrochureBusinessService', () => {
       expect(
         brochureContextService.기본_브로슈어들을_생성한다,
       ).toHaveBeenCalledWith(createdBy);
-      expect(result).toEqual(mockBrochures);
+      expect(
+        brochureContextService.브로슈어_상세_조회한다,
+      ).toHaveBeenCalledTimes(2);
+      expect(result).toEqual(mockDetailResults);
     });
   });
 
@@ -521,6 +634,128 @@ describe('BrochureBusinessService', () => {
     });
   });
 
+  describe('브로슈어_카테고리_엔티티를_수정한다', () => {
+    it('카테고리 서비스를 호출하여 카테고리를 수정해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const updateDto = {
+        name: '수정된 카테고리',
+        description: '수정된 설명',
+        isActive: false,
+        updatedBy: 'user-1',
+      };
+
+      const mockUpdatedCategory = {
+        id: categoryId,
+        ...updateDto,
+        entityType: 'brochure',
+      } as Category;
+
+      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(
+        mockUpdatedCategory,
+      );
+
+      // When
+      const result = await service.브로슈어_카테고리_엔티티를_수정한다(
+        categoryId,
+        updateDto,
+      );
+
+      // Then
+      expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(
+        categoryId,
+        updateDto,
+      );
+      expect(result).toEqual(mockUpdatedCategory);
+    });
+
+    it('일부 필드만 수정할 수 있어야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const updateDto = {
+        name: '수정된 이름만',
+        updatedBy: 'user-1',
+      };
+
+      const mockUpdatedCategory = {
+        id: categoryId,
+        ...updateDto,
+        entityType: 'brochure',
+      } as Category;
+
+      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(
+        mockUpdatedCategory,
+      );
+
+      // When
+      const result = await service.브로슈어_카테고리_엔티티를_수정한다(
+        categoryId,
+        updateDto,
+      );
+
+      // Then
+      expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(
+        categoryId,
+        updateDto,
+      );
+      expect(result).toEqual(mockUpdatedCategory);
+    });
+  });
+
+  describe('브로슈어_카테고리_오더를_변경한다', () => {
+    it('카테고리 서비스를 호출하여 정렬 순서를 변경해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      const updateDto = {
+        order: 10,
+        updatedBy: 'user-1',
+      };
+
+      const mockUpdatedCategory = {
+        id: categoryId,
+        order: 10,
+        entityType: 'brochure',
+      } as Category;
+
+      mockCategoryService.카테고리를_업데이트한다.mockResolvedValue(
+        mockUpdatedCategory,
+      );
+
+      // When
+      const result = await service.브로슈어_카테고리_오더를_변경한다(
+        categoryId,
+        updateDto,
+      );
+
+      // Then
+      expect(categoryService.카테고리를_업데이트한다).toHaveBeenCalledWith(
+        categoryId,
+        {
+          order: updateDto.order,
+          updatedBy: updateDto.updatedBy,
+        },
+      );
+      expect(result).toEqual(mockUpdatedCategory);
+    });
+  });
+
+  describe('브로슈어_카테고리를_삭제한다', () => {
+    it('카테고리 서비스를 호출하여 카테고리를 삭제해야 한다', async () => {
+      // Given
+      const categoryId = 'category-1';
+      mockCategoryService.카테고리를_삭제한다.mockResolvedValue(true);
+
+      // When
+      const result = await service.브로슈어_카테고리를_삭제한다(categoryId);
+
+      // Then
+      expect(categoryService.카테고리를_삭제한다).toHaveBeenCalledWith(
+        categoryId,
+      );
+      expect(result).toBe(true);
+    });
+  });
+
   describe('브로슈어_오더를_일괄_수정한다', () => {
     it('컨텍스트 서비스를 호출하여 순서를 일괄 수정해야 한다', async () => {
       // Given
@@ -556,6 +791,7 @@ describe('BrochureBusinessService', () => {
     it('파일을 포함하여 브로슈어를 수정해야 한다', async () => {
       // Given
       const brochureId = 'brochure-1';
+      const categoryId = 'category-1';
       const translations = [
         {
           languageId: 'language-1',
@@ -605,9 +841,11 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(
         mockExistingBrochure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
+        {} as any,
+      );
+      mockBrochureContextService.브로슈어를_수정한다.mockResolvedValue(
         {} as any,
       );
       mockBrochureContextService.브로슈어_번역들을_수정한다.mockResolvedValue(
@@ -619,28 +857,38 @@ describe('BrochureBusinessService', () => {
         brochureId,
         translations,
         updatedBy,
+        categoryId,
         files,
       );
 
       // Then
-      expect(brochureContextService.브로슈어_상세_조회한다).toHaveBeenCalledWith(
-        brochureId,
-      );
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-brochure.pdf',
-      ]);
+      expect(
+        brochureContextService.브로슈어_상세_조회한다,
+      ).toHaveBeenCalledWith(brochureId);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).toHaveBeenCalledWith(
         files,
         'brochures',
       );
-      expect(brochureContextService.브로슈어_파일을_수정한다).toHaveBeenCalledWith(
+      expect(
+        brochureContextService.브로슈어_파일을_수정한다,
+      ).toHaveBeenCalledWith(
         brochureId,
         expect.objectContaining({
           attachments: expect.arrayContaining([
             expect.objectContaining({
               fileName: 'new-brochure.pdf',
+              deletedAt: null,
             }),
           ]),
+          updatedBy,
+        }),
+      );
+      expect(brochureContextService.브로슈어를_수정한다).toHaveBeenCalledWith(
+        brochureId,
+        expect.objectContaining({
+          categoryId,
           updatedBy,
         }),
       );
@@ -656,6 +904,7 @@ describe('BrochureBusinessService', () => {
     it('파일 없이 브로슈어를 수정해야 한다', async () => {
       // Given
       const brochureId = 'brochure-1';
+      const categoryId = 'category-1';
       const translations = [
         {
           languageId: 'language-1',
@@ -687,8 +936,10 @@ describe('BrochureBusinessService', () => {
       mockBrochureContextService.브로슈어_상세_조회한다.mockResolvedValue(
         mockExistingBrochure,
       );
-      mockStorageService.deleteFiles.mockResolvedValue(undefined);
       mockBrochureContextService.브로슈어_파일을_수정한다.mockResolvedValue(
+        {} as any,
+      );
+      mockBrochureContextService.브로슈어를_수정한다.mockResolvedValue(
         {} as any,
       );
       mockBrochureContextService.브로슈어_번역들을_수정한다.mockResolvedValue(
@@ -700,18 +951,32 @@ describe('BrochureBusinessService', () => {
         brochureId,
         translations,
         updatedBy,
+        categoryId,
         undefined,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        'https://s3.aws.com/old-brochure.pdf',
-      ]);
+      // 소프트 삭제로 변경되어 deleteFiles 호출되지 않음
+      expect(storageService.deleteFiles).not.toHaveBeenCalled();
       expect(storageService.uploadFiles).not.toHaveBeenCalled();
-      expect(brochureContextService.브로슈어_파일을_수정한다).toHaveBeenCalledWith(
+      expect(
+        brochureContextService.브로슈어_파일을_수정한다,
+      ).toHaveBeenCalledWith(
         brochureId,
         expect.objectContaining({
-          attachments: [],
+          attachments: expect.arrayContaining([
+            expect.objectContaining({
+              fileName: 'old-brochure.pdf',
+              deletedAt: expect.any(Date),
+            }),
+          ]),
+          updatedBy,
+        }),
+      );
+      expect(brochureContextService.브로슈어를_수정한다).toHaveBeenCalledWith(
+        brochureId,
+        expect.objectContaining({
+          categoryId,
           updatedBy,
         }),
       );

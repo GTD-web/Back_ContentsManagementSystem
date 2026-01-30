@@ -87,8 +87,23 @@ export class CreateBrochureDto {
   @Type(() => CreateBrochureTranslationDto)
   translations: CreateBrochureTranslationDto[];
 
-  @ApiProperty({ description: '생성자 ID', required: false })
+  @ApiProperty({
+    description: '카테고리 ID (UUID) - 선택사항',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    required: false,
+  })
   @IsOptional()
   @IsString()
-  createdBy?: string;
+  categoryId?: string | null;
+
+  @ApiProperty({
+    description: '첨부파일 목록',
+    type: [BrochureAttachmentDto],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BrochureAttachmentDto)
+  attachments?: BrochureAttachmentDto[];
 }

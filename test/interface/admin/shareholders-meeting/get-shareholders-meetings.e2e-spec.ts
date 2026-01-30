@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
   let meetingIds: string[] = [];
 
   beforeAll(async () => {
@@ -29,12 +30,27 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
 
     languageId = koreanLanguage.id;
 
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 주주총회 여러 개 생성
     for (let i = 1; i <= 5; i++) {
       const response = await testSuite
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [
             {
               languageId,
@@ -67,6 +83,82 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       });
       expect(response.body.items.length).toBeGreaterThan(0);
       expect(response.body.total).toBeGreaterThanOrEqual(5);
+    });
+
+    it('categoryId 필터가 동작해야 한다', async () => {
+      // Given - 두 번째 카테고리 생성
+      const secondCategoryResponse = await testSuite
+        .request()
+        .post('/api/admin/shareholders-meetings/categories')
+        .send({
+          name: '임시 주주총회',
+          description: '임시 주주총회',
+          isActive: true,
+          order: 1,
+        })
+        .expect(201);
+      const secondCategoryId = secondCategoryResponse.body.id;
+
+      // 두 번째 카테고리의 주주총회 2개 생성
+      await testSuite
+        .request()
+        .post('/api/admin/shareholders-meetings')
+        .send({
+          categoryId: secondCategoryId,
+          translations: [
+            {
+              languageId,
+              title: '제1회 임시 주주총회',
+              description: '긴급 임시 주주총회',
+            },
+          ],
+          location: '서울',
+          meetingDate: '2024-06-15T10:00:00.000Z',
+        });
+
+      await testSuite
+        .request()
+        .post('/api/admin/shareholders-meetings')
+        .send({
+          categoryId: secondCategoryId,
+          translations: [
+            {
+              languageId,
+              title: '제2회 임시 주주총회',
+              description: '긴급 임시 주주총회',
+            },
+          ],
+          location: '부산',
+          meetingDate: '2024-09-15T10:00:00.000Z',
+        });
+
+      // When - 첫 번째 카테고리(정기 주주총회)로 필터링
+      const response1 = await testSuite
+        .request()
+        .get(`/api/admin/shareholders-meetings?categoryId=${categoryId}`)
+        .expect(200);
+
+      // Then - 첫 번째 카테고리의 주주총회만 5개
+      expect(response1.body.total).toBe(5);
+      expect(
+        response1.body.items.every(
+          (item: any) => item.categoryId === categoryId,
+        ),
+      ).toBe(true);
+
+      // When - 두 번째 카테고리(임시 주주총회)로 필터링
+      const response2 = await testSuite
+        .request()
+        .get(`/api/admin/shareholders-meetings?categoryId=${secondCategoryId}`)
+        .expect(200);
+
+      // Then - 두 번째 카테고리의 주주총회만 2개
+      expect(response2.body.total).toBe(2);
+      expect(
+        response2.body.items.every(
+          (item: any) => item.categoryId === secondCategoryId,
+        ),
+      ).toBe(true);
     });
 
     it('각 주주총회 항목이 필수 필드를 포함해야 한다', async () => {
@@ -161,7 +253,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       if (response.body.items.length >= 2) {
         const firstDate = new Date(response.body.items[0].meetingDate);
         const secondDate = new Date(response.body.items[1].meetingDate);
-        expect(firstDate.getTime()).toBeGreaterThanOrEqual(secondDate.getTime());
+        expect(firstDate.getTime()).toBeGreaterThanOrEqual(
+          secondDate.getTime(),
+        );
       }
     });
 
@@ -178,7 +272,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       if (response.body.items.length >= 2) {
         const firstDate = new Date(response.body.items[0].createdAt);
         const secondDate = new Date(response.body.items[1].createdAt);
-        expect(firstDate.getTime()).toBeGreaterThanOrEqual(secondDate.getTime());
+        expect(firstDate.getTime()).toBeGreaterThanOrEqual(
+          secondDate.getTime(),
+        );
       }
     });
   });
@@ -198,7 +294,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         .expect(200);
 
       // Then
-      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(true);
+      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(
+        true,
+      );
     });
 
     it('비공개 주주총회만 필터링할 수 있어야 한다', async () => {
@@ -271,7 +369,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         order: expect.any(Number),
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
+        categoryId: expect.any(String),
       });
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('상세 조회 시 번역 정보가 포함되어야 한다', async () => {
@@ -305,6 +405,7 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [
             {
               languageId,
@@ -360,7 +461,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       // When & Then
       await testSuite
         .request()
-        .get('/api/admin/shareholders-meetings/00000000-0000-0000-0000-000000000001')
+        .get(
+          '/api/admin/shareholders-meetings/00000000-0000-0000-0000-000000000001',
+        )
         .expect(404);
     });
 
@@ -380,7 +483,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       // When
       const response = await testSuite
         .request()
-        .get('/api/admin/shareholders-meetings?page=1&limit=3&orderBy=meetingDate')
+        .get(
+          '/api/admin/shareholders-meetings?page=1&limit=3&orderBy=meetingDate',
+        )
         .expect(200);
 
       // Then
@@ -392,7 +497,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
       if (response.body.items.length >= 2) {
         const firstDate = new Date(response.body.items[0].meetingDate);
         const secondDate = new Date(response.body.items[1].meetingDate);
-        expect(firstDate.getTime()).toBeGreaterThanOrEqual(secondDate.getTime());
+        expect(firstDate.getTime()).toBeGreaterThanOrEqual(
+          secondDate.getTime(),
+        );
       }
     });
 
@@ -414,7 +521,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         .expect(200);
 
       // Then
-      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(true);
+      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(
+        true,
+      );
       expect(response.body.page).toBe(1);
       expect(response.body.limit).toBe(2);
     });
@@ -429,7 +538,9 @@ describe('GET /api/admin/shareholders-meetings (주주총회 조회)', () => {
         .expect(200);
 
       // Then
-      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(true);
+      expect(response.body.items.every((m: any) => m.isPublic === true)).toBe(
+        true,
+      );
       expect(response.body.page).toBe(1);
       expect(response.body.limit).toBe(3);
       expect(response.body.items.length).toBeLessThanOrEqual(3);

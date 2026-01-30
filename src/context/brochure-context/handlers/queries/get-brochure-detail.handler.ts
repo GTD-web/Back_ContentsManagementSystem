@@ -26,6 +26,19 @@ export class GetBrochureDetailHandler implements IQueryHandler<GetBrochureDetail
 
     const brochure = await this.brochureService.ID로_브로슈어를_조회한다(id);
 
-    return brochure as BrochureDetailResult;
+    // deletedAt이 null인 파일만 반환
+    if (brochure.attachments) {
+      brochure.attachments = brochure.attachments.filter(
+        (att: any) => !att.deletedAt,
+      );
+    }
+
+    // category 객체는 제거하고 categoryName만 반환
+    const { category, ...brochureData } = brochure;
+
+    return {
+      ...brochureData,
+      categoryName: category?.name,
+    } as BrochureDetailResult;
   }
 }

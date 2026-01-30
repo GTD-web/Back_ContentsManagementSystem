@@ -16,6 +16,7 @@ export class GetNewsListQuery {
     public readonly limit: number = 10,
     public readonly startDate?: Date,
     public readonly endDate?: Date,
+    public readonly categoryId?: string,
   ) {}
 }
 
@@ -32,19 +33,37 @@ export class GetNewsListHandler implements IQueryHandler<GetNewsListQuery> {
   ) {}
 
   async execute(query: GetNewsListQuery): Promise<NewsListResult> {
-    const { isPublic, orderBy, page, limit, startDate, endDate } = query;
+    const { isPublic, orderBy, page, limit, startDate, endDate, categoryId } =
+      query;
 
     this.logger.debug(
-      `뉴스 목록 조회 - 공개: ${isPublic}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
+      `뉴스 목록 조회 - 공개: ${isPublic}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}`,
     );
 
     const queryBuilder = this.newsRepository.createQueryBuilder('news');
+
+    // category 조인
+    queryBuilder.leftJoin(
+      'categories',
+      'category',
+      'news.categoryId = category.id',
+    );
+    queryBuilder.addSelect(['category.name']);
 
     let hasWhere = false;
 
     if (isPublic !== undefined) {
       queryBuilder.where('news.isPublic = :isPublic', { isPublic });
       hasWhere = true;
+    }
+
+    if (categoryId) {
+      if (hasWhere) {
+        queryBuilder.andWhere('news.categoryId = :categoryId', { categoryId });
+      } else {
+        queryBuilder.where('news.categoryId = :categoryId', { categoryId });
+        hasWhere = true;
+      }
     }
 
     if (startDate) {
@@ -75,7 +94,28 @@ export class GetNewsListHandler implements IQueryHandler<GetNewsListQuery> {
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
-    const [items, total] = await queryBuilder.getManyAndCount();
+    const rawAndEntities = await queryBuilder.getRawAndEntities();
+    const items = rawAndEntities.entities;
+    const raw = rawAndEntities.raw;
+    const total = await queryBuilder.skip(0).take(undefined).getCount(); // Count separately
+
+    // raw 데이터에서 category name을 엔티티에 매핑
+    items.forEach((news, index) => {
+      if (raw[index] && raw[index].category_name) {
+        news.category = {
+          name: raw[index].category_name,
+        };
+      }
+    });
+
+    // deletedAt이 null인 파일만 필터링
+    items.forEach((item) => {
+      if (item.attachments) {
+        item.attachments = item.attachments.filter(
+          (att: any) => !att.deletedAt,
+        );
+      }
+    });
 
     return { items, total, page, limit };
   }

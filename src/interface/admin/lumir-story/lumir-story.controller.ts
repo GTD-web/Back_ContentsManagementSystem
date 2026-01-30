@@ -11,6 +11,7 @@ import {
   Patch,
   UseInterceptors,
   UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -100,6 +101,12 @@ export class LumirStoryController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 루미르스토리_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -107,6 +114,7 @@ export class LumirStoryController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<LumirStoryListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -121,6 +129,7 @@ export class LumirStoryController {
         limitNum,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
+        categoryId || undefined,
       );
 
     return result;
@@ -176,11 +185,12 @@ export class LumirStoryController {
   @ApiOperation({
     summary: '루미르스토리 생성',
     description:
-      '새로운 루미르스토리를 생성합니다. 제목, 내용과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 루미르스토리를 생성합니다. 제목, 내용과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목과 내용은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목, 내용, 카테고리 ID는 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 첨부파일과 함께 생성\n' +
       '- `files`를 전송하지 않으면: 파일 없이 생성',
@@ -196,6 +206,11 @@ export class LumirStoryController {
           type: 'string',
           description: '내용',
           example: '루미르는 끊임없이 혁신하고 있습니다...',
+        },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (UUID) - 선택사항',
+          example: '123e4567-e89b-12d3-a456-426614174000',
         },
         imageUrl: {
           type: 'string',
@@ -225,7 +240,7 @@ export class LumirStoryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<LumirStoryResponseDto> {
-    const { title, content, imageUrl } = body;
+    const { title, content, categoryId, imageUrl } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -235,13 +250,20 @@ export class LumirStoryController {
       throw new BadRequestException('content 필드는 필수입니다.');
     }
 
-    return await this.lumirStoryBusinessService.루미르스토리를_생성한다(
-      title,
-      content,
-      imageUrl || null,
-      user.id,
-      files,
-    );
+    const lumirStory =
+      await this.lumirStoryBusinessService.루미르스토리를_생성한다(
+        title,
+        content,
+        categoryId || null,
+        imageUrl || null,
+        user.id,
+        files,
+      );
+
+    return {
+      ...lumirStory,
+      categoryName: lumirStory.category?.name,
+    };
   }
 
   /**
@@ -317,7 +339,12 @@ export class LumirStoryController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '루미르스토리 수정',
-    description: '루미르스토리의 정보 및 파일을 수정합니다.',
+    description:
+      '루미르스토리의 정보 및 파일을 수정합니다.\n\n' +
+      '**필수 필드:**\n' +
+      '- `title`: 제목\n' +
+      '- `content`: 내용\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
@@ -338,6 +365,11 @@ export class LumirStoryController {
           type: 'string',
           description: '내용',
           example: '루미르는 끊임없이 혁신하고 있습니다...',
+        },
+        categoryId: {
+          type: 'string',
+          description: '카테고리 ID (UUID) - 선택사항',
+          example: '123e4567-e89b-12d3-a456-426614174000',
         },
         imageUrl: {
           type: 'string',
@@ -369,7 +401,7 @@ export class LumirStoryController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<any> {
-    const { title, content, imageUrl } = body;
+    const { title, content, categoryId, imageUrl } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -383,8 +415,9 @@ export class LumirStoryController {
       id,
       title,
       content,
-      imageUrl || null,
       user.id,
+      categoryId || null,
+      imageUrl || null,
       files,
     );
   }
@@ -444,7 +477,9 @@ export class LumirStoryController {
   @Patch(':id/public')
   @ApiOperation({
     summary: '루미르스토리 공개 상태 수정',
-    description: '루미르스토리의 공개 상태를 수정합니다.',
+    description:
+      '루미르스토리의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -456,13 +491,20 @@ export class LumirStoryController {
     description: '루미르스토리를 찾을 수 없음',
   })
   async 루미르스토리_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryPublicDto,
   ): Promise<LumirStoryResponseDto> {
-    return await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(
-      id,
-      updateDto,
-    );
+    const lumirStory =
+      await this.lumirStoryBusinessService.루미르스토리_공개를_수정한다(id, {
+        ...updateDto,
+        updatedBy: user.id,
+      });
+
+    return {
+      ...lumirStory,
+      categoryName: lumirStory.category?.name,
+    };
   }
 
   /**
@@ -495,7 +537,9 @@ export class LumirStoryController {
   @Post('categories')
   @ApiOperation({
     summary: '루미르스토리 카테고리 생성',
-    description: '새로운 루미르스토리 카테고리를 생성합니다.',
+    description:
+      '새로운 루미르스토리 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -503,10 +547,14 @@ export class LumirStoryController {
     type: LumirStoryCategoryResponseDto,
   })
   async 루미르스토리_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateLumirStoryCategoryDto,
   ): Promise<LumirStoryCategoryResponseDto> {
     return await this.lumirStoryBusinessService.루미르스토리_카테고리를_생성한다(
-      createDto,
+      {
+        ...createDto,
+        createdBy: user.id,
+      },
     );
   }
 
@@ -516,7 +564,9 @@ export class LumirStoryController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '루미르스토리 카테고리 수정',
-    description: '루미르스토리의 카테고리를 수정합니다.',
+    description:
+      '루미르스토리의 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -527,12 +577,16 @@ export class LumirStoryController {
     description: '루미르스토리를 찾을 수 없음',
   })
   async 루미르스토리_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryCategoryDto,
   ): Promise<LumirStoryCategoryResponseDto> {
     return await this.lumirStoryBusinessService.루미르스토리_카테고리를_수정한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
   }
 
@@ -542,7 +596,9 @@ export class LumirStoryController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '루미르스토리 카테고리 오더 변경',
-    description: '루미르스토리 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '루미르스토리 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -553,13 +609,17 @@ export class LumirStoryController {
     description: '카테고리를 찾을 수 없음',
   })
   async 루미르스토리_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateLumirStoryCategoryOrderDto,
   ): Promise<LumirStoryCategoryResponseDto> {
     const result =
       await this.lumirStoryBusinessService.루미르스토리_카테고리_오더를_변경한다(
         id,
-        updateDto,
+        {
+          ...updateDto,
+          updatedBy: user.id,
+        },
       );
     return result;
   }

@@ -101,6 +101,12 @@ export class NewsController {
     type: String,
     example: '2024-12-31',
   })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
   async 뉴스_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -108,6 +114,7 @@ export class NewsController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
   ): Promise<NewsListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -121,6 +128,7 @@ export class NewsController {
       limitNum,
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
+      categoryId || undefined,
     );
 
     return result;
@@ -176,12 +184,14 @@ export class NewsController {
   @ApiOperation({
     summary: '뉴스 생성',
     description:
-      '새로운 뉴스를 생성합니다. 제목, 설명, URL과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태',
+      '새로운 뉴스를 생성합니다. 제목, 설명, URL과 함께 생성됩니다. 기본값: 비공개, DRAFT 상태\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목과 카테고리는 필수입니다.\n\n' +
       '**뉴스 URL**: 외부 링크나 뉴스 기사 원본 URL을 입력할 수 있습니다.\n\n' +
+      '**카테고리**: categoryId를 통해 뉴스 카테고리를 지정해야 합니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 첨부파일과 함께 생성\n' +
       '- `files`를 전송하지 않으면: 파일 없이 생성',
@@ -202,6 +212,12 @@ export class NewsController {
           type: 'string',
           description: '외부 링크 또는 뉴스 기사 URL (선택)',
           example: 'https://news.example.com/lumir-new-product',
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '뉴스 카테고리 ID (선택)',
+          example: '123e4567-e89b-12d3-a456-426614174000',
         },
         files: {
           type: 'array',
@@ -226,7 +242,7 @@ export class NewsController {
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<NewsResponseDto> {
-    const { title, description, url } = body;
+    const { title, description, url, categoryId } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -236,6 +252,7 @@ export class NewsController {
       title,
       description || null,
       url || null,
+      categoryId || null,
       user.id,
       files,
     );
@@ -311,12 +328,15 @@ export class NewsController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '뉴스 수정',
-    description: '뉴스의 정보 및 파일을 수정합니다.',
+    description:
+      '뉴스의 정보 및 파일을 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: 제목은 필수입니다.\n\n' +
+      '⚠️ **중요**: 제목과 카테고리는 필수입니다.\n\n' +
       '**뉴스 URL**: 외부 링크나 뉴스 기사 원본 URL을 수정할 수 있습니다.\n\n' +
+      '**카테고리**: categoryId를 통해 뉴스 카테고리를 변경해야 합니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 파일 전부 삭제 → 새 파일들로 교체\n' +
       '- `files`를 전송하지 않으면: 기존 파일 전부 삭제 (파일 없음)\n' +
@@ -338,6 +358,12 @@ export class NewsController {
           type: 'string',
           description: '외부 링크 또는 뉴스 기사 URL (선택)',
           example: 'https://news.example.com/lumir-new-product',
+        },
+        categoryId: {
+          type: 'string',
+          format: 'uuid',
+          description: '뉴스 카테고리 ID (선택)',
+          example: '123e4567-e89b-12d3-a456-426614174000',
         },
         files: {
           type: 'array',
@@ -371,7 +397,7 @@ export class NewsController {
       throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
     }
 
-    const { title, description, url } = body;
+    const { title, description, url, categoryId } = body;
 
     if (!title) {
       throw new BadRequestException('title 필드는 필수입니다.');
@@ -382,6 +408,7 @@ export class NewsController {
       title,
       description || null,
       url || null,
+      categoryId || null,
       user.id,
       files,
     );
@@ -449,7 +476,9 @@ export class NewsController {
   @StrictBooleanFields('isPublic')
   @ApiOperation({
     summary: '뉴스 공개 상태 수정',
-    description: '뉴스의 공개 상태를 수정합니다.',
+    description:
+      '뉴스의 공개 상태를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -461,6 +490,7 @@ export class NewsController {
     description: '뉴스를 찾을 수 없음',
   })
   async 뉴스_공개를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsPublicDto,
   ): Promise<NewsResponseDto> {
@@ -471,7 +501,10 @@ export class NewsController {
       throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
     }
 
-    return await this.newsBusinessService.뉴스_공개를_수정한다(id, updateDto);
+    return await this.newsBusinessService.뉴스_공개를_수정한다(id, {
+      ...updateDto,
+      updatedBy: user.id,
+    });
   }
 
   /**
@@ -510,7 +543,9 @@ export class NewsController {
   @Post('categories')
   @ApiOperation({
     summary: '뉴스 카테고리 생성',
-    description: '새로운 뉴스 카테고리를 생성합니다.',
+    description:
+      '새로운 뉴스 카테고리를 생성합니다.\n\n' +
+      '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -518,9 +553,13 @@ export class NewsController {
     type: NewsCategoryResponseDto,
   })
   async 뉴스_카테고리를_생성한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateNewsCategoryDto,
   ): Promise<NewsCategoryResponseDto> {
-    return await this.newsBusinessService.뉴스_카테고리를_생성한다(createDto);
+    return await this.newsBusinessService.뉴스_카테고리를_생성한다({
+      ...createDto,
+      createdBy: user.id,
+    });
   }
 
   /**
@@ -529,7 +568,9 @@ export class NewsController {
   @Patch('categories/:id')
   @ApiOperation({
     summary: '뉴스 카테고리 수정',
-    description: '뉴스의 카테고리를 수정합니다.',
+    description:
+      '뉴스의 카테고리를 수정합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -540,6 +581,7 @@ export class NewsController {
     description: '뉴스를 찾을 수 없음',
   })
   async 뉴스_카테고리를_수정한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsCategoryDto,
   ): Promise<NewsCategoryResponseDto> {
@@ -550,10 +592,10 @@ export class NewsController {
       throw new BadRequestException('id는 유효한 UUID 형식이어야 합니다.');
     }
 
-    return await this.newsBusinessService.뉴스_카테고리를_수정한다(
-      id,
-      updateDto,
-    );
+    return await this.newsBusinessService.뉴스_카테고리를_수정한다(id, {
+      ...updateDto,
+      updatedBy: user.id,
+    });
   }
 
   /**
@@ -562,7 +604,9 @@ export class NewsController {
   @Patch('categories/:id/order')
   @ApiOperation({
     summary: '뉴스 카테고리 오더 변경',
-    description: '뉴스 카테고리의 정렬 순서를 변경합니다.',
+    description:
+      '뉴스 카테고리의 정렬 순서를 변경합니다.\n\n' +
+      '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -573,6 +617,7 @@ export class NewsController {
     description: '카테고리를 찾을 수 없음',
   })
   async 뉴스_카테고리_오더를_변경한다(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() updateDto: UpdateNewsCategoryOrderDto,
   ): Promise<NewsCategoryResponseDto> {
@@ -585,7 +630,10 @@ export class NewsController {
 
     const result = await this.newsBusinessService.뉴스_카테고리_오더를_변경한다(
       id,
-      updateDto,
+      {
+        ...updateDto,
+        updatedBy: user.id,
+      },
     );
     return result;
   }

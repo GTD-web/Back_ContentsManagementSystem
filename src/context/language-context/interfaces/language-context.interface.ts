@@ -1,13 +1,12 @@
 import { Language } from '@domain/common/language/language.entity';
-import { LanguageCode } from '@domain/common/language/language-code.types';
 
 /**
  * 언어 생성 DTO
  */
 export interface CreateLanguageDto {
-  code: LanguageCode;
+  code: string;
   name: string;
-  isActive: boolean;
+  isActive?: boolean;
   createdBy?: string;
 }
 
@@ -25,10 +24,15 @@ export interface UpdateLanguageDto {
  */
 export interface CreateLanguageResult {
   id: string;
-  code: LanguageCode;
+  code: string;
   name: string;
   isActive: boolean;
+  isDefault: boolean;
   createdAt: Date;
+  updatedAt: Date;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt?: Date;
 }
 
 /**

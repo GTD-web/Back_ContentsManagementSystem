@@ -37,6 +37,16 @@ export class UpdateBrochureTranslationDto {
  * 브로슈어 수정 DTO
  */
 export class UpdateBrochureDto {
+  @ApiProperty({
+    description: '카테고리 ID (UUID) - 선택사항',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string | null;
+
   @ApiProperty({ description: '공개 여부', example: true, required: false })
   @IsOptional()
   @IsBoolean()
@@ -68,11 +78,6 @@ export class UpdateBrochureDto {
   @ValidateNested({ each: true })
   @Type(() => UpdateBrochureTranslationDto)
   translations?: UpdateBrochureTranslationDto[];
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -82,11 +87,6 @@ export class UpdateBrochurePublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
   @IsBoolean()
   isPublic: boolean;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -96,11 +96,6 @@ export class UpdateBrochureOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -115,11 +110,6 @@ export class UpdateBrochureFileDto {
   @ValidateNested({ each: true })
   @Type(() => BrochureAttachmentDto)
   attachments: BrochureAttachmentDto[];
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }
 
 /**
@@ -148,26 +138,29 @@ export class CreateBrochureCategoryDto {
   @IsOptional()
   @IsNumber()
   order?: number;
-
-  @ApiProperty({ description: '생성자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  createdBy?: string;
 }
 
 /**
- * 브로슈어 카테고리 수정 DTO
+ * 브로슈어 카테고리 엔티티 수정 DTO
  */
-export class UpdateBrochureCategoryDto {
-  @ApiProperty({ description: '카테고리 ID 목록', type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  categoryIds: string[];
-
-  @ApiProperty({ description: '수정자 ID', required: false })
+export class UpdateBrochureCategoryEntityDto {
+  @ApiProperty({ description: '카테고리 이름', example: '제품 소개', required: false })
   @IsOptional()
   @IsString()
-  updatedBy?: string;
+  name?: string;
+
+  @ApiProperty({
+    description: '카테고리 설명',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty({ description: '활성화 여부', required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 /**
@@ -177,9 +170,4 @@ export class UpdateBrochureCategoryOrderDto {
   @ApiProperty({ description: '정렬 순서', example: 1 })
   @IsNumber()
   order: number;
-
-  @ApiProperty({ description: '수정자 ID', required: false })
-  @IsOptional()
-  @IsString()
-  updatedBy?: string;
 }

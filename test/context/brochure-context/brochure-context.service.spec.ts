@@ -52,6 +52,7 @@ describe('BrochureContextService', () => {
             description: '루미르 회사 소개서',
           },
         ],
+        categoryId: 'category-1',
         createdBy: 'user-1',
       };
 
@@ -86,6 +87,7 @@ describe('BrochureContextService', () => {
             title: '회사 소개 브로슈어',
           },
         ],
+        categoryId: 'category-1',
         attachments: [
           {
             fileName: 'brochure.pdf',
@@ -120,6 +122,7 @@ describe('BrochureContextService', () => {
       // Given
       const brochureId = 'brochure-1';
       const updateDto = {
+        categoryId: 'category-1',
         isPublic: false,
         updatedBy: 'user-1',
       };
@@ -284,6 +287,9 @@ describe('BrochureContextService', () => {
             id: 'brochure-1',
             isPublic: true,
             order: 0,
+            category: {
+              name: '회사 소개',
+            },
           } as Brochure,
         ],
         total: 1,
@@ -344,6 +350,8 @@ describe('BrochureContextService', () => {
         id: brochureId,
         isPublic: true,
         order: 0,
+        categoryId: 'category-1',
+        categoryName: '테스트 카테고리',
         translations: [],
         attachments: null,
         createdAt: new Date(),
@@ -363,6 +371,8 @@ describe('BrochureContextService', () => {
         }),
       );
       expect(result).toEqual(mockBrochure);
+      expect(result.categoryId).toBe('category-1');
+      expect(result.categoryName).toBe('테스트 카테고리');
     });
   });
 

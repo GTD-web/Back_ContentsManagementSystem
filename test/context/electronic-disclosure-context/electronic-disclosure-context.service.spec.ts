@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { EventBus } from '@nestjs/cqrs';
 import { ElectronicDisclosureContextService } from '@context/electronic-disclosure-context/electronic-disclosure-context.service';
 import { ElectronicDisclosureService } from '@domain/core/electronic-disclosure/electronic-disclosure.service';
 import { LanguageService } from '@domain/common/language/language.service';
+import { CategoryService } from '@domain/common/category/category.service';
 import { ElectronicDisclosure } from '@domain/core/electronic-disclosure/electronic-disclosure.entity';
 import { ElectronicDisclosureTranslation } from '@domain/core/electronic-disclosure/electronic-disclosure-translation.entity';
 import { Language } from '@domain/common/language/language.entity';
@@ -30,6 +33,24 @@ describe('ElectronicDisclosureContextService', () => {
   const mockLanguageService = {
     ID로_언어를_조회한다: jest.fn(),
     모든_언어를_조회한다: jest.fn(),
+    기본_언어를_조회한다: jest.fn(),
+  };
+
+  const mockCategoryService = {
+    카테고리를_조회한다: jest.fn(),
+    엔티티_타입별_카테고리를_조회한다: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string, defaultValue?: any) => {
+      if (key === 'DEFAULT_LANGUAGE_CODE') return 'en';
+      return defaultValue;
+    }),
+  };
+
+  const mockEventBus = {
+    publish: jest.fn(),
+    publishAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -43,6 +64,18 @@ describe('ElectronicDisclosureContextService', () => {
         {
           provide: LanguageService,
           useValue: mockLanguageService,
+        },
+        {
+          provide: CategoryService,
+          useValue: mockCategoryService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
+        {
+          provide: EventBus,
+          useValue: mockEventBus,
         },
       ],
     }).compile();
@@ -262,7 +295,8 @@ describe('ElectronicDisclosureContextService', () => {
       );
 
       // When
-      const result = await service.전자공시를_생성한다(translations, createdBy, attachments);
+      const categoryId = 'category-1';
+      const result = await service.전자공시를_생성한다(translations, categoryId, createdBy, attachments);
 
       // Then
       expect(languageService.ID로_언어를_조회한다).toHaveBeenCalledWith('language-1');
@@ -271,6 +305,7 @@ describe('ElectronicDisclosureContextService', () => {
       expect(electronicDisclosureService.전자공시를_생성한다).toHaveBeenCalledWith({
         isPublic: true,
         order: 0,
+        categoryId,
         attachments,
         createdBy,
       });
@@ -299,10 +334,11 @@ describe('ElectronicDisclosureContextService', () => {
       mockLanguageService.ID로_언어를_조회한다.mockResolvedValue(mockLanguage);
 
       // When & Then
-      await expect(service.전자공시를_생성한다(translations)).rejects.toThrow(
+      const categoryId = 'category-1';
+      await expect(service.전자공시를_생성한다(translations, categoryId)).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.전자공시를_생성한다(translations)).rejects.toThrow(
+      await expect(service.전자공시를_생성한다(translations, categoryId)).rejects.toThrow(
         '중복된 언어 ID가 있습니다.',
       );
     });
@@ -362,7 +398,8 @@ describe('ElectronicDisclosureContextService', () => {
       );
 
       // When
-      await service.전자공시를_생성한다(translations);
+      const categoryId = 'category-1';
+      await service.전자공시를_생성한다(translations, categoryId);
 
       // Then
       // 첫 번째 호출: 수동 입력 번역 (isSynced: false)
@@ -544,6 +581,78 @@ describe('ElectronicDisclosureContextService', () => {
         updatedBy: 'user-1',
       });
     });
+
+    it('전자공시의 카테고리를 개별적으로 수정해야 한다', async () => {
+      // Given
+      const disclosure1Id = 'disclosure-1';
+      const disclosure2Id = 'disclosure-2';
+      const newCategoryId = 'category-2';
+
+      const data1 = {
+        categoryId: newCategoryId,
+        updatedBy: 'user-1',
+      };
+
+      const data2 = {
+        categoryId: 'category-3',
+        updatedBy: 'user-1',
+      };
+
+      const mockDisclosure1 = {
+        id: disclosure1Id,
+        isPublic: true,
+        categoryId: 'category-1',
+      } as any as ElectronicDisclosure;
+
+      const mockDisclosure2 = {
+        id: disclosure2Id,
+        isPublic: true,
+        categoryId: 'category-1',
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure1 = {
+        ...mockDisclosure1,
+        categoryId: newCategoryId,
+      } as any as ElectronicDisclosure;
+
+      const mockUpdatedDisclosure2 = {
+        ...mockDisclosure2,
+        categoryId: 'category-3',
+      } as any as ElectronicDisclosure;
+
+      mockElectronicDisclosureService.전자공시를_업데이트한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2);
+      mockElectronicDisclosureService.ID로_전자공시를_조회한다
+        .mockResolvedValueOnce(mockUpdatedDisclosure1)
+        .mockResolvedValueOnce(mockUpdatedDisclosure2);
+
+      // When
+      const result1 = await service.전자공시를_수정한다(disclosure1Id, data1);
+      const result2 = await service.전자공시를_수정한다(disclosure2Id, data2);
+
+      // Then
+      expect(electronicDisclosureService.전자공시를_업데이트한다).toHaveBeenNthCalledWith(
+        1,
+        disclosure1Id,
+        expect.objectContaining({
+          categoryId: newCategoryId,
+          updatedBy: 'user-1',
+        }),
+      );
+      expect(electronicDisclosureService.전자공시를_업데이트한다).toHaveBeenNthCalledWith(
+        2,
+        disclosure2Id,
+        expect.objectContaining({
+          categoryId: 'category-3',
+          updatedBy: 'user-1',
+        }),
+      );
+      expect(result1.categoryId).toBe(newCategoryId);
+      expect(result2.categoryId).toBe('category-3');
+      // 각 전자공시가 독립적인 categoryId를 가져야 함
+      expect(result1.categoryId).not.toBe(result2.categoryId);
+    });
   });
 
   describe('전자공시_오더를_일괄_수정한다', () => {
@@ -593,6 +702,9 @@ describe('ElectronicDisclosureContextService', () => {
               title: '전자공시 제목',
             },
           ],
+          category: {
+            name: '실적 공시',
+          },
         } as any,
       ];
 
@@ -654,6 +766,7 @@ describe('ElectronicDisclosureContextService', () => {
         id: `disclosure-${i}`,
         isPublic: true,
         translations: [{ language: { code: 'ko' }, title: `제목 ${i}` }],
+        category: { name: '실적 공시' },
       })) as any;
 
       mockElectronicDisclosureService.모든_전자공시를_조회한다.mockResolvedValue(

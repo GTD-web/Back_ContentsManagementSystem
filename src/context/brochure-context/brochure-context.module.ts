@@ -5,6 +5,7 @@ import { Brochure } from '@domain/core/brochure/brochure.entity';
 import { BrochureTranslation } from '@domain/core/brochure/brochure-translation.entity';
 import { BrochureModule } from '@domain/core/brochure/brochure.module';
 import { LanguageModule } from '@domain/common/language/language.module';
+import { CategoryModule } from '@domain/common/category/category.module';
 import { BrochureContextService } from './brochure-context.service';
 import {
   CreateBrochureHandler,
@@ -18,6 +19,7 @@ import {
   InitializeDefaultBrochuresHandler,
   UpdateBrochureTranslationsHandler,
   SyncBrochureTranslationsHandler,
+  BrochureTranslationUpdatedHandler,
 } from './handlers';
 import { BrochureSyncScheduler } from './brochure-sync.scheduler';
 
@@ -32,6 +34,7 @@ import { BrochureSyncScheduler } from './brochure-sync.scheduler';
     TypeOrmModule.forFeature([Brochure, BrochureTranslation]),
     BrochureModule,
     LanguageModule,
+    CategoryModule,
   ],
   providers: [
     BrochureContextService,
@@ -46,8 +49,9 @@ import { BrochureSyncScheduler } from './brochure-sync.scheduler';
     InitializeDefaultBrochuresHandler,
     UpdateBrochureTranslationsHandler,
     SyncBrochureTranslationsHandler,
+    BrochureTranslationUpdatedHandler,
     BrochureSyncScheduler,
   ],
-  exports: [BrochureContextService],
+  exports: [BrochureContextService, SyncBrochureTranslationsHandler],
 })
 export class BrochureContextModule {}

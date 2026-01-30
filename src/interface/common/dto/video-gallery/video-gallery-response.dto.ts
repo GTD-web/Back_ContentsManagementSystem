@@ -33,6 +33,36 @@ export class VideoSourceDto {
 }
 
 /**
+ * 비디오갤러리 카테고리 응답 DTO
+ */
+export class VideoGalleryCategoryResponseDto {
+  @ApiProperty({ description: '카테고리 ID' })
+  id: string;
+
+  @ApiProperty({ description: '카테고리 이름', example: '제품 소개' })
+  name: string;
+
+  @ApiProperty({
+    description: '카테고리 설명',
+    example: '제품 소개 영상',
+    required: false,
+  })
+  description?: string | null;
+
+  @ApiProperty({ description: '활성화 여부', example: true })
+  isActive: boolean;
+
+  @ApiProperty({ description: '정렬 순서', example: 0 })
+  order: number;
+
+  @ApiProperty({ description: '생성일시' })
+  createdAt: Date;
+
+  @ApiProperty({ description: '수정일시' })
+  updatedAt: Date;
+}
+
+/**
  * 비디오갤러리 응답 DTO
  */
 export class VideoGalleryResponseDto {
@@ -49,6 +79,8 @@ export class VideoGalleryResponseDto {
     example: '루미르 회사 소개 동영상입니다.',
   })
   description: string | null;
+
+  @ApiProperty({ description: '카테고리 ID' })  categoryId: string | null;
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
@@ -75,6 +107,9 @@ export class VideoGalleryResponseDto {
 
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '제품 소개', required: false })
+  categoryName?: string;
 }
 
 /**
@@ -93,6 +128,19 @@ export class VideoGalleryListItemDto {
     nullable: true,
   })
   description: string | null;
+
+  @ApiProperty({ description: '카테고리 ID', nullable: true })  categoryId: string | null;
+
+  @ApiProperty({ description: '카테고리 이름', example: '제품 소개', required: false })
+  categoryName: string;
+
+  @ApiProperty({ 
+    description: '카테고리 정보',
+    type: VideoGalleryCategoryResponseDto,
+    nullable: true,
+    required: false,
+  })
+  category: VideoGalleryCategoryResponseDto | null;
 
   @ApiProperty({ description: '공개 여부', example: true })
   isPublic: boolean;
@@ -125,36 +173,6 @@ export class VideoGalleryListResponseDto {
 
   @ApiProperty({ description: '총 페이지 수', example: 2 })
   totalPages: number;
-}
-
-/**
- * 비디오갤러리 카테고리 응답 DTO
- */
-export class VideoGalleryCategoryResponseDto {
-  @ApiProperty({ description: '카테고리 ID' })
-  id: string;
-
-  @ApiProperty({ description: '카테고리 이름', example: '제품 소개' })
-  name: string;
-
-  @ApiProperty({
-    description: '카테고리 설명',
-    example: '제품 소개 영상',
-    required: false,
-  })
-  description?: string | null;
-
-  @ApiProperty({ description: '활성화 여부', example: true })
-  isActive: boolean;
-
-  @ApiProperty({ description: '정렬 순서', example: 0 })
-  order: number;
-
-  @ApiProperty({ description: '생성일시' })
-  createdAt: Date;
-
-  @ApiProperty({ description: '수정일시' })
-  updatedAt: Date;
 }
 
 /**

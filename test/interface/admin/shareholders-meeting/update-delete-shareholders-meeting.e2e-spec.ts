@@ -3,6 +3,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 describe('주주총회 수정/삭제 (E2E)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
   let meetingId: string;
 
   beforeAll(async () => {
@@ -28,11 +29,26 @@ describe('주주총회 수정/삭제 (E2E)', () => {
 
     languageId = koreanLanguage.id;
 
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
+
     // 테스트용 주주총회 생성
     const meetingResponse = await testSuite
       .request()
       .post('/api/admin/shareholders-meetings')
       .send({
+        categoryId,
         translations: [
           {
             languageId,
@@ -52,6 +68,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/shareholders-meetings/${meetingId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -88,6 +105,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/shareholders-meetings/${meetingId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -111,6 +129,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       const response = await testSuite
         .request()
         .put(`/api/admin/shareholders-meetings/${meetingId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -156,6 +175,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       await testSuite
         .request()
         .put('/api/admin/shareholders-meetings/00000000-0000-0000-0000-000000000001')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -173,6 +193,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       await testSuite
         .request()
         .put(`/api/admin/shareholders-meetings/${meetingId}`)
+        .field('categoryId', categoryId)
         .expect(400);
     });
   });
@@ -188,6 +209,8 @@ describe('주주총회 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(false);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('주주총회를 공개로 변경할 수 있어야 한다', async () => {
@@ -206,6 +229,8 @@ describe('주주총회 수정/삭제 (E2E)', () => {
 
       // Then
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBeDefined();
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('존재하지 않는 주주총회의 공개 상태를 변경하면 404 에러가 발생해야 한다', async () => {
@@ -302,6 +327,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
       await testSuite
         .request()
         .put(`/api/admin/shareholders-meetings/${meetingId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -328,6 +354,7 @@ describe('주주총회 수정/삭제 (E2E)', () => {
 describe('주주총회 일괄 순서 변경 (E2E)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
   let meetingIds: string[] = [];
 
   beforeAll(async () => {
@@ -354,12 +381,27 @@ describe('주주총회 일괄 순서 변경 (E2E)', () => {
 
     languageId = koreanLanguage.id;
 
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
+
     // 여러 주주총회 생성
     for (let i = 1; i <= 3; i++) {
       const response = await testSuite
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [
             {
               languageId,
@@ -472,6 +514,7 @@ describe('주주총회 일괄 순서 변경 (E2E)', () => {
 describe('주주총회 필터링 (E2E)', () => {
   const testSuite = new BaseE2ETest();
   let languageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -495,6 +538,20 @@ describe('주주총회 필터링 (E2E)', () => {
     );
 
     languageId = koreanLanguage.id;
+
+    // 주주총회 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/shareholders-meetings/categories')
+      .send({
+        name: '정기 주주총회',
+        description: '연례 정기 주주총회',
+        isActive: true,
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('GET /api/admin/shareholders-meetings - 필터링', () => {
@@ -504,6 +561,7 @@ describe('주주총회 필터링 (E2E)', () => {
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [{ languageId, title: '공개 주주총회' }],
           location: '서울',
           meetingDate: '2024-03-15T10:00:00.000Z',
@@ -515,6 +573,7 @@ describe('주주총회 필터링 (E2E)', () => {
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [{ languageId, title: '비공개 주주총회' }],
           location: '서울',
           meetingDate: '2024-06-20T10:00:00.000Z',
@@ -552,6 +611,7 @@ describe('주주총회 필터링 (E2E)', () => {
         .request()
         .post('/api/admin/shareholders-meetings')
         .send({
+          categoryId,
           translations: [{ languageId, title: '비공개 주주총회' }],
           location: '서울',
           meetingDate: '2024-03-15T10:00:00.000Z',
@@ -582,6 +642,7 @@ describe('주주총회 필터링 (E2E)', () => {
       // Given - 15개 주주총회 생성
       for (let i = 1; i <= 15; i++) {
         await testSuite.request().post('/api/admin/shareholders-meetings').send({
+          categoryId,
           translations: [{ languageId, title: `주주총회 ${i}` }],
           location: '서울',
           meetingDate: `2024-03-${String(i).padStart(2, '0')}T10:00:00.000Z`,
@@ -614,6 +675,7 @@ describe('주주총회 필터링 (E2E)', () => {
       // Given - 여러 주주총회 생성
       for (let i = 1; i <= 3; i++) {
         await testSuite.request().post('/api/admin/shareholders-meetings').send({
+          categoryId,
           translations: [{ languageId, title: `주주총회 ${i}` }],
           location: '서울',
           meetingDate: `2024-0${i + 2}-15T10:00:00.000Z`,
@@ -639,6 +701,7 @@ describe('주주총회 필터링 (E2E)', () => {
       // Given - 여러 주주총회 생성
       for (let i = 1; i <= 3; i++) {
         await testSuite.request().post('/api/admin/shareholders-meetings').send({
+          categoryId,
           translations: [{ languageId, title: `주주총회 ${i}` }],
           location: '서울',
           meetingDate: '2024-03-15T10:00:00.000Z',

@@ -5,6 +5,7 @@ describe('전자공시 CRUD API', () => {
   let koreanLanguageId: string;
   let englishLanguageId: string;
   let japaneseLanguageId: string;
+  let categoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -31,6 +32,19 @@ describe('전자공시 CRUD API', () => {
     expect(koreanLanguageId).toBeDefined();
     expect(englishLanguageId).toBeDefined();
     expect(japaneseLanguageId).toBeDefined();
+
+    // 전자공시 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/electronic-disclosures/categories')
+      .send({
+        name: '테스트 카테고리',
+        description: 'E2E 테스트용 카테고리',
+        order: 0,
+      })
+      .expect(201);
+
+    categoryId = categoryResponse.body.id;
   });
 
   describe('POST /api/admin/electronic-disclosures (전자공시 생성)', () => {
@@ -39,6 +53,7 @@ describe('전자공시 CRUD API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -79,6 +94,7 @@ describe('전자공시 CRUD API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -135,6 +151,7 @@ describe('전자공시 CRUD API', () => {
       const response = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -170,6 +187,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -184,6 +202,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -198,6 +217,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -229,6 +249,7 @@ describe('전자공시 CRUD API', () => {
         await testSuite
           .request()
           .post('/api/admin/electronic-disclosures')
+          .field('categoryId', categoryId)
           .field(
             'translations',
             JSON.stringify([
@@ -269,6 +290,7 @@ describe('전자공시 CRUD API', () => {
       const disclosure1 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -290,6 +312,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -329,6 +352,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -352,6 +376,8 @@ describe('전자공시 CRUD API', () => {
       // Then
       expect(response.body.id).toBe(disclosureId);
       expect(response.body.isPublic).toBe(true);
+      expect(response.body.categoryId).toBe(categoryId);
+      expect(response.body.categoryName).toBe('테스트 카테고리');
       expect(response.body.translations).toHaveLength(4);
 
       const koreanTranslation = response.body.translations.find(
@@ -384,6 +410,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -408,6 +435,7 @@ describe('전자공시 CRUD API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -446,6 +474,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -463,6 +492,7 @@ describe('전자공시 CRUD API', () => {
       const updateResponse = await testSuite
         .request()
         .put(`/api/admin/electronic-disclosures/${disclosureId}`)
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -487,6 +517,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .put('/api/admin/electronic-disclosures/00000000-0000-0000-0000-000000000001')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -506,6 +537,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -544,6 +576,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -582,6 +615,7 @@ describe('전자공시 CRUD API', () => {
       const disclosure1 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -596,6 +630,7 @@ describe('전자공시 CRUD API', () => {
       const disclosure2 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -610,6 +645,7 @@ describe('전자공시 CRUD API', () => {
       const disclosure3 = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -667,6 +703,7 @@ describe('전자공시 CRUD API', () => {
       const createResponse = await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -711,6 +748,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -725,6 +763,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -739,6 +778,7 @@ describe('전자공시 CRUD API', () => {
       await testSuite
         .request()
         .post('/api/admin/electronic-disclosures')
+        .field('categoryId', categoryId)
         .field(
           'translations',
           JSON.stringify([
@@ -759,6 +799,124 @@ describe('전자공시 CRUD API', () => {
       // Then
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body).toHaveLength(3);
+    });
+  });
+
+  describe('카테고리 개별 업데이트 상세 테스트', () => {
+    it('전자공시를 수정할 때 해당 전자공시의 categoryId만 변경되어야 한다', async () => {
+      // Given - 카테고리 2개 생성
+      const category1Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures/categories')
+        .send({
+          name: '재무제표',
+          description: '재무제표 카테고리',
+        })
+        .expect(201);
+
+      const category2Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures/categories')
+        .send({
+          name: '사업보고서',
+          description: '사업보고서 카테고리',
+        })
+        .expect(201);
+
+      const category1Id = category1Response.body.id;
+      const category2Id = category2Response.body.id;
+
+      // 전자공시 3개 생성 (모두 category1)
+      const disclosure1Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field('categoryId', category1Id)
+        .field(
+          'translations',
+          JSON.stringify([{ languageId: koreanLanguageId, title: '전자공시 A' }]),
+        )
+        .expect(201);
+
+      const disclosure2Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field('categoryId', category1Id)
+        .field(
+          'translations',
+          JSON.stringify([{ languageId: koreanLanguageId, title: '전자공시 B' }]),
+        )
+        .expect(201);
+
+      const disclosure3Response = await testSuite
+        .request()
+        .post('/api/admin/electronic-disclosures')
+        .field('categoryId', category1Id)
+        .field(
+          'translations',
+          JSON.stringify([{ languageId: koreanLanguageId, title: '전자공시 C' }]),
+        )
+        .expect(201);
+
+      const disclosure1Id = disclosure1Response.body.id;
+      const disclosure2Id = disclosure2Response.body.id;
+      const disclosure3Id = disclosure3Response.body.id;
+
+      // 모두 category1을 가지고 있어야 함
+      expect(disclosure1Response.body.categoryId).toBe(category1Id);
+      expect(disclosure2Response.body.categoryId).toBe(category1Id);
+      expect(disclosure3Response.body.categoryId).toBe(category1Id);
+
+      console.log(`\n생성 직후 상태:`);
+      console.log(`- 전자공시 A: ${disclosure1Id} -> ${category1Id}`);
+      console.log(`- 전자공시 B: ${disclosure2Id} -> ${category1Id}`);
+      console.log(`- 전자공시 C: ${disclosure3Id} -> ${category1Id}`);
+
+      // When - 전자공시 B의 카테고리만 category2로 변경
+      const updateResponse = await testSuite
+        .request()
+        .put(`/api/admin/electronic-disclosures/${disclosure2Id}`)
+        .field('categoryId', category2Id)
+        .field(
+          'translations',
+          JSON.stringify([{ languageId: koreanLanguageId, title: '전자공시 B' }]),
+        )
+        .expect(200);
+
+      console.log(`\n전자공시 B 수정 후:`);
+      console.log(`- 응답 categoryId: ${updateResponse.body.categoryId}`);
+
+      // Then - 각 전자공시를 개별 조회하여 확인
+      const getDisclosure1 = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures/${disclosure1Id}`)
+        .expect(200);
+
+      const getDisclosure2 = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures/${disclosure2Id}`)
+        .expect(200);
+
+      const getDisclosure3 = await testSuite
+        .request()
+        .get(`/api/admin/electronic-disclosures/${disclosure3Id}`)
+        .expect(200);
+
+      console.log(`\n개별 조회 결과:`);
+      console.log(`- 전자공시 A categoryId: ${getDisclosure1.body.categoryId} (예상: ${category1Id})`);
+      console.log(`- 전자공시 B categoryId: ${getDisclosure2.body.categoryId} (예상: ${category2Id})`);
+      console.log(`- 전자공시 C categoryId: ${getDisclosure3.body.categoryId} (예상: ${category1Id})`);
+
+      // 핵심 검증: 전자공시 A와 C는 여전히 category1, B만 category2
+      expect(getDisclosure1.body.categoryId).toBe(category1Id);
+      expect(getDisclosure2.body.categoryId).toBe(category2Id);
+      expect(getDisclosure3.body.categoryId).toBe(category1Id);
+
+      // 전자공시 B만 다른 카테고리를 가져야 함
+      expect(getDisclosure2.body.categoryId).not.toBe(getDisclosure1.body.categoryId);
+      expect(getDisclosure2.body.categoryId).not.toBe(getDisclosure3.body.categoryId);
+      expect(getDisclosure1.body.categoryId).toBe(getDisclosure3.body.categoryId);
+
+      console.log(`\n✅ 테스트 성공: 각 전자공시가 개별적인 카테고리를 가지고 있습니다!`);
     });
   });
 });

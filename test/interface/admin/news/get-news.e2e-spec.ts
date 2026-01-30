@@ -2,6 +2,7 @@ import { BaseE2ETest } from '../../../base-e2e.spec';
 
 describe('GET /api/admin/news (뉴스 목록 조회)', () => {
   const testSuite = new BaseE2ETest();
+  let testCategoryId: string;
 
   beforeAll(async () => {
     await testSuite.beforeAll();
@@ -13,12 +14,23 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
 
   beforeEach(async () => {
     await testSuite.cleanupSpecificTables(['news']);
+
+    // 테스트용 뉴스 카테고리 생성
+    const categoryResponse = await testSuite
+      .request()
+      .post('/api/admin/news/categories')
+      .send({
+        name: '테스트 뉴스 카테고리',
+        description: '테스트용 뉴스 카테고리',
+        order: 0,
+      });
+    testCategoryId = categoryResponse.body.id;
   });
 
   describe('성공 케이스', () => {
     it('모든 뉴스를 조회해야 한다', async () => {
       // Given - 3개의 뉴스 생성
-      const newsList = [];
+      const newsList: any[] = [];
       for (let i = 1; i <= 3; i++) {
         const response = await testSuite
           .request()
@@ -26,9 +38,10 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
           .field('title', `뉴스${i}`)
           .field('description', `설명${i}`)
           .field('url', `https://news.example.com/${i}`)
+          .field('categoryId', testCategoryId)
           .expect(201);
 
-        newsList.push(response.body);
+        newsList.push(response.body as any);
       }
 
       // When
@@ -51,6 +64,84 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
       });
     });
 
+    it('categoryId 필터가 동작해야 한다', async () => {
+      // Given - 두 번째 카테고리 생성
+      const secondCategoryResponse = await testSuite
+        .request()
+        .post('/api/admin/news/categories')
+        .send({
+          name: '두 번째 카테고리',
+          description: '필터링 테스트용 두 번째 카테고리',
+          order: 1,
+        });
+      const secondCategoryId = secondCategoryResponse.body.id;
+
+      // 첫 번째 카테고리의 뉴스 2개 생성
+      await testSuite
+        .request()
+        .post('/api/admin/news')
+        .field('title', '카테고리1-뉴스1')
+        .field('categoryId', testCategoryId)
+        .expect(201);
+
+      await testSuite
+        .request()
+        .post('/api/admin/news')
+        .field('title', '카테고리1-뉴스2')
+        .field('categoryId', testCategoryId)
+        .expect(201);
+
+      // 두 번째 카테고리의 뉴스 3개 생성
+      await testSuite
+        .request()
+        .post('/api/admin/news')
+        .field('title', '카테고리2-뉴스1')
+        .field('categoryId', secondCategoryId)
+        .expect(201);
+
+      await testSuite
+        .request()
+        .post('/api/admin/news')
+        .field('title', '카테고리2-뉴스2')
+        .field('categoryId', secondCategoryId)
+        .expect(201);
+
+      await testSuite
+        .request()
+        .post('/api/admin/news')
+        .field('title', '카테고리2-뉴스3')
+        .field('categoryId', secondCategoryId)
+        .expect(201);
+
+      // When - 첫 번째 카테고리로 필터링
+      const response1 = await testSuite
+        .request()
+        .get(`/api/admin/news?categoryId=${testCategoryId}`)
+        .expect(200);
+
+      // Then - 첫 번째 카테고리의 뉴스만 2개
+      expect(response1.body.total).toBe(2);
+      expect(
+        response1.body.items.every(
+          (item: any) => item.categoryId === testCategoryId,
+        ),
+      ).toBe(true);
+
+      // When - 두 번째 카테고리로 필터링
+      const response2 = await testSuite
+        .request()
+        .get(`/api/admin/news?categoryId=${secondCategoryId}`)
+        .expect(200);
+
+      // Then - 두 번째 카테고리의 뉴스만 3개
+      expect(response2.body.total).toBe(3);
+      expect(
+        response2.body.items.every(
+          (item: any) => item.categoryId === secondCategoryId,
+        ),
+      ).toBe(true);
+    });
+
     it('공개 여부로 필터링하여 조회해야 한다', async () => {
       // Given - 공개/비공개 뉴스 생성
       await testSuite
@@ -58,6 +149,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .post('/api/admin/news')
         .field('title', '공개 뉴스')
         .field('description', '공개된 뉴스입니다')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const privateNews = await testSuite
@@ -65,6 +157,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .post('/api/admin/news')
         .field('title', '비공개 뉴스')
         .field('description', '비공개된 뉴스입니다')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // 비공개로 변경
@@ -102,6 +195,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
           .request()
           .post('/api/admin/news')
           .field('title', `뉴스${i}`)
+          .field('categoryId', testCategoryId)
           .expect(201);
       }
 
@@ -142,6 +236,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .request()
         .post('/api/admin/news')
         .field('title', '첫 번째 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -150,6 +245,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .request()
         .post('/api/admin/news')
         .field('title', '두 번째 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // When - order로 정렬 (오름차순)
@@ -161,7 +257,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
       // Then - order 값 확인 (ASC 정렬이므로 작은 값이 먼저)
       expect(orderResponse.body.items.length).toBe(2);
       const orders = orderResponse.body.items.map((item: any) => item.order);
-      
+
       // 두 뉴스가 서로 다른 order를 가져야 함
       expect(news1.body.order).not.toBe(news2.body.order);
       // ASC 정렬이므로 첫 번째 항목의 order가 더 작거나 같아야 함
@@ -175,8 +271,8 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
 
       // Then - 최근 생성된 항목이 먼저 나와야 함
       expect(createdAtResponse.body.items.length).toBe(2);
-      const dates = createdAtResponse.body.items.map(
-        (item: any) => new Date(item.createdAt).getTime(),
+      const dates = createdAtResponse.body.items.map((item: any) =>
+        new Date(item.createdAt).getTime(),
       );
       expect(dates[0]).toBeGreaterThanOrEqual(dates[1]);
     });
@@ -187,6 +283,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .request()
         .post('/api/admin/news')
         .field('title', '첫 번째 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -195,6 +292,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .request()
         .post('/api/admin/news')
         .field('title', '두 번째 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // When - 오늘 날짜로 필터링
@@ -221,6 +319,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
           .request()
           .post('/api/admin/news')
           .field('title', `뉴스${i}`)
+          .field('categoryId', testCategoryId)
           .expect(201);
       }
 
@@ -245,6 +344,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .field('title', '뉴스 제목')
         .field('description', '뉴스 설명')
         .field('url', 'https://news.example.com/article')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       const newsId = createResponse.body.id;
@@ -262,7 +362,9 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         description: '뉴스 설명',
         url: 'https://news.example.com/article',
         isPublic: true,
+        categoryId: testCategoryId,
       });
+      expect(response.body.categoryName).toBeDefined();
     });
 
     it('잘못된 UUID 형식으로 조회 시 400을 반환해야 한다', async () => {
@@ -325,6 +427,7 @@ describe('GET /api/admin/news (뉴스 목록 조회)', () => {
         .request()
         .post('/api/admin/news')
         .field('title', '테스트 뉴스')
+        .field('categoryId', testCategoryId)
         .expect(201);
 
       // When - 잘못된 orderBy 값
