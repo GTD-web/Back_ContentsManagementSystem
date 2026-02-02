@@ -250,8 +250,12 @@ export class AnnouncementBusinessService {
 
     // 대상 직원 정보 포함 옵션이 true면 추가
     if (includeTargetEmployees) {
-      result.targetEmployees =
+      const targetEmployeesList =
         await this.공지사항_대상_직원_상세_정보를_조회한다(announcement);
+      result.recipients = {
+        total: targetEmployeesList.length,
+        employees: targetEmployeesList,
+      };
     }
 
     return result;
@@ -308,11 +312,19 @@ export class AnnouncementBusinessService {
     const targetEmployees = targetEmployeeIds.map((employeeId) => {
       const employee = employeeMap.get(employeeId);
 
+      // department 정보는 중첩 객체 또는 직접 필드로 제공될 수 있음
+      const departmentId =
+        employee?.departmentId || employee?.department?.id || null;
+      const departmentName =
+        employee?.departmentName ||
+        employee?.department?.departmentName ||
+        '알 수 없음';
+
       return {
         employeeId,
         employeeName: employee?.name || '알 수 없음',
-        departmentId: employee?.departmentId || null,
-        departmentName: employee?.departmentName || '알 수 없음',
+        departmentId,
+        departmentName,
         hasRead: readEmployeeIds.has(employeeId),
         hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
       };
@@ -935,15 +947,29 @@ export class AnnouncementBusinessService {
   private async 공지사항_대상_직원_목록을_추출한다(
     announcement: Announcement,
   ): Promise<string[]> {
-    // 1. 전사공개인 경우 모든 직원 ID 반환
-    if (announcement.isPublic) {
-      const orgInfo = await this.companyContextService.조직_정보를_가져온다();
+    // 권한 필드가 하나라도 있는지 확인
+    const hasPermissionFilters =
+      (announcement.permissionEmployeeIds &&
+        announcement.permissionEmployeeIds.length > 0) ||
+      (announcement.permissionRankIds &&
+        announcement.permissionRankIds.length > 0) ||
+      (announcement.permissionPositionIds &&
+        announcement.permissionPositionIds.length > 0) ||
+      (announcement.permissionDepartmentIds &&
+        announcement.permissionDepartmentIds.length > 0);
+
+    // 1. 전사공개이면서 권한 필터가 없는 경우만 모든 직원 반환 (활성 부서만)
+    if (announcement.isPublic && !hasPermissionFilters) {
+      const orgInfo =
+        await this.companyContextService.조직_정보를_가져온다(false);
       return this.조직에서_모든_직원ID를_추출한다(orgInfo);
     }
 
-    // 2. 제한공개인 경우 권한 필드 기반 필터링
+    // 2. 제한공개 또는 권한 필터가 있는 경우 권한 필드 기반 필터링
+    // 비활성 부서도 포함하여 조회 (부서 권한이 비활성 부서를 참조할 수 있으므로)
     const employeeIds = new Set<string>();
-    const orgInfo = await this.companyContextService.조직_정보를_가져온다();
+    const orgInfo =
+      await this.companyContextService.조직_정보를_가져온다(true);
 
     // 특정 직원 ID 목록
     if (
@@ -1007,8 +1033,10 @@ export class AnnouncementBusinessService {
           }
         });
       }
-      if (dept.children) {
-        dept.children.forEach((child: any) => extractFromDept(child));
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
       }
     };
 
@@ -1038,8 +1066,10 @@ export class AnnouncementBusinessService {
           }
         });
       }
-      if (dept.children) {
-        dept.children.forEach((child: any) => extractFromDept(child));
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
       }
     };
 
@@ -1073,8 +1103,10 @@ export class AnnouncementBusinessService {
           }
         });
       }
-      if (dept.children) {
-        dept.children.forEach((child: any) => extractFromDept(child));
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
       }
     };
 
@@ -1096,25 +1128,42 @@ export class AnnouncementBusinessService {
     const employeeIds: string[] = [];
     const departmentIdSet = new Set(departmentIds);
 
-    const extractFromDept = (dept: any) => {
+    this.logger.debug(
+      `부서별 직원 추출 시작 - 대상 부서 ID: ${departmentIds.join(', ')}`,
+    );
+
+    const extractFromDept = (dept: any, depth: number = 0) => {
       const isDepartmentMatch = dept.id && departmentIdSet.has(dept.id);
 
-      if (isDepartmentMatch && dept.employees) {
-        dept.employees.forEach((emp: any) => {
-          if (emp.employeeNumber) {
-            employeeIds.push(emp.employeeNumber);
-          }
-        });
+      if (isDepartmentMatch) {
+        const employeeCount = dept.employees?.length || 0;
+        this.logger.debug(
+          `${'  '.repeat(depth)}부서 매칭: ${dept.departmentName || dept.name} (${dept.id}) - 직원 ${employeeCount}명`,
+        );
+
+        if (dept.employees) {
+          dept.employees.forEach((emp: any) => {
+            if (emp.employeeNumber) {
+              employeeIds.push(emp.employeeNumber);
+            }
+          });
+        }
       }
 
-      if (dept.children) {
-        dept.children.forEach((child: any) => extractFromDept(child));
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children && children.length > 0) {
+        children.forEach((child: any) => extractFromDept(child, depth + 1));
       }
     };
 
     if (orgInfo.departments) {
       orgInfo.departments.forEach((dept) => extractFromDept(dept));
     }
+
+    this.logger.debug(
+      `부서별 직원 추출 완료 - 총 ${employeeIds.length}명 추출됨`,
+    );
 
     return employeeIds;
   }
@@ -1144,15 +1193,17 @@ export class AnnouncementBusinessService {
             result = {
               name: emp.name || '알 수 없음',
               departmentId: dept.id || null,
-              departmentName: dept.name || '알 수 없음',
+              departmentName: dept.departmentName || dept.name || '알 수 없음',
             };
             return true;
           }
         }
       }
 
-      if (dept.children) {
-        for (const child of dept.children) {
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        for (const child of children) {
           if (searchInDept(child)) {
             return true;
           }

@@ -45,6 +45,20 @@ export class AnnouncementTargetEmployeeDto {
 }
 
 /**
+ * 공지사항 수신자 목록 DTO
+ */
+export class AnnouncementRecipientsDto {
+  @ApiProperty({ description: '총 수신자 수', example: 10 })
+  total: number;
+
+  @ApiProperty({
+    description: '수신자 목록',
+    type: [AnnouncementTargetEmployeeDto],
+  })
+  employees: AnnouncementTargetEmployeeDto[];
+}
+
+/**
  * 공지사항 응답 DTO
  */
 export class AnnouncementResponseDto {
@@ -156,11 +170,11 @@ export class AnnouncementResponseDto {
   survey?: SurveyResponseDto | null;
 
   @ApiProperty({
-    description: '공지사항 조회 가능한 대상 직원 목록 (권한 기반)',
-    type: [AnnouncementTargetEmployeeDto],
+    description: '공지사항 수신자 정보 (권한 기반)',
+    type: AnnouncementRecipientsDto,
     required: false,
   })
-  targetEmployees?: AnnouncementTargetEmployeeDto[];
+  recipients?: AnnouncementRecipientsDto;
 }
 
 /**

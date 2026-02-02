@@ -25,9 +25,12 @@ export class CompanyContextService {
 
   /**
    * 조직 정보를 가져온다
+   * @param includeInactive 비활성 부서 포함 여부 (기본값: false)
    */
-  async 조직_정보를_가져온다(): Promise<OrganizationInfo> {
-    const query = new GetOrganizationInfoQuery();
+  async 조직_정보를_가져온다(
+    includeInactive: boolean = false,
+  ): Promise<OrganizationInfo> {
+    const query = new GetOrganizationInfoQuery(includeInactive);
     return await this.queryBus.execute(query);
   }
 

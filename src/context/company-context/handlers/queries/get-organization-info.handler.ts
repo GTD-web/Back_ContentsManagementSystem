@@ -12,7 +12,7 @@ import {
  * 조직 정보 조회 쿼리
  */
 export class GetOrganizationInfoQuery {
-  constructor() {}
+  constructor(public readonly includeInactive: boolean = false) {}
 }
 
 /**
@@ -80,6 +80,11 @@ export class GetOrganizationInfoHandler implements IQueryHandler<GetOrganization
       );
 
       const orgInfo = response.data as OrganizationInfo;
+
+      // includeInactive가 true면 필터링하지 않고 전체 반환
+      if (query.includeInactive) {
+        return orgInfo;
+      }
 
       // isActive가 true인 부서만 필터링
       const activeDepartments = orgInfo.departments
