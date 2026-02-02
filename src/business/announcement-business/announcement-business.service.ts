@@ -281,11 +281,13 @@ export class AnnouncementBusinessService {
       return [];
     }
 
-    // 2. 직원 정보 직접 조회 (SSO API)
-    const employees =
-      await this.companyContextService.직원_목록을_조회한다(targetEmployeeIds);
-    const employeeMap = new Map(
-      employees.map((emp) => [emp.employeeNumber, emp]),
+    // 2. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
+    const orgInfo =
+      await this.companyContextService.조직_정보를_가져온다(true);
+    const employeeMap = this.조직에서_직원_정보_맵을_생성한다(orgInfo);
+
+    this.logger.debug(
+      `조직 정보에서 직원 맵 생성 완료 - 총 ${employeeMap.size}명`,
     );
 
     // 3. 읽음 여부 조회
@@ -310,21 +312,13 @@ export class AnnouncementBusinessService {
 
     // 5. 각 직원의 상세 정보 조합
     const targetEmployees = targetEmployeeIds.map((employeeId) => {
-      const employee = employeeMap.get(employeeId);
-
-      // department 정보는 중첩 객체 또는 직접 필드로 제공될 수 있음
-      const departmentId =
-        employee?.departmentId || employee?.department?.id || null;
-      const departmentName =
-        employee?.departmentName ||
-        employee?.department?.departmentName ||
-        '알 수 없음';
+      const employeeInfo = employeeMap.get(employeeId);
 
       return {
         employeeId,
-        employeeName: employee?.name || '알 수 없음',
-        departmentId,
-        departmentName,
+        employeeName: employeeInfo?.name || '알 수 없음',
+        departmentId: employeeInfo?.departmentId || null,
+        departmentName: employeeInfo?.departmentName || '알 수 없음',
         hasRead: readEmployeeIds.has(employeeId),
         hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
       };
@@ -1166,6 +1160,56 @@ export class AnnouncementBusinessService {
     );
 
     return employeeIds;
+  }
+
+  /**
+   * 조직 정보에서 직원 정보 맵을 생성한다 (employeeNumber → 직원정보)
+   * @private
+   */
+  private 조직에서_직원_정보_맵을_생성한다(
+    orgInfo: OrganizationInfo,
+  ): Map<
+    string,
+    {
+      name: string;
+      departmentId: string | null;
+      departmentName: string;
+    }
+  > {
+    const employeeMap = new Map<
+      string,
+      {
+        name: string;
+        departmentId: string | null;
+        departmentName: string;
+      }
+    >();
+
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          if (emp.employeeNumber) {
+            employeeMap.set(emp.employeeNumber, {
+              name: emp.name || '알 수 없음',
+              departmentId: dept.id || null,
+              departmentName: dept.departmentName || dept.name || '알 수 없음',
+            });
+          }
+        });
+      }
+
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    return employeeMap;
   }
 
   /**
