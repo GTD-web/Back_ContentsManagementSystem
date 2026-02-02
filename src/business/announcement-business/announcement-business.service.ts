@@ -1217,7 +1217,7 @@ export class AnnouncementBusinessService {
   }
 
   /**
-   * 조직 정보에서 직원 정보 맵을 생성한다 (employeeNumber → 직원정보)
+   * 조직 정보에서 직원 정보 맵을 생성한다 (employeeNumber & id → 직원정보)
    * @private
    */
   private 조직에서_직원_정보_맵을_생성한다(
@@ -1242,12 +1242,20 @@ export class AnnouncementBusinessService {
     const extractFromDept = (dept: any) => {
       if (dept.employees) {
         dept.employees.forEach((emp: any) => {
+          const employeeInfo = {
+            name: emp.name || '알 수 없음',
+            departmentId: dept.id || null,
+            departmentName: dept.departmentName || dept.name || '알 수 없음',
+          };
+
+          // employeeNumber(사번)로 매핑
           if (emp.employeeNumber) {
-            employeeMap.set(emp.employeeNumber, {
-              name: emp.name || '알 수 없음',
-              departmentId: dept.id || null,
-              departmentName: dept.departmentName || dept.name || '알 수 없음',
-            });
+            employeeMap.set(emp.employeeNumber, employeeInfo);
+          }
+
+          // id(UUID)로도 매핑 (permissionEmployeeIds가 UUID로 저장될 수 있음)
+          if (emp.id) {
+            employeeMap.set(emp.id, employeeInfo);
           }
         });
       }
