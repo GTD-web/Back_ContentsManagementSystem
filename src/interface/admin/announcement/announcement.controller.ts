@@ -305,8 +305,15 @@ export class AnnouncementController {
   async 공지사항_카테고리_목록을_조회한다(): Promise<AnnouncementCategoryListResponseDto> {
     const categories =
       await this.announcementBusinessService.공지사항_카테고리_목록을_조회한다();
+    
+    // isDefault 값 추가
+    const items = categories.map((category) => ({
+      ...category,
+      isDefault: category.name === '미분류',
+    }));
+
     return {
-      items: categories,
+      items,
       total: categories.length,
     };
   }
@@ -336,10 +343,15 @@ export class AnnouncementController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() createDto: CreateAnnouncementCategoryDto,
   ): Promise<AnnouncementCategoryResponseDto> {
-    return await this.announcementBusinessService.공지사항_카테고리를_생성한다({
+    const category = await this.announcementBusinessService.공지사항_카테고리를_생성한다({
       ...createDto,
       createdBy: user.id,
     });
+
+    return {
+      ...category,
+      isDefault: category.name === '미분류',
+    };
   }
 
   /**
@@ -377,13 +389,18 @@ export class AnnouncementController {
     @Param('id') id: string,
     @Body() updateDto: UpdateAnnouncementCategoryDto,
   ): Promise<AnnouncementCategoryResponseDto> {
-    return await this.announcementBusinessService.공지사항_카테고리를_수정한다(
+    const category = await this.announcementBusinessService.공지사항_카테고리를_수정한다(
       id,
       {
         ...updateDto,
         updatedBy: user.id,
       },
     );
+
+    return {
+      ...category,
+      isDefault: category.name === '미분류',
+    };
   }
 
   /**
@@ -418,7 +435,7 @@ export class AnnouncementController {
     @Param('id') id: string,
     @Body() updateDto: UpdateAnnouncementCategoryOrderDto,
   ): Promise<AnnouncementCategoryResponseDto> {
-    const result =
+    const category =
       await this.announcementBusinessService.공지사항_카테고리_오더를_변경한다(
         id,
         {
@@ -426,7 +443,11 @@ export class AnnouncementController {
           updatedBy: user.id,
         },
       );
-    return result;
+    
+    return {
+      ...category,
+      isDefault: category.name === '미분류',
+    };
   }
 
   /**
