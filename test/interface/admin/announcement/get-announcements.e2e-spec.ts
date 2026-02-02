@@ -51,7 +51,12 @@ describe('GET /api/admin/announcements (공지사항 목록 조회)', () => {
       const announcements = [
         { categoryId: testCategoryId, title: '공지1', content: '내용1' },
         { categoryId: testCategoryId, title: '공지2', content: '내용2' },
-        { categoryId: testCategoryId, title: '공지3', content: '내용3' },
+        {
+          categoryId: testCategoryId,
+          title: '공지3',
+          content: '내용3',
+          expiredAt: '2024-12-31T23:59:59Z',
+        },
       ];
 
       for (const announcement of announcements) {
@@ -73,6 +78,26 @@ describe('GET /api/admin/announcements (공지사항 목록 조회)', () => {
       expect(response.body.page).toBe(1);
       expect(response.body.limit).toBe(10);
       expect(response.body.totalPages).toBe(1);
+
+      // categoryName 필드가 포함되어 있어야 한다
+      expect(
+        response.body.items.every(
+          (item: any) => item.categoryName === '테스트 카테고리',
+        ),
+      ).toBe(true);
+
+      // expiredAt 필드가 존재해야 한다 (null 또는 날짜값)
+      expect(
+        response.body.items.every(
+          (item: any) => item.hasOwnProperty('expiredAt'),
+        ),
+      ).toBe(true);
+
+      // expiredAt이 설정된 공지사항 확인
+      const announcementWithExpiry = response.body.items.find(
+        (item: any) => item.title === '공지3',
+      );
+      expect(announcementWithExpiry.expiredAt).not.toBeNull();
     });
 
     it('페이지네이션이 동작해야 한다', async () => {
@@ -426,6 +451,7 @@ describe('GET /api/admin/announcements/fixed (고정 공지사항 목록 조회)
           title: '고정1',
           content: '내용1',
           isFixed: true,
+          expiredAt: '2024-12-31T23:59:59Z',
         });
 
       await testSuite
@@ -460,6 +486,26 @@ describe('GET /api/admin/announcements/fixed (고정 공지사항 목록 조회)
         response.body.items.every((item: any) => item.isFixed === true),
       ).toBe(true);
       expect(response.body.total).toBe(2);
+
+      // categoryName이 포함되어 있어야 한다
+      expect(
+        response.body.items.every(
+          (item: any) => item.categoryName === '테스트 카테고리',
+        ),
+      ).toBe(true);
+
+      // expiredAt 필드가 존재해야 한다
+      expect(
+        response.body.items.every(
+          (item: any) => item.hasOwnProperty('expiredAt'),
+        ),
+      ).toBe(true);
+
+      // expiredAt이 설정된 공지사항 확인
+      const announcementWithExpiry = response.body.items.find(
+        (item: any) => item.title === '고정1',
+      );
+      expect(announcementWithExpiry.expiredAt).not.toBeNull();
     });
 
     it('고정 공지사항에서 isPublic 필터가 동작해야 한다', async () => {
@@ -680,8 +726,8 @@ describe('GET /api/admin/announcements/all (공지사항 전체 목록 조회)',
     });
 
     it('모든 공지사항을 페이지네이션 없이 조회해야 한다', async () => {
-      // Given - 15개의 공지사항 생성
-      for (let i = 1; i <= 15; i++) {
+      // Given - 15개의 공지사항 생성 (마지막 하나는 expiredAt 포함)
+      for (let i = 1; i <= 14; i++) {
         await testSuite
           .request()
           .post('/api/admin/announcements')
@@ -692,6 +738,17 @@ describe('GET /api/admin/announcements/all (공지사항 전체 목록 조회)',
           });
       }
 
+      // expiredAt이 있는 공지사항 추가
+      await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          categoryId: testCategoryId,
+          title: '공지15',
+          content: '내용15',
+          expiredAt: '2024-12-31T23:59:59Z',
+        });
+
       // When
       const response = await testSuite
         .request()
@@ -701,6 +758,17 @@ describe('GET /api/admin/announcements/all (공지사항 전체 목록 조회)',
       // Then
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body).toHaveLength(15);
+
+      // expiredAt 필드가 존재해야 한다
+      expect(
+        response.body.every((item: any) => item.hasOwnProperty('expiredAt')),
+      ).toBe(true);
+
+      // expiredAt이 설정된 공지사항 확인
+      const announcementWithExpiry = response.body.find(
+        (item: any) => item.title === '공지15',
+      );
+      expect(announcementWithExpiry.expiredAt).not.toBeNull();
     });
   });
 });
@@ -763,6 +831,49 @@ describe('GET /api/admin/announcements/:id (공지사항 상세 조회)', () => 
         updatedAt: expect.any(String),
       });
       expect(response.body.categoryName).toBeDefined();
+
+      // targetEmployees 필드가 존재해야 한다
+      expect(response.body.targetEmployees).toBeDefined();
+      expect(Array.isArray(response.body.targetEmployees)).toBe(true);
+    });
+
+    it('대상 직원 정보가 포함되어야 한다', async () => {
+      // Given - 전사공개 공지사항 생성
+      const createResponse = await testSuite
+        .request()
+        .post('/api/admin/announcements')
+        .send({
+          categoryId: testCategoryId,
+          title: '전사공개 공지',
+          content: '모두에게 공개',
+          isPublic: true,
+        });
+
+      const announcementId = createResponse.body.id;
+
+      // When
+      const response = await testSuite
+        .request()
+        .get(`/api/admin/announcements/${announcementId}`)
+        .expect(200);
+
+      // Then
+      expect(response.body.targetEmployees).toBeDefined();
+      expect(Array.isArray(response.body.targetEmployees)).toBe(true);
+
+      // 전사공개이므로 대상 직원이 있어야 함 (TEST001 최소 1명)
+      expect(response.body.targetEmployees.length).toBeGreaterThan(0);
+
+      // 각 직원 정보 구조 확인
+      if (response.body.targetEmployees.length > 0) {
+        const employee = response.body.targetEmployees[0];
+        expect(employee).toHaveProperty('employeeId');
+        expect(employee).toHaveProperty('employeeName');
+        expect(employee).toHaveProperty('departmentId');
+        expect(employee).toHaveProperty('departmentName');
+        expect(employee).toHaveProperty('hasRead');
+        expect(employee).toHaveProperty('hasSurveyCompleted');
+      }
     });
 
     it('모든 필드가 포함된 공지사항을 조회해야 한다', async () => {

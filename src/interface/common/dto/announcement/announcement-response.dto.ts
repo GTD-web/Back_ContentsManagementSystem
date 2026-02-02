@@ -22,6 +22,29 @@ export class AnnouncementAttachmentResponseDto {
 }
 
 /**
+ * 공지사항 대상 직원 DTO
+ */
+export class AnnouncementTargetEmployeeDto {
+  @ApiProperty({ description: '직원 ID (SSO)', example: 'EMP001' })
+  employeeId: string;
+
+  @ApiProperty({ description: '직원 이름', example: '홍길동' })
+  employeeName: string;
+
+  @ApiProperty({ description: '부서 ID (UUID)', nullable: true })
+  departmentId: string | null;
+
+  @ApiProperty({ description: '부서 이름', example: '개발팀' })
+  departmentName: string;
+
+  @ApiProperty({ description: '읽음 여부', example: false })
+  hasRead: boolean;
+
+  @ApiProperty({ description: '설문 응답 완료 여부', example: false })
+  hasSurveyCompleted: boolean;
+}
+
+/**
  * 공지사항 응답 DTO
  */
 export class AnnouncementResponseDto {
@@ -131,6 +154,13 @@ export class AnnouncementResponseDto {
     nullable: true,
   })
   survey?: SurveyResponseDto | null;
+
+  @ApiProperty({
+    description: '공지사항 조회 가능한 대상 직원 목록 (권한 기반)',
+    type: [AnnouncementTargetEmployeeDto],
+    required: false,
+  })
+  targetEmployees?: AnnouncementTargetEmployeeDto[];
 }
 
 /**
@@ -169,6 +199,13 @@ export class AnnouncementListItemDto {
 
   @ApiProperty({ description: '수정 일시' })
   updatedAt: Date;
+
+  @ApiProperty({
+    description: '공개 종료 일시',
+    required: false,
+    nullable: true,
+  })
+  expiredAt: Date | null;
 
   @ApiProperty({ description: '설문조사 포함 여부', example: false })
   hasSurvey: boolean;

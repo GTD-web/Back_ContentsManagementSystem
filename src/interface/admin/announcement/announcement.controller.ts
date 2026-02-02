@@ -635,7 +635,15 @@ export class AnnouncementController {
   @Get(':id')
   @ApiOperation({
     summary: '공지사항 상세 조회',
-    description: '특정 공지사항의 상세 정보를 조회합니다.',
+    description:
+      '특정 공지사항의 상세 정보를 조회합니다.\n\n' +
+      '**응답 정보:**\n' +
+      '- 기본 공지사항 정보\n' +
+      '- 연결된 설문조사 정보 (있는 경우)\n' +
+      '- 대상 직원 목록 (권한 기반으로 계산)\n' +
+      '  - 각 직원의 이름, 부서\n' +
+      '  - 읽음 여부\n' +
+      '  - 설문 응답 완료 여부 (설문이 있는 경우)',
   })
   @ApiParam({
     name: 'id',
@@ -650,8 +658,9 @@ export class AnnouncementController {
   async 공지사항을_조회한다(
     @Param('id') id: string,
   ): Promise<AnnouncementResponseDto> {
+    // includeTargetEmployees를 true로 설정하여 대상 직원 정보 포함
     const announcement =
-      await this.announcementBusinessService.공지사항을_조회한다(id);
+      await this.announcementBusinessService.공지사항을_조회한다(id, true);
 
     // Survey 정보를 포함하여 반환
     return {

@@ -108,6 +108,7 @@ export class AnnouncementBusinessService {
         order: announcement.order,
         createdAt: announcement.createdAt,
         updatedAt: announcement.updatedAt,
+        expiredAt: announcement.expiredAt,
         hasSurvey: !!announcement.survey,
       }),
     );
@@ -160,6 +161,7 @@ export class AnnouncementBusinessService {
         order: announcement.order,
         createdAt: announcement.createdAt,
         updatedAt: announcement.updatedAt,
+        expiredAt: announcement.expiredAt,
         hasSurvey: !!announcement.survey,
       }),
     );
@@ -199,6 +201,7 @@ export class AnnouncementBusinessService {
         order: announcement.order,
         createdAt: announcement.createdAt,
         updatedAt: announcement.updatedAt,
+        expiredAt: announcement.expiredAt,
         hasSurvey: !!announcement.survey,
       }),
     );
@@ -226,7 +229,10 @@ export class AnnouncementBusinessService {
   /**
    * 공지사항을 조회한다
    */
-  async 공지사항을_조회한다(id: string): Promise<any> {
+  async 공지사항을_조회한다(
+    id: string,
+    includeTargetEmployees: boolean = false,
+  ): Promise<any> {
     this.logger.log(`공지사항 조회 시작 - ID: ${id}`);
 
     const announcement =
@@ -237,10 +243,82 @@ export class AnnouncementBusinessService {
     // category 객체는 제거하고 categoryName만 반환
     const { category, ...announcementData } = announcement as any;
 
-    return {
+    const result: any = {
       ...announcementData,
       categoryName: category?.name,
     };
+
+    // 대상 직원 정보 포함 옵션이 true면 추가
+    if (includeTargetEmployees) {
+      result.targetEmployees =
+        await this.공지사항_대상_직원_상세_정보를_조회한다(announcement);
+    }
+
+    return result;
+  }
+
+  /**
+   * 공지사항 대상 직원 상세 정보를 조회한다
+   * @private
+   */
+  async 공지사항_대상_직원_상세_정보를_조회한다(
+    announcement: Announcement,
+  ): Promise<any[]> {
+    this.logger.log(
+      `공지사항 대상 직원 상세 정보 조회 시작 - ID: ${announcement.id}`,
+    );
+
+    // 1. 대상 직원 ID 목록 추출
+    const targetEmployeeIds =
+      await this.공지사항_대상_직원_목록을_추출한다(announcement);
+
+    if (targetEmployeeIds.length === 0) {
+      this.logger.log('대상 직원이 없습니다.');
+      return [];
+    }
+
+    // 2. 조직 정보 조회 (직원 부서 정보)
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다();
+
+    // 3. 읽음 여부 조회
+    const readRecords = await this.announcementReadRepository.find({
+      where: { announcementId: announcement.id },
+    });
+    const readEmployeeIds = new Set(readRecords.map((r) => r.employeeId));
+
+    // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우)
+    let surveyCompletionMap = new Map<string, boolean>();
+    if (announcement.survey) {
+      const surveyCompletions = await this.surveyCompletionRepository.find({
+        where: {
+          surveyId: announcement.survey.id,
+          isCompleted: true,
+        },
+      });
+      surveyCompletionMap = new Map(
+        surveyCompletions.map((sc) => [sc.employeeId, true]),
+      );
+    }
+
+    // 5. 각 직원의 상세 정보 조합
+    const targetEmployees = targetEmployeeIds.map((employeeId) => {
+      const employeeInfo = this.조직에서_직원_정보를_찾기(orgInfo, employeeId);
+
+      return {
+        employeeId,
+        employeeName: employeeInfo?.name || '알 수 없음',
+        departmentId: employeeInfo?.departmentId || null,
+        departmentName: employeeInfo?.departmentName || '알 수 없음',
+        hasRead: readEmployeeIds.has(employeeId),
+        hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
+      };
+    });
+
+    this.logger.log(
+      `공지사항 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명`,
+    );
+
+    return targetEmployees;
   }
 
   /**
@@ -1035,6 +1113,60 @@ export class AnnouncementBusinessService {
     }
 
     return employeeIds;
+  }
+
+  /**
+   * 조직에서 직원 정보를 찾기
+   * @private
+   */
+  private 조직에서_직원_정보를_찾기(
+    orgInfo: OrganizationInfo,
+    employeeId: string,
+  ): {
+    name: string;
+    departmentId: string | null;
+    departmentName: string;
+  } | null {
+    let result: {
+      name: string;
+      departmentId: string | null;
+      departmentName: string;
+    } | null = null;
+
+    const searchInDept = (dept: any): boolean => {
+      if (dept.employees) {
+        for (const emp of dept.employees) {
+          if (emp.employeeNumber === employeeId) {
+            result = {
+              name: emp.name || '알 수 없음',
+              departmentId: dept.id || null,
+              departmentName: dept.name || '알 수 없음',
+            };
+            return true;
+          }
+        }
+      }
+
+      if (dept.children) {
+        for (const child of dept.children) {
+          if (searchInDept(child)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    if (orgInfo.departments) {
+      for (const dept of orgInfo.departments) {
+        if (searchInDept(dept)) {
+          break;
+        }
+      }
+    }
+
+    return result;
   }
 
   /**

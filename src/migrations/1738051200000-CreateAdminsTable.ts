@@ -35,8 +35,8 @@ export class CreateAdminsTable1738051200000 implements MigrationInterface {
         await queryRunner.query(`COMMENT ON COLUMN "admins"."isActive" IS '활성화 여부'`);
         await queryRunner.query(`COMMENT ON COLUMN "admins"."notes" IS '비고'`);
         
-        await queryRunner.query(`CREATE INDEX "idx_admin_employee_number" ON "admins" ("employeeNumber")`);
-        await queryRunner.query(`CREATE INDEX "idx_admin_is_active" ON "admins" ("isActive")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_admin_employee_number" ON "admins" ("employeeNumber")`);
+        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_admin_is_active" ON "admins" ("isActive")`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
