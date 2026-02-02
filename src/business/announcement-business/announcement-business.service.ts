@@ -311,8 +311,13 @@ export class AnnouncementBusinessService {
     }
 
     // 5. 각 직원의 상세 정보 조합
+    const unknownEmployees: string[] = [];
     const targetEmployees = targetEmployeeIds.map((employeeId) => {
       const employeeInfo = employeeMap.get(employeeId);
+
+      if (!employeeInfo) {
+        unknownEmployees.push(employeeId);
+      }
 
       return {
         employeeId,
@@ -323,6 +328,55 @@ export class AnnouncementBusinessService {
         hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
       };
     });
+
+    // 6. 알 수 없는 직원들의 출처 로깅
+    if (unknownEmployees.length > 0) {
+      this.logger.warn(
+        `⚠️ 조직 정보에서 찾을 수 없는 직원 ${unknownEmployees.length}명: ${unknownEmployees.join(', ')}`,
+      );
+
+      // 직원 출처 분석
+      const sources: string[] = [];
+      if (
+        announcement.permissionEmployeeIds &&
+        announcement.permissionEmployeeIds.length > 0
+      ) {
+        const fromPermissionEmployees = unknownEmployees.filter((id) =>
+          announcement.permissionEmployeeIds?.includes(id),
+        );
+        if (fromPermissionEmployees.length > 0) {
+          sources.push(
+            `permissionEmployeeIds에서 ${fromPermissionEmployees.length}명 (${fromPermissionEmployees.slice(0, 5).join(', ')}${fromPermissionEmployees.length > 5 ? '...' : ''})`,
+          );
+        }
+      }
+      if (
+        announcement.permissionDepartmentIds &&
+        announcement.permissionDepartmentIds.length > 0
+      ) {
+        sources.push(
+          `permissionDepartmentIds 부서에서 추출 (${announcement.permissionDepartmentIds.join(', ')})`,
+        );
+      }
+      if (
+        announcement.permissionRankIds &&
+        announcement.permissionRankIds.length > 0
+      ) {
+        sources.push(
+          `permissionRankIds 직급에서 추출 (${announcement.permissionRankIds.join(', ')})`,
+        );
+      }
+      if (
+        announcement.permissionPositionIds &&
+        announcement.permissionPositionIds.length > 0
+      ) {
+        sources.push(
+          `permissionPositionIds 직책에서 추출 (${announcement.permissionPositionIds.join(', ')})`,
+        );
+      }
+
+      this.logger.warn(`출처: ${sources.join(' | ')}`);
+    }
 
     this.logger.log(
       `공지사항 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명`,
