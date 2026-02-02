@@ -277,8 +277,12 @@ export class AnnouncementBusinessService {
       return [];
     }
 
-    // 2. 조직 정보 조회 (직원 부서 정보)
-    const orgInfo = await this.companyContextService.조직_정보를_가져온다();
+    // 2. 직원 정보 직접 조회 (SSO API)
+    const employees =
+      await this.companyContextService.직원_목록을_조회한다(targetEmployeeIds);
+    const employeeMap = new Map(
+      employees.map((emp) => [emp.employeeNumber, emp]),
+    );
 
     // 3. 읽음 여부 조회
     const readRecords = await this.announcementReadRepository.find({
@@ -302,13 +306,13 @@ export class AnnouncementBusinessService {
 
     // 5. 각 직원의 상세 정보 조합
     const targetEmployees = targetEmployeeIds.map((employeeId) => {
-      const employeeInfo = this.조직에서_직원_정보를_찾기(orgInfo, employeeId);
+      const employee = employeeMap.get(employeeId);
 
       return {
         employeeId,
-        employeeName: employeeInfo?.name || '알 수 없음',
-        departmentId: employeeInfo?.departmentId || null,
-        departmentName: employeeInfo?.departmentName || '알 수 없음',
+        employeeName: employee?.name || '알 수 없음',
+        departmentId: employee?.departmentId || null,
+        departmentName: employee?.departmentName || '알 수 없음',
         hasRead: readEmployeeIds.has(employeeId),
         hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
       };
