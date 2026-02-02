@@ -47,39 +47,56 @@ export class GetEmployeeListHandler
         return [];
       }
 
-      // SSO의 직원 목록 조회 API를 사용하여 한 번에 조회
-      const response = await firstValueFrom(
-        this.httpService.get(`${this.ssoBaseUrl}/api/organization/employees`, {
-          params: {
-            identifiers: query.employeeIds.join(','),
-            withDetail: true, // 부서, 직급, 직책 정보 포함
-          },
-        }),
-      );
+      // URL 길이 제한을 피하기 위해 청크로 나눠서 조회 (최대 50명씩)
+      const CHUNK_SIZE = 50;
+      const allEmployees: Employee[] = [];
 
-      // 응답이 배열인지 확인하고, 배열이 아니면 빈 배열 반환
-      let employees: Employee[];
-      
-      if (Array.isArray(response.data)) {
-        employees = response.data;
-      } else if (response.data && Array.isArray(response.data.employees)) {
-        // 응답이 { employees: [...] } 형태인 경우
-        employees = response.data.employees;
-      } else if (response.data && Array.isArray(response.data.items)) {
-        // 응답이 { items: [...] } 형태인 경우
-        employees = response.data.items;
-      } else {
-        this.logger.warn(
-          `예상치 못한 응답 형태 - ${JSON.stringify(response.data)}`,
+      for (let i = 0; i < query.employeeIds.length; i += CHUNK_SIZE) {
+        const chunk = query.employeeIds.slice(i, i + CHUNK_SIZE);
+        
+        this.logger.debug(
+          `청크 ${Math.floor(i / CHUNK_SIZE) + 1}/${Math.ceil(query.employeeIds.length / CHUNK_SIZE)} 조회 중 - ${chunk.length}명`,
         );
-        employees = [];
+
+        // SSO의 직원 목록 조회 API 호출
+        const response = await firstValueFrom(
+          this.httpService.get(
+            `${this.ssoBaseUrl}/api/organization/employees`,
+            {
+              params: {
+                identifiers: chunk.join(','),
+                withDetail: true, // 부서, 직급, 직책 정보 포함
+              },
+            },
+          ),
+        );
+
+        // 응답 파싱
+        let employees: Employee[];
+
+        if (Array.isArray(response.data)) {
+          employees = response.data;
+        } else if (response.data && Array.isArray(response.data.employees)) {
+          // 응답이 { employees: [...] } 형태인 경우
+          employees = response.data.employees;
+        } else if (response.data && Array.isArray(response.data.items)) {
+          // 응답이 { items: [...] } 형태인 경우
+          employees = response.data.items;
+        } else {
+          this.logger.warn(
+            `예상치 못한 응답 형태 - ${JSON.stringify(response.data)}`,
+          );
+          employees = [];
+        }
+
+        allEmployees.push(...employees);
       }
 
       this.logger.log(
-        `직원 목록 조회 완료 - 요청: ${query.employeeIds.length}명, 조회 성공: ${employees.length}명`,
+        `직원 목록 조회 완료 - 요청: ${query.employeeIds.length}명, 조회 성공: ${allEmployees.length}명`,
       );
 
-      return employees;
+      return allEmployees;
     } catch (error) {
       this.logger.error(`직원 목록 조회 실패`, error);
       throw new Error('직원 목록을 가져오는데 실패했습니다.');
