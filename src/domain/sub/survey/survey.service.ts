@@ -617,7 +617,7 @@ export class SurveyService {
         for (const answer of answers.textAnswers) {
           await queryRunner.manager.save(SurveyResponseText, {
             questionId: answer.questionId,
-            employeeId: employeeNumber,
+            employeeId: employeeId,
             textValue: answer.textValue,
             submittedAt,
           });
@@ -632,7 +632,7 @@ export class SurveyService {
         for (const answer of answers.choiceAnswers) {
           await queryRunner.manager.save(SurveyResponseChoice, {
             questionId: answer.questionId,
-            employeeId: employeeNumber,
+            employeeId: employeeId,
             selectedOption: answer.selectedOption,
             submittedAt,
           });
@@ -648,7 +648,7 @@ export class SurveyService {
           for (const option of answer.selectedOptions) {
             await queryRunner.manager.save(SurveyResponseCheckbox, {
               questionId: answer.questionId,
-              employeeId: employeeNumber,
+              employeeId: employeeId,
               selectedOption: option,
               submittedAt,
             });
@@ -664,7 +664,7 @@ export class SurveyService {
         for (const answer of answers.scaleAnswers) {
           await queryRunner.manager.save(SurveyResponseScale, {
             questionId: answer.questionId,
-            employeeId: employeeNumber,
+            employeeId: employeeId,
             scaleValue: answer.scaleValue,
             submittedAt,
           });
@@ -680,7 +680,7 @@ export class SurveyService {
           for (const gridItem of answer.gridAnswers) {
             await queryRunner.manager.save(SurveyResponseGrid, {
               questionId: answer.questionId,
-              employeeId: employeeNumber,
+              employeeId: employeeId,
               rowName: gridItem.rowName,
               columnValue: gridItem.columnValue,
               submittedAt,
@@ -698,7 +698,7 @@ export class SurveyService {
           for (const file of answer.files) {
             await queryRunner.manager.save(SurveyResponseFile, {
               questionId: answer.questionId,
-              employeeId: employeeNumber,
+              employeeId: employeeId,
               fileUrl: file.fileUrl,
               fileName: file.fileName,
               fileSize: file.fileSize,
@@ -717,7 +717,7 @@ export class SurveyService {
         for (const answer of answers.datetimeAnswers) {
           await queryRunner.manager.save(SurveyResponseDatetime, {
             questionId: answer.questionId,
-            employeeId: employeeNumber,
+            employeeId: employeeId,
             datetimeValue: new Date(answer.datetimeValue),
             submittedAt,
           });
