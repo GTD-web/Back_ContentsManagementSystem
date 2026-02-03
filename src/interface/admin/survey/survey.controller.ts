@@ -256,9 +256,12 @@ export class SurveyController {
     @Body() dto: CompleteSurveyDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ success: boolean; message: string }> {
+    const employeeNumber = dto.employeeNumber || user.employeeNumber;
+    
     await this.surveyBusinessService.설문_완료를_기록한다({
       surveyId: id,
-      employeeId: dto.employeeId || user.id,
+      employeeId: dto.employeeNumber || user.id, // TODO: employeeNumber로 employeeId 조회 필요
+      employeeNumber,
     });
 
     return {

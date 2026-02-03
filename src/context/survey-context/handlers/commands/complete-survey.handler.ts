@@ -26,16 +26,17 @@ export class CompleteSurveyHandler
     const { data } = command;
 
     this.logger.log(
-      `설문 완료 기록 시작 - 설문 ID: ${data.surveyId}, 직원 ID: ${data.employeeId}`,
+      `설문 완료 기록 시작 - 설문 ID: ${data.surveyId}, 직원 사번: ${data.employeeNumber}`,
     );
 
     const completion = await this.surveyService.설문_완료를_기록한다(
       data.surveyId,
       data.employeeId,
+      data.employeeNumber,
     );
 
     this.logger.log(
-      `설문 완료 기록 완료 - 설문 ID: ${data.surveyId}, 직원 ID: ${data.employeeId}`,
+      `설문 완료 기록 완료 - 설문 ID: ${data.surveyId}, 직원 사번: ${data.employeeNumber}`,
     );
 
     return completion;

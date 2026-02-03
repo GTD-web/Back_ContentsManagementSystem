@@ -64,6 +64,7 @@ export interface SubmitSurveyResponseDto {
 export interface CompleteSurveyDto {
   surveyId: string;
   employeeId: string;
+  employeeNumber: string;
 }
 
 /**

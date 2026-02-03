@@ -275,21 +275,25 @@ export class SurveyService {
   async 설문_완료를_기록한다(
     surveyId: string,
     employeeId: string,
+    employeeNumber: string,
   ): Promise<SurveyCompletion> {
     this.logger.log(
-      `설문 완료 기록 - 설문 ID: ${surveyId}, 직원 ID: ${employeeId}`,
+      `설문 완료 기록 - 설문 ID: ${surveyId}, 직원 사번: ${employeeNumber}`,
     );
 
     // 설문조사 존재 확인
-    await this.ID로_설문조사를_조회한다(surveyId);
+    const survey = await this.ID로_설문조사를_조회한다(surveyId);
+    const totalQuestions = survey.questions?.length || 0;
 
     // 이미 완료 기록이 있는지 확인
     let completion = await this.completionRepository.findOne({
-      where: { surveyId, employeeId },
+      where: { surveyId, employeeNumber },
     });
 
     if (completion) {
       // 이미 있으면 완료 상태 업데이트
+      completion.totalQuestions = totalQuestions;
+      completion.answeredQuestions = totalQuestions;
       completion.isCompleted = true;
       completion.completedAt = new Date();
       return await this.completionRepository.save(completion);
@@ -299,6 +303,9 @@ export class SurveyService {
     completion = this.completionRepository.create({
       surveyId,
       employeeId,
+      employeeNumber,
+      totalQuestions,
+      answeredQuestions: totalQuestions,
       isCompleted: true,
       completedAt: new Date(),
     });
@@ -311,10 +318,10 @@ export class SurveyService {
    */
   async 설문_완료_여부를_확인한다(
     surveyId: string,
-    employeeId: string,
+    employeeNumber: string,
   ): Promise<boolean> {
     const completion = await this.completionRepository.findOne({
-      where: { surveyId, employeeId, isCompleted: true },
+      where: { surveyId, employeeNumber, isCompleted: true },
     });
 
     return !!completion;
@@ -330,18 +337,18 @@ export class SurveyService {
   }
 
   /**
-   * 설문 미완료자 ID 목록을 조회한다
+   * 설문 미완료자 사번 목록을 조회한다
    */
   async 설문_미완료자를_조회한다(
     surveyId: string,
-    targetEmployeeIds: string[],
+    targetEmployeeNumbers: string[],
   ): Promise<string[]> {
     const completions = await this.completionRepository.find({
       where: { surveyId, isCompleted: true },
     });
 
-    const completedIds = new Set(completions.map((c) => c.employeeId));
-    return targetEmployeeIds.filter((id) => !completedIds.has(id));
+    const completedNumbers = new Set(completions.map((c) => c.employeeNumber));
+    return targetEmployeeNumbers.filter((num) => !completedNumbers.has(num));
   }
 
   /**
@@ -759,7 +766,7 @@ export class SurveyService {
       const existingCompletion = await queryRunner.manager.findOne(
         SurveyCompletion,
         {
-          where: { surveyId: survey.id, employeeId: employeeNumber },
+          where: { surveyId: survey.id, employeeNumber },
         },
       );
 
@@ -772,7 +779,8 @@ export class SurveyService {
       } else {
         await queryRunner.manager.save(SurveyCompletion, {
           surveyId: survey.id,
-          employeeId: employeeNumber,
+          employeeId, // 내부 UUID
+          employeeNumber, // SSO 사번
           totalQuestions,
           answeredQuestions,
           isCompleted,

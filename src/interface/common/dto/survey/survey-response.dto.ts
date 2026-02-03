@@ -199,6 +199,10 @@ export class SurveyListResponseDto {
  * 설문 완료 DTO
  */
 export class CompleteSurveyDto {
-  @ApiProperty({ description: '직원 ID', required: false })
-  employeeId?: string;
+  @ApiProperty({ 
+    description: '직원 사번 (SSO employeeNumber)', 
+    required: false,
+    example: '26002',
+  })
+  employeeNumber?: string;
 }

@@ -135,14 +135,14 @@ export class SurveyBusinessService {
     data: CompleteSurveyDto,
   ): Promise<SurveyCompletion> {
     this.logger.log(
-      `설문 완료 기록 시작 - 설문 ID: ${data.surveyId}, 직원 ID: ${data.employeeId}`,
+      `설문 완료 기록 시작 - 설문 ID: ${data.surveyId}, 직원 사번: ${data.employeeNumber}`,
     );
 
     const result =
       await this.surveyContextService.설문_완료를_기록한다(data);
 
     this.logger.log(
-      `설문 완료 기록 완료 - 설문 ID: ${data.surveyId}, 직원 ID: ${data.employeeId}`,
+      `설문 완료 기록 완료 - 설문 ID: ${data.surveyId}, 직원 사번: ${data.employeeNumber}`,
     );
 
     return result;
