@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -7,6 +17,7 @@ import {
   ApiQuery,
   ApiParam,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -23,6 +34,7 @@ import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-surve
 import { MyAnswersDto } from '@interface/common/dto/survey/survey-response.dto';
 import { SurveyService } from '@domain/sub/survey/survey.service';
 import { Category } from '@domain/common/category/category.entity';
+import { FileUploadService } from '@domain/common/file-upload/file-upload.service';
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
@@ -33,6 +45,7 @@ export class UserAnnouncementController {
     @InjectRepository(AnnouncementRead)
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
     private readonly surveyService: SurveyService,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   /**
@@ -220,18 +233,29 @@ export class UserAnnouncementController {
    * 공지사항 설문에 응답한다
    */
   @Post(':id/survey/answers')
+  @UseInterceptors(FilesInterceptor('files', 20)) // 최대 20개 파일 (여러 질문에 첨부 가능)
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 설문 응답 제출',
     description:
       '공지사항에 연결된 설문에 응답을 제출합니다.\n\n' +
+      '**📋 FormData 작성 가이드:**\n\n' +
       '각 질문 타입에 맞는 응답을 제출해야 합니다:\n' +
-      '- `short_answer`, `paragraph`: textAnswers 사용\n' +
-      '- `multiple_choice`, `dropdown`: choiceAnswers 사용\n' +
-      '- `checkboxes`: checkboxAnswers 사용\n' +
-      '- `linear_scale`: scaleAnswers 사용\n' +
-      '- `grid_scale`: gridAnswers 사용\n' +
-      '- `file_upload`: fileAnswers 사용\n' +
-      '- `datetime`: datetimeAnswers 사용',
+      '- `short_answer`, `paragraph`: textAnswers (JSON 문자열)\n' +
+      '- `multiple_choice`, `dropdown`: choiceAnswers (JSON 문자열)\n' +
+      '- `checkboxes`: checkboxAnswers (JSON 문자열)\n' +
+      '- `linear_scale`: scaleAnswers (JSON 문자열)\n' +
+      '- `grid_scale`: gridAnswers (JSON 문자열)\n' +
+      '- `file_upload`: files (파일 첨부) + fileQuestionIds (JSON 문자열)\n' +
+      '- `datetime`: datetimeAnswers (JSON 문자열)\n\n' +
+      '**파일 업로드 방법:**\n' +
+      '1. `files`: 첨부할 파일들 (최대 20개)\n' +
+      '2. `fileQuestionIds`: 각 파일이 속한 질문 ID 배열 (JSON 문자열)\n' +
+      '   - 예: `["질문1-UUID", "질문1-UUID", "질문2-UUID"]`\n' +
+      '   - files 배열과 같은 순서로 매칭됩니다.\n\n' +
+      '⚠️ **주의사항:**\n' +
+      '- Content-Type은 multipart/form-data를 사용합니다\n' +
+      '- 배열과 객체는 JSON 문자열로 전송해야 합니다',
   })
   @ApiParam({
     name: 'id',
@@ -239,14 +263,13 @@ export class UserAnnouncementController {
     type: String,
   })
   @ApiBody({
-    type: SubmitSurveyAnswerDto,
     description:
-      '설문 응답 데이터\n\n' +
+      '설문 응답 데이터 (FormData)\n\n' +
       '**중요 사항**:\n' +
       '1. 질문 타입에 맞는 응답 배열에 데이터를 추가해야 합니다.\n' +
       '2. 필수 질문(`isRequired: true`)은 반드시 응답해야 합니다.\n' +
       '3. 선택형/체크박스 응답은 질문의 `form.options`에 정의된 값만 사용 가능합니다.\n' +
-      '4. 파일은 먼저 S3에 업로드 후 URL을 전달합니다.',
+      '4. 파일은 files 필드에 첨부하고, fileQuestionIds로 질문 ID를 매핑합니다.',
     examples: {
       'complete-survey': {
         summary: '전체 응답 예시 (모든 질문 타입 포함)',
@@ -413,24 +436,102 @@ export class UserAnnouncementController {
   async 공지사항_설문에_응답한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() answers: SubmitSurveyAnswerDto,
+    @Body() dto: any, // FormData로 전송되므로 any 타입으로 받음
+    @UploadedFiles() files: Express.Multer.File[],
   ): Promise<{ success: boolean }> {
+    // FormData 파싱
+    const parsedDto = this.parseFormDataDto(dto);
+
+    // 파일 업로드 처리
+    let fileAnswers: Array<{
+      questionId: string;
+      files: Array<{
+        fileUrl: string;
+        fileName: string;
+        fileSize: number;
+        mimeType: string;
+      }>;
+    }> = [];
+
+    if (files && files.length > 0) {
+      // 파일 업로드 (surveys 폴더에 저장)
+      const uploadedFiles = await this.fileUploadService.uploadFiles(
+        files,
+        'surveys',
+      );
+
+      // fileQuestionIds가 있으면 각 파일을 해당 질문에 매핑
+      if (parsedDto.fileQuestionIds && Array.isArray(parsedDto.fileQuestionIds)) {
+        const fileQuestionMap = new Map<string, typeof uploadedFiles>();
+
+        // 각 파일을 질문 ID별로 그룹화
+        uploadedFiles.forEach((file, index) => {
+          const questionId = parsedDto.fileQuestionIds[index];
+          if (!questionId) return;
+
+          const existing = fileQuestionMap.get(questionId) || [];
+          existing.push(file);
+          fileQuestionMap.set(questionId, existing);
+        });
+
+        // fileAnswers 형식으로 변환
+        fileAnswers = Array.from(fileQuestionMap.entries()).map(
+          ([questionId, files]) => ({
+            questionId,
+            files,
+          }),
+        );
+      }
+    }
+
     // 설문 응답 제출
     const result = await this.surveyService.설문_응답을_제출한다(
       id, // announcementId
       user.id, // employeeId (내부 UUID)
       user.employeeNumber, // employeeNumber (SSO 사번)
       {
-        textAnswers: answers.textAnswers,
-        choiceAnswers: answers.choiceAnswers,
-        checkboxAnswers: answers.checkboxAnswers,
-        scaleAnswers: answers.scaleAnswers,
-        gridAnswers: answers.gridAnswers,
-        fileAnswers: answers.fileAnswers,
-        datetimeAnswers: answers.datetimeAnswers,
+        textAnswers: parsedDto.textAnswers,
+        choiceAnswers: parsedDto.choiceAnswers,
+        checkboxAnswers: parsedDto.checkboxAnswers,
+        scaleAnswers: parsedDto.scaleAnswers,
+        gridAnswers: parsedDto.gridAnswers,
+        fileAnswers: fileAnswers.length > 0 ? fileAnswers : undefined,
+        datetimeAnswers: parsedDto.datetimeAnswers,
       },
     );
 
     return { success: result.success };
+  }
+
+  /**
+   * FormData로 전송된 DTO를 파싱한다
+   * @private
+   */
+  private parseFormDataDto(dto: any): any {
+    const parsed = { ...dto };
+
+    // JSON 문자열로 전송된 배열/객체 필드 파싱
+    const jsonFields = [
+      'textAnswers',
+      'choiceAnswers',
+      'checkboxAnswers',
+      'scaleAnswers',
+      'gridAnswers',
+      'fileQuestionIds',
+      'datetimeAnswers',
+    ];
+
+    for (const field of jsonFields) {
+      if (parsed[field] && typeof parsed[field] === 'string') {
+        try {
+          parsed[field] = JSON.parse(parsed[field]);
+        } catch (error) {
+          // 파싱 실패 시 빈 배열로 설정
+          parsed[field] = [];
+        }
+      }
+    }
+
+    return parsed;
   }
 }
