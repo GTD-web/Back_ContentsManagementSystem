@@ -312,20 +312,20 @@ export class AnnouncementBusinessService {
 
     // 5. 각 직원의 상세 정보 조합
     const unknownEmployees: string[] = [];
-    const targetEmployees = targetEmployeeIds.map((employeeId) => {
-      const employeeInfo = employeeMap.get(employeeId);
+    const targetEmployees = targetEmployeeIds.map((employeeNumber) => {
+      const employeeInfo = employeeMap.get(employeeNumber);
 
       if (!employeeInfo) {
-        unknownEmployees.push(employeeId);
+        unknownEmployees.push(employeeNumber);
       }
 
       return {
-        employeeId,
+        employeeNumber, // SSO 사번 (employeeNumber)
         employeeName: employeeInfo?.name || '알 수 없음',
         departmentId: employeeInfo?.departmentId || null,
         departmentName: employeeInfo?.departmentName || '알 수 없음',
-        hasRead: readEmployeeIds.has(employeeId),
-        hasSurveyCompleted: surveyCompletionMap.get(employeeId) || false,
+        hasRead: readEmployeeIds.has(employeeNumber),
+        hasSurveyCompleted: surveyCompletionMap.get(employeeNumber) || false,
       };
     });
 

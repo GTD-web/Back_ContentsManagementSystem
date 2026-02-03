@@ -25,8 +25,8 @@ export class AnnouncementAttachmentResponseDto {
  * 공지사항 대상 직원 DTO
  */
 export class AnnouncementTargetEmployeeDto {
-  @ApiProperty({ description: '직원 ID (SSO)', example: 'EMP001' })
-  employeeId: string;
+  @ApiProperty({ description: '직원 사번 (SSO employeeNumber)', example: '26002' })
+  employeeNumber: string;
 
   @ApiProperty({ description: '직원 이름', example: '홍길동' })
   employeeName: string;

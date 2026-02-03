@@ -131,7 +131,6 @@ export class UserAnnouncementController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<AnnouncementResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
     // - 전사공개가 아닌 경우, 사용자가 접근 권한이 있는지 확인
 
     // 1. 공지사항 조회
