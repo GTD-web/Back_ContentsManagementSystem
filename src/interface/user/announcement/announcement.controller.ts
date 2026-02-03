@@ -20,6 +20,8 @@ import {
   AnnouncementListResponseDto,
 } from '@interface/common/dto/announcement/announcement-response.dto';
 import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-survey-answer.dto';
+import { MyAnswersDto } from '@interface/common/dto/survey/survey-response.dto';
+import { SurveyService } from '@domain/sub/survey/survey.service';
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
@@ -29,6 +31,7 @@ export class UserAnnouncementController {
     private readonly announcementBusinessService: AnnouncementBusinessService,
     @InjectRepository(AnnouncementRead)
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
+    private readonly surveyService: SurveyService,
   ) {}
 
   /**
@@ -155,7 +158,16 @@ export class UserAnnouncementController {
       });
     }
 
-    // 3. 응답 반환
+    // 3. 설문 응답 내역 조회 (설문이 있는 경우)
+    let myAnswers: MyAnswersDto | null = null;
+    if (announcement.survey) {
+      myAnswers = await this.surveyService.사용자의_설문_응답을_조회한다(
+        announcement.survey.id,
+        user.employeeNumber,
+      );
+    }
+
+    // 4. 응답 반환
     return {
       ...announcement,
       survey: announcement.survey
@@ -178,6 +190,7 @@ export class UserAnnouncementController {
               })) || [],
             createdAt: announcement.survey.createdAt,
             updatedAt: announcement.survey.updatedAt,
+            myAnswers, // ✅ 사용자의 응답 내역 추가
           }
         : null,
     };
@@ -382,12 +395,22 @@ export class UserAnnouncementController {
     @Param('id') id: string,
     @Body() answers: SubmitSurveyAnswerDto,
   ): Promise<{ success: boolean }> {
-    // TODO: 설문 응답 제출 로직 구현 필요
-    // - 설문 존재 여부 확인
-    // - 중복 응답 확인
-    // - 응답 유효성 검증
-    // - 응답 저장
+    // 설문 응답 제출
+    const result = await this.surveyService.설문_응답을_제출한다(
+      id, // announcementId
+      user.id, // employeeId (내부 UUID)
+      user.employeeNumber, // employeeNumber (SSO 사번)
+      {
+        textAnswers: answers.textAnswers,
+        choiceAnswers: answers.choiceAnswers,
+        checkboxAnswers: answers.checkboxAnswers,
+        scaleAnswers: answers.scaleAnswers,
+        gridAnswers: answers.gridAnswers,
+        fileAnswers: answers.fileAnswers,
+        datetimeAnswers: answers.datetimeAnswers,
+      },
+    );
 
-    return { success: true };
+    return { success: result.success };
   }
 }

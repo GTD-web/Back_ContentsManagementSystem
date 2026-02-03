@@ -75,11 +75,21 @@ export interface ScaleStatistics {
 }
 
 /**
+ * 텍스트 응답 아이템
+ */
+export interface TextResponseItem {
+  employeeId: string;
+  textValue: string;
+  submittedAt: Date;
+}
+
+/**
  * 텍스트 질문 통계 (short_answer, paragraph)
  */
 export interface TextStatistics {
   type: 'text';
   responseCount: number;
+  responses: TextResponseItem[]; // ✅ 실제 응답 내용 추가
 }
 
 /**
@@ -203,7 +213,7 @@ export class GetSurveyStatisticsHandler
 
       default:
         // 기타 타입은 텍스트 통계로 처리
-        statistics = { type: 'text', responseCount: 0 };
+        statistics = { type: 'text', responseCount: 0, responses: [] };
         totalResponses = 0;
     }
 
@@ -372,6 +382,7 @@ export class GetSurveyStatisticsHandler
   }> {
     const responses = await this.responseTextRepository.find({
       where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
     const totalResponses = responses.length;
@@ -380,6 +391,11 @@ export class GetSurveyStatisticsHandler
       statistics: {
         type: 'text',
         responseCount: totalResponses,
+        responses: responses.map((r) => ({
+          employeeId: r.employeeId,
+          textValue: r.textValue,
+          submittedAt: r.submittedAt,
+        })),
       },
       totalResponses,
     };

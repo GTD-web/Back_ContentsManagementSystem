@@ -2,6 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Survey } from '@domain/sub/survey/survey.entity';
 import { SurveyQuestion } from '@domain/sub/survey/survey-question.entity';
 import { InqueryType } from '@domain/sub/survey/inquery-type.types';
+import {
+  TextAnswerDto,
+  ChoiceAnswerDto,
+  CheckboxAnswerDto,
+  ScaleAnswerDto,
+  GridAnswerDto,
+  FileAnswerDto,
+  DatetimeAnswerDto,
+} from './submit-survey-answer.dto';
 
 /**
  * 설문 질문 응답 DTO
@@ -41,6 +50,60 @@ export class SurveyQuestionResponseDto {
 }
 
 /**
+ * 사용자의 설문 응답 DTO
+ */
+export class MyAnswersDto {
+  @ApiProperty({
+    description: '텍스트 응답 목록',
+    type: [TextAnswerDto],
+    required: false,
+  })
+  textAnswers?: TextAnswerDto[];
+
+  @ApiProperty({
+    description: '선택형 응답 목록',
+    type: [ChoiceAnswerDto],
+    required: false,
+  })
+  choiceAnswers?: ChoiceAnswerDto[];
+
+  @ApiProperty({
+    description: '체크박스 응답 목록',
+    type: [CheckboxAnswerDto],
+    required: false,
+  })
+  checkboxAnswers?: CheckboxAnswerDto[];
+
+  @ApiProperty({
+    description: '척도 응답 목록',
+    type: [ScaleAnswerDto],
+    required: false,
+  })
+  scaleAnswers?: ScaleAnswerDto[];
+
+  @ApiProperty({
+    description: '그리드 응답 목록',
+    type: [GridAnswerDto],
+    required: false,
+  })
+  gridAnswers?: GridAnswerDto[];
+
+  @ApiProperty({
+    description: '파일 응답 목록',
+    type: [FileAnswerDto],
+    required: false,
+  })
+  fileAnswers?: FileAnswerDto[];
+
+  @ApiProperty({
+    description: '날짜/시간 응답 목록',
+    type: [DatetimeAnswerDto],
+    required: false,
+  })
+  datetimeAnswers?: DatetimeAnswerDto[];
+}
+
+/**
  * 설문조사 응답 DTO
  */
 export class SurveyResponseDto {
@@ -76,6 +139,16 @@ export class SurveyResponseDto {
 
   @ApiProperty({ description: '수정 일시' })
   updatedAt: Date;
+
+  @ApiProperty({
+    description:
+      '사용자의 설문 응답 내역 (사용자용 API에서만 제공)\n\n' +
+      '설문을 완료한 경우 자신이 제출한 응답 내용이 포함됩니다.',
+    type: MyAnswersDto,
+    required: false,
+    nullable: true,
+  })
+  myAnswers?: MyAnswersDto | null;
 
   static from(survey: Survey): SurveyResponseDto {
     return {

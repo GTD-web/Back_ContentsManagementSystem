@@ -296,7 +296,7 @@ export class AnnouncementBusinessService {
     });
     const readEmployeeNumbers = new Set(readRecords.map((r) => r.employeeNumber));
 
-    // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우)
+    // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준)
     let surveyCompletionMap = new Map<string, boolean>();
     if (announcement.survey) {
       const surveyCompletions = await this.surveyCompletionRepository.find({
@@ -306,7 +306,7 @@ export class AnnouncementBusinessService {
         },
       });
       surveyCompletionMap = new Map(
-        surveyCompletions.map((sc) => [sc.employeeId, true]),
+        surveyCompletions.map((sc) => [sc.employeeNumber, true]),
       );
     }
 

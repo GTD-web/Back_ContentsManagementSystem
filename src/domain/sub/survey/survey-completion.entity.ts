@@ -10,7 +10,11 @@ import { Survey } from './survey.entity';
  */
 @Entity('survey_completions')
 @Index('uk_survey_completion', ['surveyId', 'employeeId'], { unique: true })
+@Index('uk_survey_completion_employee_number', ['surveyId', 'employeeNumber'], {
+  unique: true,
+})
 @Index('idx_survey_completion_employee_id', ['employeeId'])
+@Index('idx_survey_completion_employee_number', ['employeeNumber'])
 export class SurveyCompletion extends BaseEntity<SurveyCompletion> {
   @Column({
     type: 'uuid',
@@ -26,9 +30,17 @@ export class SurveyCompletion extends BaseEntity<SurveyCompletion> {
 
   @Column({
     type: 'uuid',
-    comment: '직원 ID (외부 시스템 직원 ID - SSO)',
+    comment: '직원 ID (내부 DB 사용자 UUID)',
   })
   employeeId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '직원 사번 (SSO employeeNumber)',
+  })
+  employeeNumber: string;
 
   @Column({
     type: 'int',

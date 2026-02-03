@@ -117,6 +117,29 @@ export class ScaleStatisticsDto {
 }
 
 /**
+ * 텍스트 응답 아이템
+ */
+export class TextResponseItemDto {
+  @ApiProperty({
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
+  })
+  employeeId: string;
+
+  @ApiProperty({
+    description: '텍스트 응답 내용',
+    example: '제품 품질이 매우 우수합니다.',
+  })
+  textValue: string;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
+}
+
+/**
  * 텍스트 질문 통계 (short_answer, paragraph)
  */
 export class TextStatisticsDto {
@@ -131,6 +154,12 @@ export class TextStatisticsDto {
     example: 25,
   })
   responseCount: number;
+
+  @ApiProperty({
+    description: '실제 응답 내용 목록 (최신순)',
+    type: [TextResponseItemDto],
+  })
+  responses: TextResponseItemDto[];
 }
 
 /**

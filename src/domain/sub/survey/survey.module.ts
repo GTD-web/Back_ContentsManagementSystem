@@ -3,6 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Survey } from './survey.entity';
 import { SurveyQuestion } from './survey-question.entity';
 import { SurveyCompletion } from './survey-completion.entity';
+import { SurveyResponseText } from './responses/survey-response-text.entity';
+import { SurveyResponseChoice } from './responses/survey-response-choice.entity';
+import { SurveyResponseCheckbox } from './responses/survey-response-checkbox.entity';
+import { SurveyResponseScale } from './responses/survey-response-scale.entity';
+import { SurveyResponseGrid } from './responses/survey-response-grid.entity';
+import { SurveyResponseFile } from './responses/survey-response-file.entity';
+import { SurveyResponseDatetime } from './responses/survey-response-datetime.entity';
 import { SurveyService } from './survey.service';
 
 /**
@@ -11,7 +18,18 @@ import { SurveyService } from './survey.service';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Survey, SurveyQuestion, SurveyCompletion]),
+    TypeOrmModule.forFeature([
+      Survey,
+      SurveyQuestion,
+      SurveyCompletion,
+      SurveyResponseText,
+      SurveyResponseChoice,
+      SurveyResponseCheckbox,
+      SurveyResponseScale,
+      SurveyResponseGrid,
+      SurveyResponseFile,
+      SurveyResponseDatetime,
+    ]),
   ],
   providers: [SurveyService],
   exports: [SurveyService],
