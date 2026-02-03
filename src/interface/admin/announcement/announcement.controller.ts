@@ -766,7 +766,12 @@ export class AnnouncementController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
     // 파일 업로드 처리
-    let attachments = [];
+    let attachments: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+    }> = [];
     if (files && files.length > 0) {
       attachments = await this.fileUploadService.uploadFiles(files, 'announcements');
     }
@@ -918,7 +923,14 @@ export class AnnouncementController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
     // 파일 업로드 처리
-    let attachments = undefined;
+    let attachments:
+      | Array<{
+          fileName: string;
+          fileUrl: string;
+          fileSize: number;
+          mimeType: string;
+        }>
+      | undefined = undefined;
     if (files && files.length > 0) {
       attachments = await this.fileUploadService.uploadFiles(files, 'announcements');
     }
