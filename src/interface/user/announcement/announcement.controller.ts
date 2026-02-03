@@ -466,8 +466,17 @@ export class UserAnnouncementController {
     @Body() dto: any, // FormData로 전송되므로 any 타입으로 받음
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<{ success: boolean }> {
+    console.log('📝 설문 응답 제출 시작:', {
+      announcementId: id,
+      userId: user.id,
+      employeeNumber: user.employeeNumber,
+      hasFiles: files ? files.length : 0,
+      dto: dto,
+    });
+
     // FormData 파싱
     const parsedDto = this.parseFormDataDto(dto);
+    console.log('✅ FormData 파싱 완료:', parsedDto);
 
     // 파일 업로드 처리
     let fileAnswers: Array<{
@@ -481,11 +490,14 @@ export class UserAnnouncementController {
     }> = [];
 
     if (files && files.length > 0) {
+      console.log(`📎 파일 ${files.length}개 업로드 시작`);
+      
       // 파일 업로드 (surveys 폴더에 저장)
       const uploadedFiles = await this.fileUploadService.uploadFiles(
         files,
         'surveys',
       );
+      console.log('✅ 파일 업로드 완료:', uploadedFiles);
 
       // fileQuestionIds가 있으면 각 파일을 해당 질문에 매핑
       if (parsedDto.fileQuestionIds && Array.isArray(parsedDto.fileQuestionIds)) {
@@ -494,7 +506,10 @@ export class UserAnnouncementController {
         // 각 파일을 질문 ID별로 그룹화
         uploadedFiles.forEach((file, index) => {
           const questionId = parsedDto.fileQuestionIds[index];
-          if (!questionId) return;
+          if (!questionId) {
+            console.warn(`⚠️ 파일 인덱스 ${index}에 대한 questionId가 없습니다`);
+            return;
+          }
 
           const existing = fileQuestionMap.get(questionId) || [];
           existing.push(file);
@@ -508,25 +523,32 @@ export class UserAnnouncementController {
             files,
           }),
         );
+        console.log('✅ 파일-질문 매핑 완료:', fileAnswers);
       }
     }
+
+    // 설문 응답 데이터 준비
+    const answersData = {
+      textAnswers: parsedDto.textAnswers || [],
+      choiceAnswers: parsedDto.choiceAnswers || [],
+      checkboxAnswers: parsedDto.checkboxAnswers || [],
+      scaleAnswers: parsedDto.scaleAnswers || [],
+      gridAnswers: parsedDto.gridAnswers || [],
+      fileAnswers: fileAnswers.length > 0 ? fileAnswers : undefined,
+      datetimeAnswers: parsedDto.datetimeAnswers || [],
+    };
+
+    console.log('📊 설문 응답 데이터:', answersData);
 
     // 설문 응답 제출
     const result = await this.surveyService.설문_응답을_제출한다(
       id, // announcementId
       user.id, // employeeId (내부 UUID)
       user.employeeNumber, // employeeNumber (SSO 사번)
-      {
-        textAnswers: parsedDto.textAnswers,
-        choiceAnswers: parsedDto.choiceAnswers,
-        checkboxAnswers: parsedDto.checkboxAnswers,
-        scaleAnswers: parsedDto.scaleAnswers,
-        gridAnswers: parsedDto.gridAnswers,
-        fileAnswers: fileAnswers.length > 0 ? fileAnswers : undefined,
-        datetimeAnswers: parsedDto.datetimeAnswers,
-      },
+      answersData,
     );
 
+    console.log('✅ 설문 응답 제출 완료:', result);
     return { success: result.success };
   }
 
@@ -535,6 +557,7 @@ export class UserAnnouncementController {
    * @private
    */
   private parseFormDataDto(dto: any): any {
+    console.log('🔍 파싱 시작 - 원본 DTO:', dto);
     const parsed = { ...dto };
 
     // JSON 문자열로 전송된 배열/객체 필드 파싱
@@ -549,16 +572,30 @@ export class UserAnnouncementController {
     ];
 
     for (const field of jsonFields) {
-      if (parsed[field] && typeof parsed[field] === 'string') {
-        try {
-          parsed[field] = JSON.parse(parsed[field]);
-        } catch (error) {
-          // 파싱 실패 시 빈 배열로 설정
+      if (parsed[field]) {
+        if (typeof parsed[field] === 'string') {
+          try {
+            parsed[field] = JSON.parse(parsed[field]);
+            console.log(`✅ ${field} 파싱 성공:`, parsed[field]);
+          } catch (error) {
+            console.error(`❌ ${field} 파싱 실패:`, error.message);
+            // 파싱 실패 시 빈 배열로 설정
+            parsed[field] = [];
+          }
+        } else if (Array.isArray(parsed[field])) {
+          // 이미 배열이면 그대로 사용
+          console.log(`✅ ${field} 이미 배열 형식:`, parsed[field]);
+        } else {
+          console.warn(`⚠️ ${field}가 문자열도 배열도 아닙니다:`, typeof parsed[field]);
           parsed[field] = [];
         }
+      } else {
+        // 필드가 없으면 빈 배열로 초기화
+        parsed[field] = [];
       }
     }
 
+    console.log('✅ 파싱 완료 - 결과:', parsed);
     return parsed;
   }
 }
