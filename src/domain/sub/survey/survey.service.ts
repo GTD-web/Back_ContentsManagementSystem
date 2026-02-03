@@ -644,7 +644,7 @@ export class SurveyService {
       const questionIds =
         survey.questions?.map((q) => q.id) || [];
 
-      // 2-1. 기존 응답 삭제 (재제출 시 덮어쓰기)
+      // 2-1. 기존 응답 삭제 (재제출 시 덮어쓰기) - 파일은 제외, DELETE 엔드포인트로만 제거
       if (questionIds.length > 0) {
         await queryRunner.manager.delete(SurveyResponseText, {
           employeeId,
@@ -666,15 +666,12 @@ export class SurveyService {
           employeeId,
           questionId: In(questionIds),
         });
-        await queryRunner.manager.delete(SurveyResponseFile, {
-          employeeId,
-          questionId: In(questionIds),
-        });
+        // SurveyResponseFile은 삭제하지 않음 → 기존 파일 유지, 새 파일만 추가. 제거는 DELETE /survey/answers/files 로만 가능
         await queryRunner.manager.delete(SurveyResponseDatetime, {
           employeeId,
           questionId: In(questionIds),
         });
-        this.logger.debug('기존 설문 응답 삭제 완료 (덮어쓰기)');
+        this.logger.debug('기존 설문 응답 삭제 완료 (덮어쓰기, 파일 제외)');
       }
 
       const submittedAt = new Date();
@@ -801,7 +798,7 @@ export class SurveyService {
         );
       }
 
-      // 4. 응답한 질문 수 계산
+      // 4. 응답한 질문 수 계산 (이번 요청 + 기존 파일 응답 질문 포함)
       const answeredQuestionIds = new Set<string>();
       if (answers.textAnswers)
         answers.textAnswers.forEach((a) =>
@@ -831,6 +828,17 @@ export class SurveyService {
         answers.datetimeAnswers.forEach((a) =>
           answeredQuestionIds.add(a.questionId),
         );
+      // 기존 파일 응답이 있는 질문도 포함 (파일은 재제출 시 삭제하지 않으므로)
+      if (questionIds.length > 0) {
+        const existingFiles = await queryRunner.manager.find(
+          SurveyResponseFile,
+          {
+            where: { employeeId, questionId: In(questionIds) },
+            select: ['questionId'],
+          },
+        );
+        existingFiles.forEach((f) => answeredQuestionIds.add(f.questionId));
+      }
 
       const answeredQuestions = answeredQuestionIds.size;
       const totalQuestions = survey.questions?.length || 0;
