@@ -159,8 +159,7 @@ export class AnnouncementBusinessService {
       });
 
     // 2. 조직 정보 조회 (비활성 부서 포함)
-    const orgInfo =
-      await this.companyContextService.조직_정보를_가져온다(true);
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
 
     // 3. 조직에서 사용자 정보 추출
     const userInfo = this.조직에서_직원_정보를_찾기(orgInfo, employeeNumber);
@@ -176,7 +175,6 @@ export class AnnouncementBusinessService {
       const hasPermission = this.사용자가_공지사항에_접근_가능한지_확인한다(
         announcement,
         userId,
-        employeeNumber,
         userInfo,
         orgInfo,
       );
@@ -230,7 +228,6 @@ export class AnnouncementBusinessService {
   private 사용자가_공지사항에_접근_가능한지_확인한다(
     announcement: Announcement,
     userId: string,
-    employeeNumber: string,
     userInfo: {
       name: string;
       departmentId: string | null;
@@ -256,16 +253,12 @@ export class AnnouncementBusinessService {
       return false;
     }
 
-    // 1. 직원 ID로 직접 지정되었는지 확인 (UUID 또는 employeeNumber 둘 다 체크)
-    if (announcement.permissionEmployeeIds) {
-      // UUID (내부 ID)로 체크
-      if (announcement.permissionEmployeeIds.includes(userId)) {
-        return true;
-      }
-      // employeeNumber (SSO 사번)로도 체크
-      if (announcement.permissionEmployeeIds.includes(employeeNumber)) {
-        return true;
-      }
+    // 1. 직원 ID로 직접 지정되었는지 확인 (UUID로 체크)
+    if (
+      announcement.permissionEmployeeIds &&
+      announcement.permissionEmployeeIds.includes(userId)
+    ) {
+      return true;
     }
 
     // 사용자 정보가 없으면 이후 검사 불가
@@ -462,8 +455,7 @@ export class AnnouncementBusinessService {
     }
 
     // 2. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
-    const orgInfo =
-      await this.companyContextService.조직_정보를_가져온다(true);
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
     const employeeMap = this.조직에서_직원_정보_맵을_생성한다(orgInfo);
 
     this.logger.debug(
@@ -474,7 +466,9 @@ export class AnnouncementBusinessService {
     const readRecords = await this.announcementReadRepository.find({
       where: { announcementId: announcement.id },
     });
-    const readEmployeeNumbers = new Set(readRecords.map((r) => r.employeeNumber));
+    const readEmployeeNumbers = new Set(
+      readRecords.map((r) => r.employeeNumber),
+    );
 
     // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준)
     let surveyCompletionMap = new Map<string, boolean>();
@@ -770,10 +764,15 @@ export class AnnouncementBusinessService {
     id: string,
     fileUrl: string,
   ): Promise<Announcement> {
-    this.logger.log(`공지사항 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`);
+    this.logger.log(
+      `공지사항 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`,
+    );
 
     const result =
-      await this.announcementContextService.공지사항_첨부파일을_삭제한다(id, fileUrl);
+      await this.announcementContextService.공지사항_첨부파일을_삭제한다(
+        id,
+        fileUrl,
+      );
 
     this.logger.log(`공지사항 첨부파일 삭제 완료 - ID: ${id}`);
 
@@ -1213,8 +1212,7 @@ export class AnnouncementBusinessService {
     // 2. 제한공개 또는 권한 필터가 있는 경우 권한 필드 기반 필터링
     // 비활성 부서도 포함하여 조회 (부서 권한이 비활성 부서를 참조할 수 있으므로)
     const employeeIds = new Set<string>();
-    const orgInfo =
-      await this.companyContextService.조직_정보를_가져온다(true);
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
 
     // 특정 직원 ID 목록
     if (
@@ -1417,9 +1415,7 @@ export class AnnouncementBusinessService {
    * 조직 정보에서 직원 정보 맵을 생성한다 (employeeNumber & id → 직원정보)
    * @private
    */
-  private 조직에서_직원_정보_맵을_생성한다(
-    orgInfo: OrganizationInfo,
-  ): Map<
+  private 조직에서_직원_정보_맵을_생성한다(orgInfo: OrganizationInfo): Map<
     string,
     {
       name: string;
