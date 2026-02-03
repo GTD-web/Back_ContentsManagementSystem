@@ -552,6 +552,48 @@ export class SurveyService {
   }
 
   /**
+   * 설문 응답 파일을 개별 삭제한다 (본인이 제출한 파일만 삭제 가능)
+   */
+  async 설문_응답_파일을_삭제한다(
+    announcementId: string,
+    employeeId: string,
+    fileUrl: string,
+  ): Promise<{ success: boolean }> {
+    const survey =
+      await this.공지사항ID로_설문조사를_조회한다(announcementId);
+    if (!survey) {
+      throw new NotFoundException(
+        `해당 공지사항에 설문조사가 없습니다. 공지사항 ID: ${announcementId}`,
+      );
+    }
+
+    const questionIds = survey.questions?.map((q) => q.id) || [];
+    if (questionIds.length === 0) {
+      throw new NotFoundException('설문에 질문이 없습니다.');
+    }
+
+    const fileResponse = await this.fileResponseRepository.findOne({
+      where: {
+        fileUrl,
+        employeeId,
+        questionId: In(questionIds),
+      },
+    });
+
+    if (!fileResponse) {
+      throw new NotFoundException(
+        '해당 설문 응답 파일을 찾을 수 없거나 삭제 권한이 없습니다.',
+      );
+    }
+
+    await this.fileResponseRepository.remove(fileResponse);
+    this.logger.log(
+      `설문 응답 파일 삭제 완료 - 공지사항 ID: ${announcementId}, 파일 URL: ${fileUrl}`,
+    );
+    return { success: true };
+  }
+
+  /**
    * 설문 응답을 제출한다
    */
   async 설문_응답을_제출한다(

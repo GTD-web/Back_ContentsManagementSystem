@@ -2,11 +2,13 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Query,
   UploadedFiles,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -616,6 +618,62 @@ export class UserAnnouncementController {
 
     console.log('✅ 설문 응답 제출 완료:', result);
     return { success: result.success };
+  }
+
+  /**
+   * 공지사항 설문 응답 파일을 개별 삭제한다
+   */
+  @Delete(':id/survey/answers/files')
+  @ApiOperation({
+    summary: '설문 응답 파일 개별 삭제',
+    description:
+      '본인이 제출한 설문 응답 파일을 개별 삭제합니다.\n\n' +
+      '**쿼리 파라미터:**\n' +
+      '- `fileUrl`: 삭제할 파일의 URL (필수)\n\n' +
+      '⚠️ **주의사항:**\n' +
+      '- 본인이 제출한 파일만 삭제할 수 있습니다\n' +
+      '- 파일 URL은 정확히 일치해야 합니다\n' +
+      '- DB 레코드만 삭제되며, S3 객체는 삭제되지 않습니다',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID (UUID)',
+    type: String,
+    required: true,
+  })
+  @ApiQuery({
+    name: 'fileUrl',
+    description: '삭제할 설문 응답 파일의 URL',
+    type: String,
+    required: true,
+    example:
+      'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/surveys/xxx.jpg',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '파일 삭제 성공',
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean', example: true } },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항/설문을 찾을 수 없거나, 해당 파일이 없거나 삭제 권한이 없음',
+  })
+  async 공지사항_설문_응답_파일을_삭제한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query('fileUrl') fileUrl: string,
+  ): Promise<{ success: boolean }> {
+    if (!fileUrl || typeof fileUrl !== 'string' || fileUrl.trim() === '') {
+      throw new BadRequestException('fileUrl 쿼리 파라미터가 필요합니다.');
+    }
+    return this.surveyService.설문_응답_파일을_삭제한다(
+      id,
+      user.id,
+      fileUrl.trim(),
+    );
   }
 
   /**
