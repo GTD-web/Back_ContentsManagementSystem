@@ -156,19 +156,6 @@ export class SurveyResponseDto {
   @ApiProperty({ description: '수정 일시' })
   updatedAt: Date;
 
-  @ApiProperty({
-    description:
-      '⚠️ DEPRECATED: 각 질문의 `myAnswer` 필드를 사용하세요.\n\n' +
-      '사용자의 설문 응답 내역 (사용자용 API에서만 제공)\n\n' +
-      '설문을 완료한 경우 자신이 제출한 응답 내용이 포함됩니다.\n\n' +
-      '이 필드는 하위 호환성을 위해 유지되지만, 각 질문의 `myAnswer` 필드를 사용하는 것을 권장합니다.',
-    type: MyAnswersDto,
-    required: false,
-    nullable: true,
-    deprecated: true,
-  })
-  myAnswers?: MyAnswersDto | null;
-
   static from(survey: Survey): SurveyResponseDto {
     return {
       id: survey.id,

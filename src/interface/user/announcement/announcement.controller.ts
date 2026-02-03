@@ -298,7 +298,6 @@ export class UserAnnouncementController {
               }) || [],
             createdAt: announcement.survey.createdAt,
             updatedAt: announcement.survey.updatedAt,
-            myAnswers, // 하위 호환성을 위해 유지 (deprecated)
           }
         : null,
     };
