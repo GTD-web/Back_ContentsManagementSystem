@@ -119,6 +119,7 @@ export class UserAnnouncementController {
     // - 사용자 ID가 permissionEmployeeIds에 포함된 공지사항
     const result =
       await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다({
+        userId: user.id,
         employeeNumber: user.employeeNumber,
         page: pageNum,
         limit: limitNum,

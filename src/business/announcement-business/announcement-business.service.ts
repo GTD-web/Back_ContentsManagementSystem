@@ -127,6 +127,7 @@ export class AnnouncementBusinessService {
    * 공지사항 목록을 조회한다 (사용자용 - 권한 필터링 포함)
    */
   async 공지사항_목록을_사용자_권한으로_조회한다(params: {
+    userId: string;
     employeeNumber: string;
     isFixed?: boolean;
     orderBy?: 'order' | 'createdAt';
@@ -141,12 +142,12 @@ export class AnnouncementBusinessService {
     page: number;
     limit: number;
   }> {
-    const { employeeNumber, ...queryParams } = params;
+    const { userId, employeeNumber, ...queryParams } = params;
     const page = params.page || 1;
     const limit = params.limit || 10;
 
     this.logger.log(
-      `공지사항 목록 조회 시작 (사용자용) - 사번: ${employeeNumber}`,
+      `공지사항 목록 조회 시작 (사용자용) - 사번: ${employeeNumber}, ID: ${userId}`,
     );
 
     // 1. isPublic 조건 없이 모든 공지사항 조회 (대량 조회를 위해 큰 limit 사용)
@@ -174,6 +175,7 @@ export class AnnouncementBusinessService {
       // 제한공개인 경우, 권한 확인
       const hasPermission = this.사용자가_공지사항에_접근_가능한지_확인한다(
         announcement,
+        userId,
         employeeNumber,
         userInfo,
         orgInfo,
@@ -227,6 +229,7 @@ export class AnnouncementBusinessService {
    */
   private 사용자가_공지사항에_접근_가능한지_확인한다(
     announcement: Announcement,
+    userId: string,
     employeeNumber: string,
     userInfo: {
       name: string;
@@ -253,12 +256,16 @@ export class AnnouncementBusinessService {
       return false;
     }
 
-    // 1. 직원 ID로 직접 지정되었는지 확인
-    if (
-      announcement.permissionEmployeeIds &&
-      announcement.permissionEmployeeIds.includes(employeeNumber)
-    ) {
-      return true;
+    // 1. 직원 ID로 직접 지정되었는지 확인 (UUID 또는 employeeNumber 둘 다 체크)
+    if (announcement.permissionEmployeeIds) {
+      // UUID (내부 ID)로 체크
+      if (announcement.permissionEmployeeIds.includes(userId)) {
+        return true;
+      }
+      // employeeNumber (SSO 사번)로도 체크
+      if (announcement.permissionEmployeeIds.includes(employeeNumber)) {
+        return true;
+      }
     }
 
     // 사용자 정보가 없으면 이후 검사 불가
