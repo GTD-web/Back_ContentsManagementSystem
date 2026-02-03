@@ -165,8 +165,10 @@ export class AnnouncementService {
       'expiredAt',
     ];
 
+    // 허용된 필드만 필터링하여 업데이트
+    // undefined가 아닌 모든 값(null, 빈 배열 포함)은 업데이트
     const filteredData = Object.keys(data)
-      .filter((key) => allowedFields.includes(key))
+      .filter((key) => allowedFields.includes(key) && data[key] !== undefined)
       .reduce((obj, key) => {
         obj[key] = data[key];
         return obj;
