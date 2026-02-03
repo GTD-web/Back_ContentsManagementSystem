@@ -10,12 +10,11 @@ import {
   IsUUID,
   IsNotEmpty,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { AnnouncementAttachmentDto } from './create-announcement.dto';
+import { Type, Transform } from 'class-transformer';
 import { CreateSurveyWithoutAnnouncementDto } from '../survey/create-survey.dto';
 
 /**
- * 공지사항 수정 DTO
+ * 공지사항 수정 DTO (FormData용)
  */
 export class UpdateAnnouncementDto {
   @ApiProperty({
@@ -61,6 +60,7 @@ export class UpdateAnnouncementDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isFixed?: boolean;
 
@@ -73,6 +73,7 @@ export class UpdateAnnouncementDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isPublic?: boolean;
 
@@ -109,86 +110,73 @@ export class UpdateAnnouncementDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   mustRead?: boolean;
 
   @ApiProperty({
     description:
-      '특정 직원 ID 목록 (SSO ID)\n\n' +
+      '특정 직원 ID 목록 (SSO ID) - JSON 문자열\n\n' +
       '**제한공개 시 사용**\n\n' +
       '공지사항을 볼 수 있는 특정 직원들의 SSO ID 목록입니다.\n' +
+      'JSON 문자열 형태로 전송: \'["employee-uuid-1", "employee-uuid-2"]\'\n' +
       '`isPublic=false`일 때만 적용됩니다.',
-    type: [String],
-    example: ['employee-uuid-1', 'employee-uuid-2'],
+    example: '["employee-uuid-1", "employee-uuid-2"]',
     required: false,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permissionEmployeeIds?: string[];
+  permissionEmployeeIds?: string | string[];
 
   @ApiProperty({
     description:
-      '직급 ID 목록 (UUID)\n\n' +
+      '직급 ID 목록 (UUID) - JSON 문자열\n\n' +
       '**제한공개 시 사용**\n\n' +
       '공지사항을 볼 수 있는 직급의 UUID 목록입니다.\n' +
-      '예: 대리, 과장, 차장 등의 직급 ID\n' +
+      'JSON 문자열 형태로 전송\n' +
       '`isPublic=false`일 때만 적용됩니다.',
-    type: [String],
-    example: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'b2c3d4e5-f6a7-8901-bcde-f12345678901'],
+    example: '["a1b2c3d4-e5f6-7890-abcd-ef1234567890"]',
     required: false,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permissionRankIds?: string[];
+  permissionRankIds?: string | string[];
 
   @ApiProperty({
     description:
-      '직책 ID 목록 (UUID)\n\n' +
+      '직책 ID 목록 (UUID) - JSON 문자열\n\n' +
       '**제한공개 시 사용**\n\n' +
       '공지사항을 볼 수 있는 직책의 UUID 목록입니다.\n' +
-      '예: 팀장, 실장, 본부장 등의 직책 ID\n' +
+      'JSON 문자열 형태로 전송\n' +
       '`isPublic=false`일 때만 적용됩니다.',
-    type: [String],
-    example: ['c3d4e5f6-a7b8-9012-cdef-123456789012', 'd4e5f6a7-b890-1234-def0-234567890123'],
+    example: '["c3d4e5f6-a7b8-9012-cdef-123456789012"]',
     required: false,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permissionPositionIds?: string[];
+  permissionPositionIds?: string | string[];
 
   @ApiProperty({
     description:
-      '부서 ID 목록 (UUID)\n\n' +
+      '부서 ID 목록 (UUID) - JSON 문자열\n\n' +
       '**제한공개 시 사용**\n\n' +
       '공지사항을 볼 수 있는 부서의 UUID 목록입니다.\n' +
-      '예: 개발팀, 마케팅팀, 인사팀 등의 부서 ID\n' +
+      'JSON 문자열 형태로 전송\n' +
       '`isPublic=false`일 때만 적용됩니다.',
-    type: [String],
-    example: ['e2b3b884-833c-4fdb-ba00-ede1a45b8160', 'c11023a2-fb66-4e3f-bfcf-0666fb19f6bf'],
+    example: '["e2b3b884-833c-4fdb-ba00-ede1a45b8160"]',
     required: false,
   })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permissionDepartmentIds?: string[];
+  permissionDepartmentIds?: string | string[];
 
   @ApiProperty({
     description:
-      '첨부파일 목록\n\n' +
-      '공지사항에 첨부할 파일들의 정보입니다.\n' +
-      '파일은 미리 업로드된 상태여야 하며, URL과 메타데이터를 포함합니다.\n' +
-      '이 배열을 전송하면 기존 첨부파일을 완전히 대체합니다.',
-    type: [AnnouncementAttachmentDto],
+      '첨부 파일 목록\n\n' +
+      'multipart/form-data의 files 필드로 전송합니다.\n' +
+      '최대 10개 파일을 업로드할 수 있습니다.\n' +
+      '새 파일을 업로드하면 기존 파일이 교체됩니다.',
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
     required: false,
   })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AnnouncementAttachmentDto)
-  attachments?: AnnouncementAttachmentDto[];
+  files?: any;
 
   @ApiProperty({
     description:
@@ -198,41 +186,20 @@ export class UpdateAnnouncementDto {
     required: false,
   })
   @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
   @IsNumber()
   order?: number;
 
   @ApiProperty({
     description:
-      '설문조사 정보 (수정 또는 생성)\n\n' +
+      '설문조사 정보 (수정 또는 생성) - JSON 문자열\n\n' +
       '공지사항에 연결할 설문조사 데이터입니다.\n' +
-      '기존 설문이 있으면 수정되고, 없으면 새로 생성됩니다.\n\n' +
-      '**설문 예시:**\n' +
-      '```json\n' +
-      '{\n' +
-      '  "title": "만족도 조사",\n' +
-      '  "description": "의견을 들려주세요",\n' +
-      '  "startDate": "2024-01-01T00:00:00Z",\n' +
-      '  "endDate": "2024-12-31T23:59:59Z",\n' +
-      '  "questions": [\n' +
-      '    {\n' +
-      '      "title": "만족도를 선택해주세요",\n' +
-      '      "type": "multiple_choice",\n' +
-      '      "form": {\n' +
-      '        "options": ["매우 만족", "만족", "보통", "불만족"]\n' +
-      '      },\n' +
-      '      "isRequired": true,\n' +
-      '      "order": 0\n' +
-      '    }\n' +
-      '  ]\n' +
-      '}\n' +
-      '```',
-    type: CreateSurveyWithoutAnnouncementDto,
+      'JSON 문자열 형태로 전송합니다.',
+    example: '{"title":"만족도 조사","description":"의견을 들려주세요","questions":[]}',
     required: false,
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => CreateSurveyWithoutAnnouncementDto)
-  survey?: CreateSurveyWithoutAnnouncementDto;
+  survey?: string | CreateSurveyWithoutAnnouncementDto;
 }
 
 /**

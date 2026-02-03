@@ -7,6 +7,7 @@ import { SurveyContextModule } from '@context/survey-context/survey-context.modu
 import { CompanyContextModule } from '@context/company-context/company-context.module';
 import { CategoryModule } from '@domain/common/category/category.module';
 import { SsoModule } from '@domain/common/sso/sso.module';
+import { FileUploadModule } from '@domain/common/file-upload/file-upload.module';
 import { AnnouncementRead } from '@domain/core/announcement/announcement-read.entity';
 import { AnnouncementPermissionLog } from '@domain/core/announcement/announcement-permission-log.entity';
 import { Survey } from '@domain/sub/survey/survey.entity';
@@ -33,6 +34,7 @@ import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
     CompanyContextModule,
     CategoryModule,
     SsoModule,
+    FileUploadModule,
   ],
   providers: [AnnouncementBusinessService],
   exports: [AnnouncementBusinessService],

@@ -8,7 +8,10 @@ import {
   Param,
   Query,
   Patch,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -16,10 +19,12 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
+import { FileUploadService } from '@domain/common/file-upload/file-upload.service';
 import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { CreateAnnouncementDto } from '@interface/common/dto/announcement/create-announcement.dto';
 import {
@@ -55,6 +60,7 @@ import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-
 export class AnnouncementController {
   constructor(
     private readonly announcementBusinessService: AnnouncementBusinessService,
+    private readonly fileUploadService: FileUploadService,
     private readonly announcementPermissionScheduler: AnnouncementPermissionScheduler,
     @InjectRepository(AnnouncementPermissionLog)
     private readonly permissionLogRepository: Repository<AnnouncementPermissionLog>,
@@ -717,34 +723,36 @@ export class AnnouncementController {
    * 공지사항을 생성한다
    */
   @Post()
+  @UseInterceptors(FilesInterceptor('files', 10)) // 최대 10개 파일
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 생성',
     description:
       '새로운 공지사항을 생성합니다.\n\n' +
-      '**📋 Request Body 작성 가이드:**\n\n' +
+      '**📋 FormData 작성 가이드:**\n\n' +
       '1. **기본 정보** (필수)\n' +
       '   - `title`: 공지사항 제목\n' +
       '   - `content`: 공지사항 내용 (HTML 지원)\n\n' +
       '2. **카테고리** (선택)\n' +
       '   - `categoryId`: 공지사항 카테고리 ID (UUID)\n\n' +
-      '2. **공개 설정**\n' +
+      '3. **공개 설정**\n' +
       '   - `isPublic`: `true`(전사공개) 또는 `false`(제한공개)\n' +
       '   - `isFixed`: 상단 고정 여부\n' +
       '   - `mustRead`: 필독 여부\n' +
       '   - `releasedAt`, `expiredAt`: 공개 기간 (ISO 8601 형식)\n\n' +
-      '3. **권한 설정** (제한공개 시)\n' +
-      '   - `permissionEmployeeIds`: 특정 직원 ID 배열\n' +
-      '   - `permissionDepartmentIds`: 부서 ID 배열\n' +
-      '   - `permissionRankIds`: 직급 ID 배열\n' +
-      '   - `permissionPositionIds`: 직책 ID 배열\n\n' +
-      '4. **설문조사 추가** (선택사항)\n' +
-      '   - `survey` 객체에 설문 정보 포함\n' +
-      '   - `survey.questions` 배열에 질문 추가\n' +
-      '   - 각 질문의 `type`에 따라 필요한 `form` 데이터 다름\n\n' +
+      '4. **권한 설정** (제한공개 시)\n' +
+      '   - `permissionEmployeeIds`: 특정 직원 ID 배열 (JSON 문자열)\n' +
+      '   - `permissionDepartmentIds`: 부서 ID 배열 (JSON 문자열)\n' +
+      '   - `permissionRankIds`: 직급 ID 배열 (JSON 문자열)\n' +
+      '   - `permissionPositionIds`: 직책 ID 배열 (JSON 문자열)\n\n' +
+      '5. **파일 업로드**\n' +
+      '   - `files`: 첨부할 파일들 (최대 10개)\n\n' +
+      '6. **설문조사 추가** (선택사항)\n' +
+      '   - `survey`: 설문 정보 (JSON 문자열)\n\n' +
       '⚠️ **주의사항:**\n' +
-      '- 날짜는 ISO 8601 형식 (예: `2024-01-01T00:00:00Z`)\n' +
-      '- 설문 질문 타입별로 필요한 `form` 필드가 다릅니다\n' +
-      '- 제한공개 시 최소 하나의 권한 필드는 필수입니다\n\n' +
+      '- Content-Type은 multipart/form-data를 사용합니다\n' +
+      '- 배열과 객체는 JSON 문자열로 전송해야 합니다\n' +
+      '- 날짜는 ISO 8601 형식 (예: `2024-01-01T00:00:00Z`)\n\n' +
       '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
@@ -754,14 +762,25 @@ export class AnnouncementController {
   })
   async 공지사항을_생성한다(
     @Body() dto: CreateAnnouncementDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
+    // 파일 업로드 처리
+    let attachments = [];
+    if (files && files.length > 0) {
+      attachments = await this.fileUploadService.uploadFiles(files, 'announcements');
+    }
+
+    // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
+    const parsedDto = this.parseFormDataDto(dto);
+
     // 날짜 변환
     const data = {
-      ...dto,
-      categoryId: dto.categoryId || null,
-      releasedAt: dto.releasedAt ? new Date(dto.releasedAt) : null,
-      expiredAt: dto.expiredAt ? new Date(dto.expiredAt) : null,
+      ...parsedDto,
+      categoryId: parsedDto.categoryId || null,
+      releasedAt: parsedDto.releasedAt ? new Date(parsedDto.releasedAt) : null,
+      expiredAt: parsedDto.expiredAt ? new Date(parsedDto.expiredAt) : null,
+      attachments,
       createdBy: user.id,
     };
 
@@ -842,11 +861,13 @@ export class AnnouncementController {
    * 공지사항을 수정한다
    */
   @Put(':id')
+  @UseInterceptors(FilesInterceptor('files', 10)) // 최대 10개 파일
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 수정',
     description:
       '공지사항을 수정합니다. (비공개 상태에서만 가능)\n\n' +
-      '**📋 Request Body 작성 가이드:**\n\n' +
+      '**📋 FormData 작성 가이드:**\n\n' +
       '1. **수정 가능한 필드** (선택사항)\n' +
       '   - `categoryId`: 공지사항 카테고리 ID (UUID)\n' +
       '   - `title`: 공지사항 제목\n' +
@@ -854,18 +875,19 @@ export class AnnouncementController {
       '   - `isFixed`: 상단 고정 여부\n' +
       '   - `mustRead`: 필독 여부\n' +
       '   - `releasedAt`, `expiredAt`: 공개 기간\n\n' +
-      '3. **권한 설정 수정**\n' +
+      '2. **권한 설정 수정**\n' +
       '   - `isPublic`: 공개 방식 변경\n' +
-      '   - `permissionEmployeeIds`: 특정 직원 권한\n' +
-      '   - `permissionDepartmentIds`: 부서 권한\n' +
-      '   - `permissionRankIds`: 직급 권한\n' +
-      '   - `permissionPositionIds`: 직책 권한\n\n' +
+      '   - `permissionEmployeeIds`: 특정 직원 권한 (JSON 문자열)\n' +
+      '   - `permissionDepartmentIds`: 부서 권한 (JSON 문자열)\n' +
+      '   - `permissionRankIds`: 직급 권한 (JSON 문자열)\n' +
+      '   - `permissionPositionIds`: 직책 권한 (JSON 문자열)\n\n' +
+      '3. **파일 업로드**\n' +
+      '   - `files`: 새로 첨부할 파일들 (최대 10개)\n' +
+      '   - 기존 파일은 자동으로 교체됩니다\n\n' +
       '4. **설문조사 수정/추가**\n' +
-      '   - `survey` 객체를 포함하면 기존 설문 수정 또는 새 설문 생성\n' +
-      '   - 기존 설문이 있으면 덮어씌워집니다\n\n' +
-      '5. **첨부파일 수정**\n' +
-      '   - `attachments` 배열을 전송하면 기존 첨부파일 완전 교체\n\n' +
+      '   - `survey`: 설문 정보 (JSON 문자열)\n\n' +
       '⚠️ **주의사항:**\n' +
+      '- Content-Type은 multipart/form-data를 사용합니다\n' +
       '- 공개된 공지사항은 수정 불가 (먼저 비공개로 전환 필요)\n' +
       '- 수정하지 않을 필드는 생략 가능합니다\n' +
       '- 날짜는 ISO 8601 형식 사용\n\n' +
@@ -892,15 +914,28 @@ export class AnnouncementController {
   async 공지사항을_수정한다(
     @Param('id') id: string,
     @Body() dto: UpdateAnnouncementDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
-    // 날짜 변환
-    const data: any = { ...dto, updatedBy: user.id };
-    if (dto.releasedAt) {
-      data.releasedAt = new Date(dto.releasedAt);
+    // 파일 업로드 처리
+    let attachments = undefined;
+    if (files && files.length > 0) {
+      attachments = await this.fileUploadService.uploadFiles(files, 'announcements');
     }
-    if (dto.expiredAt) {
-      data.expiredAt = new Date(dto.expiredAt);
+
+    // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
+    const parsedDto = this.parseFormDataDto(dto);
+
+    // 날짜 변환
+    const data: any = { ...parsedDto, updatedBy: user.id };
+    if (parsedDto.releasedAt) {
+      data.releasedAt = new Date(parsedDto.releasedAt);
+    }
+    if (parsedDto.expiredAt) {
+      data.expiredAt = new Date(parsedDto.expiredAt);
+    }
+    if (attachments) {
+      data.attachments = attachments;
     }
 
     const announcement =
@@ -932,6 +967,45 @@ export class AnnouncementController {
           }
         : null,
     };
+  }
+
+  /**
+   * FormData로 전송된 DTO를 파싱한다
+   * @private
+   */
+  private parseFormDataDto(dto: any): any {
+    const parsed = { ...dto };
+
+    // JSON 문자열로 전송된 배열/객체 필드 파싱
+    const jsonFields = [
+      'permissionEmployeeIds',
+      'permissionRankIds',
+      'permissionPositionIds',
+      'permissionDepartmentIds',
+      'survey',
+    ];
+
+    for (const field of jsonFields) {
+      if (parsed[field] && typeof parsed[field] === 'string') {
+        try {
+          parsed[field] = JSON.parse(parsed[field]);
+        } catch (error) {
+          // 파싱 실패 시 원본 유지
+        }
+      }
+    }
+
+    // boolean 문자열 변환
+    const booleanFields = ['isPublic', 'isFixed', 'mustRead'];
+    for (const field of booleanFields) {
+      if (parsed[field] !== undefined) {
+        if (typeof parsed[field] === 'string') {
+          parsed[field] = parsed[field] === 'true';
+        }
+      }
+    }
+
+    return parsed;
   }
 
   /**
