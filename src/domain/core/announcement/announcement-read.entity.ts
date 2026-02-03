@@ -12,7 +12,11 @@ import { Announcement } from './announcement.entity';
 @Index('uk_announcement_read', ['announcementId', 'employeeId'], {
   unique: true,
 })
+@Index('uk_announcement_read_employee_number', ['announcementId', 'employeeNumber'], {
+  unique: true,
+})
 @Index('idx_announcement_read_employee_id', ['employeeId'])
+@Index('idx_announcement_read_employee_number', ['employeeNumber'])
 export class AnnouncementRead extends BaseEntity<AnnouncementRead> {
   @Column({
     type: 'uuid',
@@ -28,9 +32,17 @@ export class AnnouncementRead extends BaseEntity<AnnouncementRead> {
 
   @Column({
     type: 'uuid',
-    comment: '직원 ID (외부 시스템 직원 ID - SSO)',
+    comment: '직원 ID (내부 DB 사용자 UUID)',
   })
   employeeId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '직원 사번 (SSO employeeNumber)',
+  })
+  employeeNumber: string;
 
   @Column({
     type: 'timestamp',

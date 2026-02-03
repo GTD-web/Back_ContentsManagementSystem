@@ -138,18 +138,19 @@ export class UserAnnouncementController {
       await this.announcementBusinessService.공지사항을_조회한다(id);
 
     // 2. 읽음 처리 (중복 확인 후 없으면 생성)
-    // employeeNumber (사번)를 사용해야 권한 기반 대상 직원과 일치
+    // employeeNumber (사번)로 중복 확인
     const existingRead = await this.announcementReadRepository.findOne({
       where: {
         announcementId: id,
-        employeeId: user.employeeNumber,
+        employeeNumber: user.employeeNumber,
       },
     });
 
     if (!existingRead) {
       await this.announcementReadRepository.save({
         announcementId: id,
-        employeeId: user.employeeNumber,
+        employeeId: user.id, // 내부 UUID
+        employeeNumber: user.employeeNumber, // SSO 사번
         readAt: new Date(),
       });
     }

@@ -290,11 +290,11 @@ export class AnnouncementBusinessService {
       `조직 정보에서 직원 맵 생성 완료 - 총 ${employeeMap.size}명`,
     );
 
-    // 3. 읽음 여부 조회
+    // 3. 읽음 여부 조회 (employeeNumber 기준)
     const readRecords = await this.announcementReadRepository.find({
       where: { announcementId: announcement.id },
     });
-    const readEmployeeIds = new Set(readRecords.map((r) => r.employeeId));
+    const readEmployeeNumbers = new Set(readRecords.map((r) => r.employeeNumber));
 
     // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우)
     let surveyCompletionMap = new Map<string, boolean>();
@@ -324,7 +324,7 @@ export class AnnouncementBusinessService {
         employeeName: employeeInfo?.name || '알 수 없음',
         departmentId: employeeInfo?.departmentId || null,
         departmentName: employeeInfo?.departmentName || '알 수 없음',
-        hasRead: readEmployeeIds.has(employeeNumber),
+        hasRead: readEmployeeNumbers.has(employeeNumber),
         hasSurveyCompleted: surveyCompletionMap.get(employeeNumber) || false,
       };
     });
