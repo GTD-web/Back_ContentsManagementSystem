@@ -246,16 +246,20 @@ export class UserAnnouncementController {
       '- `checkboxes`: checkboxAnswers (JSON 문자열)\n' +
       '- `linear_scale`: scaleAnswers (JSON 문자열)\n' +
       '- `grid_scale`: gridAnswers (JSON 문자열)\n' +
-      '- `file_upload`: files (파일 첨부) + fileQuestionIds (JSON 문자열)\n' +
+      '- `file_upload`: files (실제 파일) + fileQuestionIds (JSON 문자열)\n' +
       '- `datetime`: datetimeAnswers (JSON 문자열)\n\n' +
-      '**파일 업로드 방법:**\n' +
-      '1. `files`: 첨부할 파일들 (최대 20개)\n' +
+      '**파일 업로드 방법 (백엔드에서 자동으로 S3 업로드 처리):**\n' +
+      '1. `files`: 첨부할 실제 파일들 (최대 20개)\n' +
+      '   - 프론트엔드에서 파일 객체를 그대로 전송\n' +
+      '   - 백엔드에서 자동으로 S3에 업로드하고 URL 생성\n' +
       '2. `fileQuestionIds`: 각 파일이 속한 질문 ID 배열 (JSON 문자열)\n' +
       '   - 예: `["질문1-UUID", "질문1-UUID", "질문2-UUID"]`\n' +
-      '   - files 배열과 같은 순서로 매칭됩니다.\n\n' +
+      '   - files 배열과 같은 순서로 매칭됩니다\n' +
+      '   - 같은 질문 ID를 여러 번 사용하면 해당 질문에 여러 파일 첨부 가능\n\n' +
       '⚠️ **주의사항:**\n' +
       '- Content-Type은 multipart/form-data를 사용합니다\n' +
-      '- 배열과 객체는 JSON 문자열로 전송해야 합니다',
+      '- 배열과 객체는 JSON 문자열로 전송해야 합니다\n' +
+      '- 파일은 프론트엔드에서 URL로 변환하지 말고 실제 파일을 전송하세요',
   })
   @ApiParam({
     name: 'id',
@@ -269,13 +273,18 @@ export class UserAnnouncementController {
       '1. 질문 타입에 맞는 응답 배열에 데이터를 추가해야 합니다.\n' +
       '2. 필수 질문(`isRequired: true`)은 반드시 응답해야 합니다.\n' +
       '3. 선택형/체크박스 응답은 질문의 `form.options`에 정의된 값만 사용 가능합니다.\n' +
-      '4. 파일은 files 필드에 첨부하고, fileQuestionIds로 질문 ID를 매핑합니다.',
+      '4. 파일은 실제 파일을 files 필드에 첨부하고, fileQuestionIds로 질문 ID를 매핑합니다.\n' +
+      '5. 백엔드에서 자동으로 S3에 업로드하므로 프론트엔드에서 별도 업로드 불필요합니다.',
     examples: {
       'complete-survey': {
         summary: '전체 응답 예시 (모든 질문 타입 포함)',
         description:
           '설문조사의 모든 질문 타입에 대한 응답 예시입니다.\n' +
-          '실제로는 설문에 있는 질문들에만 응답하면 됩니다.',
+          '실제로는 설문에 있는 질문들에만 응답하면 됩니다.\n\n' +
+          '**파일 첨부 방법:**\n' +
+          '- `files`: 실제 파일 객체를 FormData에 추가\n' +
+          '- `fileQuestionIds`: JSON 문자열로 각 파일이 속한 질문 ID 배열 전송\n' +
+          '- 예시에서는 질문 123e4567-e89b-12d3-a456-426614174007에 2개의 파일 첨부',
         value: {
           textAnswers: [
             {
@@ -325,19 +334,9 @@ export class UserAnnouncementController {
               ],
             },
           ],
-          fileAnswers: [
-            {
-              questionId: '123e4567-e89b-12d3-a456-426614174007',
-              files: [
-                {
-                  fileUrl:
-                    'https://s3.amazonaws.com/bucket/surveys/proposal.pdf',
-                  fileName: '개선제안서.pdf',
-                  fileSize: 2048000,
-                  mimeType: 'application/pdf',
-                },
-              ],
-            },
+          fileQuestionIds: [
+            '123e4567-e89b-12d3-a456-426614174007',
+            '123e4567-e89b-12d3-a456-426614174007',
           ],
           datetimeAnswers: [
             {
@@ -414,6 +413,34 @@ export class UserAnnouncementController {
                 '고객센터 운영시간 확대',
               ],
             },
+          ],
+        },
+      },
+      'file-upload-survey': {
+        summary: '파일 첨부 설문 응답 예시',
+        description:
+          '파일 업로드 질문이 포함된 설문 응답\n\n' +
+          '**FormData 작성 방법:**\n' +
+          '```javascript\n' +
+          'const formData = new FormData();\n' +
+          'formData.append("textAnswers", JSON.stringify([...]));\n' +
+          'formData.append("files", file1); // 첫 번째 파일\n' +
+          'formData.append("files", file2); // 두 번째 파일\n' +
+          'formData.append("fileQuestionIds", JSON.stringify([\n' +
+          '  "86e6bbc6-2839-4477-9672-bb4b381e8919",\n' +
+          '  "86e6bbc6-2839-4477-9672-bb4b381e8919"\n' +
+          ']));\n' +
+          '```',
+        value: {
+          textAnswers: [
+            {
+              questionId: '85e6bbc6-2839-4477-9672-bb4b381e8919',
+              textValue: '개선 제안 내용입니다.',
+            },
+          ],
+          fileQuestionIds: [
+            '86e6bbc6-2839-4477-9672-bb4b381e8919',
+            '86e6bbc6-2839-4477-9672-bb4b381e8919',
           ],
         },
       },
