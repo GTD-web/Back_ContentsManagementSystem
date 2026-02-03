@@ -124,6 +124,179 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 공지사항 목록을 조회한다 (사용자용 - 권한 필터링 포함)
+   */
+  async 공지사항_목록을_사용자_권한으로_조회한다(params: {
+    employeeNumber: string;
+    isFixed?: boolean;
+    orderBy?: 'order' | 'createdAt';
+    page?: number;
+    limit?: number;
+    startDate?: Date;
+    endDate?: Date;
+    categoryId?: string;
+  }): Promise<{
+    items: AnnouncementListItemDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { employeeNumber, ...queryParams } = params;
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+
+    this.logger.log(
+      `공지사항 목록 조회 시작 (사용자용) - 사번: ${employeeNumber}`,
+    );
+
+    // 1. isPublic 조건 없이 모든 공지사항 조회 (대량 조회를 위해 큰 limit 사용)
+    const result =
+      await this.announcementContextService.공지사항_목록을_조회한다({
+        ...queryParams,
+        page: 1,
+        limit: 10000, // 전체 조회를 위한 큰 값
+      });
+
+    // 2. 조직 정보 조회 (비활성 부서 포함)
+    const orgInfo =
+      await this.companyContextService.조직_정보를_가져온다(true);
+
+    // 3. 조직에서 사용자 정보 추출
+    const userInfo = this.조직에서_직원_정보를_찾기(orgInfo, employeeNumber);
+
+    // 4. 사용자가 접근 가능한 공지사항 필터링
+    const accessibleAnnouncements = result.items.filter((announcement) => {
+      // 전사공개는 무조건 접근 가능
+      if (announcement.isPublic) {
+        return true;
+      }
+
+      // 제한공개인 경우, 권한 확인
+      const hasPermission = this.사용자가_공지사항에_접근_가능한지_확인한다(
+        announcement,
+        employeeNumber,
+        userInfo,
+        orgInfo,
+      );
+
+      return hasPermission;
+    });
+
+    // 5. 페이징 처리
+    const total = accessibleAnnouncements.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedAnnouncements = accessibleAnnouncements.slice(
+      startIndex,
+      endIndex,
+    );
+
+    // 6. DTO로 변환
+    const items: AnnouncementListItemDto[] = paginatedAnnouncements.map(
+      (announcement) => ({
+        id: announcement.id,
+        categoryId: announcement.categoryId,
+        categoryName: announcement.category?.name || '',
+        title: announcement.title,
+        isFixed: announcement.isFixed,
+        isPublic: announcement.isPublic,
+        mustRead: announcement.mustRead,
+        order: announcement.order,
+        createdAt: announcement.createdAt,
+        updatedAt: announcement.updatedAt,
+        expiredAt: announcement.expiredAt,
+        hasSurvey: !!announcement.survey,
+      }),
+    );
+
+    this.logger.log(
+      `공지사항 목록 조회 완료 (사용자용) - 전체: ${result.items.length}개, 접근 가능: ${total}개, 페이지: ${page}/${Math.ceil(total / limit)}`,
+    );
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  /**
+   * 사용자가 공지사항에 접근 가능한지 확인한다
+   * @private
+   */
+  private 사용자가_공지사항에_접근_가능한지_확인한다(
+    announcement: Announcement,
+    employeeNumber: string,
+    userInfo: {
+      name: string;
+      departmentId: string | null;
+      departmentName: string;
+      rankId?: string;
+      positionId?: string;
+    } | null,
+    orgInfo: OrganizationInfo,
+  ): boolean {
+    // 권한 필드가 하나라도 있는지 확인
+    const hasPermissionFilters =
+      (announcement.permissionEmployeeIds &&
+        announcement.permissionEmployeeIds.length > 0) ||
+      (announcement.permissionRankIds &&
+        announcement.permissionRankIds.length > 0) ||
+      (announcement.permissionPositionIds &&
+        announcement.permissionPositionIds.length > 0) ||
+      (announcement.permissionDepartmentIds &&
+        announcement.permissionDepartmentIds.length > 0);
+
+    // 권한 필터가 없으면 접근 불가 (제한공개이지만 대상이 지정되지 않음)
+    if (!hasPermissionFilters) {
+      return false;
+    }
+
+    // 1. 직원 ID로 직접 지정되었는지 확인
+    if (
+      announcement.permissionEmployeeIds &&
+      announcement.permissionEmployeeIds.includes(employeeNumber)
+    ) {
+      return true;
+    }
+
+    // 사용자 정보가 없으면 이후 검사 불가
+    if (!userInfo) {
+      return false;
+    }
+
+    // 2. 부서 ID로 포함되었는지 확인
+    if (
+      userInfo.departmentId &&
+      announcement.permissionDepartmentIds &&
+      announcement.permissionDepartmentIds.includes(userInfo.departmentId)
+    ) {
+      return true;
+    }
+
+    // 3. 직급 ID로 포함되었는지 확인
+    if (
+      userInfo.rankId &&
+      announcement.permissionRankIds &&
+      announcement.permissionRankIds.includes(userInfo.rankId)
+    ) {
+      return true;
+    }
+
+    // 4. 직책 ID로 포함되었는지 확인
+    if (
+      userInfo.positionId &&
+      announcement.permissionPositionIds &&
+      announcement.permissionPositionIds.includes(userInfo.positionId)
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * 고정 공지사항 목록을 조회한다 (isFixed=true만)
    */
   async 고정_공지사항_목록을_조회한다(params: {
@@ -1302,11 +1475,15 @@ export class AnnouncementBusinessService {
     name: string;
     departmentId: string | null;
     departmentName: string;
+    rankId?: string;
+    positionId?: string;
   } | null {
     let result: {
       name: string;
       departmentId: string | null;
       departmentName: string;
+      rankId?: string;
+      positionId?: string;
     } | null = null;
 
     const searchInDept = (dept: any): boolean => {
@@ -1317,6 +1494,8 @@ export class AnnouncementBusinessService {
               name: emp.name || '알 수 없음',
               departmentId: dept.id || null,
               departmentName: dept.departmentName || dept.name || '알 수 없음',
+              rankId: emp.rankId || undefined,
+              positionId: emp.positionId || undefined,
             };
             return true;
           }

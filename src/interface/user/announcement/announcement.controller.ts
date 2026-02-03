@@ -113,17 +113,17 @@ export class UserAnnouncementController {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
-    // TODO: 사용자 권한에 따른 필터링 로직 구현 필요
+    // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
     // - 사용자의 부서/직급/직책이 포함된 제한공개 공지사항
     // - 사용자 ID가 permissionEmployeeIds에 포함된 공지사항
-
     const result =
-      await this.announcementBusinessService.공지사항_목록을_조회한다({
-        isPublic: true, // 임시: 전사공개만 조회
+      await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다({
+        employeeNumber: user.employeeNumber,
         page: pageNum,
         limit: limitNum,
         orderBy: 'order',
+        categoryId: categoryId,
       });
 
     return {
