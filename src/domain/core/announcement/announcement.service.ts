@@ -126,15 +126,12 @@ export class AnnouncementService {
     // 수정 가능 여부 검증
     this.수정_가능_여부를_검증한다(announcement);
 
-    // attachments가 전달된 경우 소프트 삭제 처리
+    // attachments가 전달된 경우 기존 파일에 추가
     if (data.attachments !== undefined) {
       const currentAttachments = announcement.attachments || [];
       
-      // 기존 파일에 deletedAt 설정 (소프트 삭제)
-      const markedForDeletion = currentAttachments.map((att: any) => ({
-        ...att,
-        deletedAt: new Date(),
-      }));
+      // 기존 파일 중 삭제되지 않은 파일만 유지
+      const activeAttachments = currentAttachments.filter((att: any) => !att.deletedAt);
       
       // 새 파일에 deletedAt: null 설정
       const newAttachments = (data.attachments || []).map((att: any) => ({
@@ -142,11 +139,11 @@ export class AnnouncementService {
         deletedAt: null,
       }));
       
-      // 기존 소프트 삭제 + 새 파일 합침
-      data.attachments = [...markedForDeletion, ...newAttachments];
+      // 기존 파일 + 새 파일 합침
+      data.attachments = [...activeAttachments, ...newAttachments];
       
       this.logger.log(
-        `첨부파일 처리 - 기존 ${currentAttachments.length}개 소프트 삭제, 새 파일 ${newAttachments.length}개 추가`,
+        `첨부파일 처리 - 기존 ${activeAttachments.length}개 유지, 새 파일 ${newAttachments.length}개 추가`,
       );
     }
 
@@ -179,6 +176,40 @@ export class AnnouncementService {
     const updated = await this.announcementRepository.save(announcement);
 
     this.logger.log(`공지사항 업데이트 완료 - ID: ${id}`);
+    return updated;
+  }
+
+  /**
+   * 공지사항 첨부파일을 개별 삭제한다 (소프트 삭제)
+   */
+  async 공지사항_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<Announcement> {
+    this.logger.log(`공지사항 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`);
+
+    const announcement = await this.ID로_공지사항을_조회한다(id);
+
+    // 삭제 가능 여부 검증
+    this.수정_가능_여부를_검증한다(announcement);
+
+    const attachments = announcement.attachments || [];
+    
+    // 해당 파일 찾기
+    const fileIndex = attachments.findIndex((att: any) => att.fileUrl === fileUrl);
+    
+    if (fileIndex === -1) {
+      throw new NotFoundException(`첨부파일을 찾을 수 없습니다. URL: ${fileUrl}`);
+    }
+
+    // 소프트 삭제 처리
+    attachments[fileIndex].deletedAt = new Date();
+    announcement.attachments = attachments;
+
+    const updated = await this.announcementRepository.save(announcement);
+
+    this.logger.log(`공지사항 첨부파일 삭제 완료 - ID: ${id}`);
+    
     return updated;
   }
 

@@ -1184,6 +1184,85 @@ export class AnnouncementController {
   }
 
   /**
+   * 공지사항 첨부파일을 개별 삭제한다
+   */
+  @Delete(':id/attachments')
+  @ApiOperation({
+    summary: '공지사항 첨부파일 개별 삭제',
+    description:
+      '공지사항의 특정 첨부파일을 삭제합니다. (비공개 상태에서만 가능)\n\n' +
+      '**쿼리 파라미터:**\n' +
+      '- `fileUrl`: 삭제할 파일의 URL (필수)\n\n' +
+      '⚠️ **주의사항:**\n' +
+      '- 공개된 공지사항의 첨부파일은 삭제할 수 없습니다\n' +
+      '- 파일 URL은 정확히 일치해야 합니다\n' +
+      '- 실제 S3 파일은 삭제되지 않고, DB에서만 소프트 삭제됩니다',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID (UUID)',
+    type: String,
+    required: true,
+  })
+  @ApiQuery({
+    name: 'fileUrl',
+    description: '삭제할 파일의 URL',
+    type: String,
+    required: true,
+    example: 'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/announcements/file.pdf',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '첨부파일 삭제 성공',
+    type: AnnouncementResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항 또는 첨부파일을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '공개된 공지사항의 첨부파일은 삭제할 수 없음',
+  })
+  async 공지사항_첨부파일을_삭제한다(
+    @Param('id') id: string,
+    @Query('fileUrl') fileUrl: string,
+  ): Promise<AnnouncementResponseDto> {
+    const announcement =
+      await this.announcementBusinessService.공지사항_첨부파일을_삭제한다(
+        id,
+        fileUrl,
+      );
+
+    return {
+      ...announcement,
+      categoryName: announcement.category?.name,
+      survey: announcement.survey
+        ? {
+            id: announcement.survey.id,
+            announcementId: announcement.survey.announcementId,
+            title: announcement.survey.title,
+            description: announcement.survey.description,
+            startDate: announcement.survey.startDate,
+            endDate: announcement.survey.endDate,
+            order: announcement.survey.order,
+            questions:
+              announcement.survey.questions?.map((q) => ({
+                id: q.id,
+                title: q.title,
+                type: q.type,
+                form: q.form,
+                isRequired: q.isRequired,
+                order: q.order,
+              })) || [],
+            createdAt: announcement.survey.createdAt,
+            updatedAt: announcement.survey.updatedAt,
+          }
+        : null,
+    };
+  }
+
+  /**
    * 공지사항에 포함된 전체 직원에게 알림을 보낸다
    */
   @Post(':id/notifications/all')

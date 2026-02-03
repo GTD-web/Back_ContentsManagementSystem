@@ -584,6 +584,23 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 공지사항 첨부파일을 삭제한다
+   */
+  async 공지사항_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<Announcement> {
+    this.logger.log(`공지사항 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`);
+
+    const result =
+      await this.announcementContextService.공지사항_첨부파일을_삭제한다(id, fileUrl);
+
+    this.logger.log(`공지사항 첨부파일 삭제 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
    * 조직 정보를 가져온다 (SSO)
    */
   async 조직_정보를_가져온다(): Promise<OrganizationInfo> {

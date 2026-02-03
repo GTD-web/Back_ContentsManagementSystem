@@ -109,6 +109,16 @@ export class AnnouncementContextService {
   }
 
   /**
+   * 공지사항 첨부파일을 삭제한다
+   */
+  async 공지사항_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<Announcement> {
+    return await this.announcementService.공지사항_첨부파일을_삭제한다(id, fileUrl);
+  }
+
+  /**
    * 공지사항 목록을 조회한다
    */
   async 공지사항_목록을_조회한다(params: {
