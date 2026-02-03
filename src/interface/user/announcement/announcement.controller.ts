@@ -23,7 +23,6 @@ import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-surve
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
-@Public()
 @Controller('user/announcements')
 export class UserAnnouncementController {
   constructor(
