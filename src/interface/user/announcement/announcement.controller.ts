@@ -22,6 +22,7 @@ import {
 import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-survey-answer.dto';
 import { MyAnswersDto } from '@interface/common/dto/survey/survey-response.dto';
 import { SurveyService } from '@domain/sub/survey/survey.service';
+import { Category } from '@domain/common/category/category.entity';
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
@@ -33,6 +34,25 @@ export class UserAnnouncementController {
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
     private readonly surveyService: SurveyService,
   ) {}
+
+  /**
+   * 공지사항 카테고리 목록을 조회한다 (사용자용)
+   */
+  @Get('categories')
+  @ApiOperation({
+    summary: '공지사항 카테고리 목록 조회 (사용자용)',
+    description:
+      '공지사항에 사용 가능한 카테고리 목록을 조회합니다. ' +
+      '활성화된 카테고리만 정렬 순서에 따라 반환됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '카테고리 목록 조회 성공',
+    type: [Category],
+  })
+  async 공지사항_카테고리_목록을_조회한다(): Promise<Category[]> {
+    return await this.announcementBusinessService.공지사항_카테고리_목록을_조회한다();
+  }
 
   /**
    * 공지사항 목록을 조회한다 (사용자용)
