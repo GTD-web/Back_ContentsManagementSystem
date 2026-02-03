@@ -397,11 +397,10 @@ export class SurveyService {
     );
 
     // 설문 완료 여부 확인
-    const isCompleted = await this.설문_완료_여부를_확인한다(
-      surveyId,
-      employeeNumber,
-    );
-    if (!isCompleted) {
+    const completion = await this.completionRepository.findOne({
+      where: { surveyId, employeeNumber },
+    });
+    if (!completion || completion.answeredQuestions === 0) {
       return null;
     }
 
@@ -618,6 +617,7 @@ export class SurveyService {
           await queryRunner.manager.save(SurveyResponseText, {
             questionId: answer.questionId,
             employeeId: employeeId,
+            employeeNumber: employeeNumber,
             textValue: answer.textValue,
             submittedAt,
           });
@@ -633,6 +633,7 @@ export class SurveyService {
           await queryRunner.manager.save(SurveyResponseChoice, {
             questionId: answer.questionId,
             employeeId: employeeId,
+            employeeNumber: employeeNumber,
             selectedOption: answer.selectedOption,
             submittedAt,
           });
@@ -649,6 +650,7 @@ export class SurveyService {
             await queryRunner.manager.save(SurveyResponseCheckbox, {
               questionId: answer.questionId,
               employeeId: employeeId,
+              employeeNumber: employeeNumber,
               selectedOption: option,
               submittedAt,
             });
@@ -665,6 +667,7 @@ export class SurveyService {
           await queryRunner.manager.save(SurveyResponseScale, {
             questionId: answer.questionId,
             employeeId: employeeId,
+            employeeNumber: employeeNumber,
             scaleValue: answer.scaleValue,
             submittedAt,
           });
@@ -681,6 +684,7 @@ export class SurveyService {
             await queryRunner.manager.save(SurveyResponseGrid, {
               questionId: answer.questionId,
               employeeId: employeeId,
+              employeeNumber: employeeNumber,
               rowName: gridItem.rowName,
               columnValue: gridItem.columnValue,
               submittedAt,
@@ -699,6 +703,7 @@ export class SurveyService {
             await queryRunner.manager.save(SurveyResponseFile, {
               questionId: answer.questionId,
               employeeId: employeeId,
+              employeeNumber: employeeNumber,
               fileUrl: file.fileUrl,
               fileName: file.fileName,
               fileSize: file.fileSize,
@@ -718,6 +723,7 @@ export class SurveyService {
           await queryRunner.manager.save(SurveyResponseDatetime, {
             questionId: answer.questionId,
             employeeId: employeeId,
+            employeeNumber: employeeNumber,
             datetimeValue: new Date(answer.datetimeValue),
             submittedAt,
           });

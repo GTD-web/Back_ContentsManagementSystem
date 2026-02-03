@@ -22,6 +22,7 @@ import {
   unique: true,
 })
 @Index('idx_survey_response_checkbox_employee_id', ['employeeId'])
+@Index('idx_survey_response_checkbox_employee_number', ['employeeNumber'])
 export class SurveyResponseCheckbox {
   @PrimaryGeneratedColumn('uuid', {
     comment: '응답 ID',
@@ -36,9 +37,17 @@ export class SurveyResponseCheckbox {
 
   @Column({
     type: 'uuid',
-    comment: '직원 ID (외부 시스템 직원 ID - SSO)',
+    comment: '직원 ID (내부 DB 사용자 UUID)',
   })
   employeeId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    comment: '직원 사번 (SSO employeeNumber)',
+  })
+  employeeNumber: string;
 
   @Column({
     type: 'varchar',
