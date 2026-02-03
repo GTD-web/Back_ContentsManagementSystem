@@ -200,7 +200,7 @@ export class UserAnnouncementController {
       );
     }
 
-    // 4. 응답 반환
+    // 4. 응답 반환 (각 질문에 답변 포함)
     return {
       ...announcement,
       survey: announcement.survey
@@ -213,17 +213,92 @@ export class UserAnnouncementController {
             endDate: announcement.survey.endDate,
             order: announcement.survey.order,
             questions:
-              announcement.survey.questions?.map((q) => ({
-                id: q.id,
-                title: q.title,
-                type: q.type,
-                form: q.form,
-                isRequired: q.isRequired,
-                order: q.order,
-              })) || [],
+              announcement.survey.questions?.map((q) => {
+                // 질문 타입에 따라 답변 찾기
+                let myAnswer: any = null;
+
+                if (myAnswers) {
+                  switch (q.type) {
+                    case 'short_answer':
+                    case 'paragraph':
+                      const textAnswer = myAnswers.textAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (textAnswer) {
+                        myAnswer = { textValue: textAnswer.textValue };
+                      }
+                      break;
+
+                    case 'multiple_choice':
+                    case 'dropdown':
+                      const choiceAnswer = myAnswers.choiceAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (choiceAnswer) {
+                        myAnswer = { selectedOption: choiceAnswer.selectedOption };
+                      }
+                      break;
+
+                    case 'checkboxes':
+                      const checkboxAnswer = myAnswers.checkboxAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (checkboxAnswer) {
+                        myAnswer = { selectedOptions: checkboxAnswer.selectedOptions };
+                      }
+                      break;
+
+                    case 'linear_scale':
+                      const scaleAnswer = myAnswers.scaleAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (scaleAnswer) {
+                        myAnswer = { scaleValue: scaleAnswer.scaleValue };
+                      }
+                      break;
+
+                    case 'grid_scale':
+                      const gridAnswer = myAnswers.gridAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (gridAnswer) {
+                        myAnswer = { gridAnswers: gridAnswer.gridAnswers };
+                      }
+                      break;
+
+                    case 'file_upload':
+                      const fileAnswer = myAnswers.fileAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (fileAnswer) {
+                        myAnswer = { files: fileAnswer.files };
+                      }
+                      break;
+
+                    case 'datetime':
+                      const datetimeAnswer = myAnswers.datetimeAnswers?.find(
+                        (a) => a.questionId === q.id,
+                      );
+                      if (datetimeAnswer) {
+                        myAnswer = { datetimeValue: datetimeAnswer.datetimeValue };
+                      }
+                      break;
+                  }
+                }
+
+                return {
+                  id: q.id,
+                  title: q.title,
+                  type: q.type,
+                  form: q.form,
+                  isRequired: q.isRequired,
+                  order: q.order,
+                  myAnswer, // 각 질문에 답변 포함
+                };
+              }) || [],
             createdAt: announcement.survey.createdAt,
             updatedAt: announcement.survey.updatedAt,
-            myAnswers, // ✅ 사용자의 응답 내역 추가
+            myAnswers, // 하위 호환성을 위해 유지 (deprecated)
           }
         : null,
     };
