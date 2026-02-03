@@ -3,10 +3,9 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Survey } from './survey.entity';
 import { SurveyQuestion } from './survey-question.entity';
 import { SurveyCompletion } from './survey-completion.entity';
@@ -593,22 +592,49 @@ export class SurveyService {
       );
     }
 
-    // 2. 중복 응답 확인
-    const isAlreadyCompleted = await this.설문_완료_여부를_확인한다(
-      survey.id,
-      employeeNumber,
-    );
-    if (isAlreadyCompleted) {
-      throw new ConflictException('이미 응답을 완료한 설문조사입니다.');
-    }
-
-    // 3. 트랜잭션으로 응답 저장
+    // 2. 트랜잭션으로 기존 응답 삭제 후 새 응답 저장 (재제출 시 덮어쓰기)
     const queryRunner =
       this.surveyRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const questionIds =
+        survey.questions?.map((q) => q.id) || [];
+
+      // 2-1. 기존 응답 삭제 (재제출 시 덮어쓰기)
+      if (questionIds.length > 0) {
+        await queryRunner.manager.delete(SurveyResponseText, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseChoice, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseCheckbox, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseScale, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseGrid, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseFile, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        await queryRunner.manager.delete(SurveyResponseDatetime, {
+          employeeId,
+          questionId: In(questionIds),
+        });
+        this.logger.debug('기존 설문 응답 삭제 완료 (덮어쓰기)');
+      }
+
       const submittedAt = new Date();
 
       // 3-1. 텍스트 응답 저장
