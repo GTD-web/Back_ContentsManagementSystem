@@ -423,7 +423,7 @@ export class SurveyService {
     // 1. 텍스트 응답
     const textResponses = await this.textResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const textAnswers = textResponses.map((r) => ({
@@ -434,7 +434,7 @@ export class SurveyService {
     // 2. 선택형 응답
     const choiceResponses = await this.choiceResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const choiceAnswers = choiceResponses.map((r) => ({
@@ -445,7 +445,7 @@ export class SurveyService {
     // 3. 체크박스 응답
     const checkboxResponses = await this.checkboxResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const checkboxMap = new Map<string, string[]>();
@@ -464,7 +464,7 @@ export class SurveyService {
     // 4. 척도 응답
     const scaleResponses = await this.scaleResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const scaleAnswers = scaleResponses.map((r) => ({
@@ -475,7 +475,7 @@ export class SurveyService {
     // 5. 그리드 응답
     const gridResponses = await this.gridResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const gridMap = new Map<
@@ -497,7 +497,7 @@ export class SurveyService {
     // 6. 파일 응답
     const fileResponses = await this.fileResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const fileMap = new Map<
@@ -529,7 +529,7 @@ export class SurveyService {
     // 7. 날짜/시간 응답
     const datetimeResponses = await this.datetimeResponseRepository
       .createQueryBuilder('response')
-      .where('response.employeeId = :employeeNumber', { employeeNumber })
+      .where('response.employeeNumber = :employeeNumber', { employeeNumber })
       .andWhere('response.questionId IN (:...questionIds)', { questionIds })
       .getMany();
     const datetimeAnswers = datetimeResponses.map((r) => ({
