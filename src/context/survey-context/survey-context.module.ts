@@ -9,6 +9,9 @@ import { SurveyResponseChoice } from '@domain/sub/survey/responses/survey-respon
 import { SurveyResponseCheckbox } from '@domain/sub/survey/responses/survey-response-checkbox.entity';
 import { SurveyResponseScale } from '@domain/sub/survey/responses/survey-response-scale.entity';
 import { SurveyResponseText } from '@domain/sub/survey/responses/survey-response-text.entity';
+import { SurveyResponseFile } from '@domain/sub/survey/responses/survey-response-file.entity';
+import { SurveyResponseDatetime } from '@domain/sub/survey/responses/survey-response-datetime.entity';
+import { SurveyResponseGrid } from '@domain/sub/survey/responses/survey-response-grid.entity';
 import { SurveyContextService } from './survey-context.service';
 import { SurveyHandlers } from './handlers';
 
@@ -29,6 +32,9 @@ import { SurveyHandlers } from './handlers';
       SurveyResponseCheckbox,
       SurveyResponseScale,
       SurveyResponseText,
+      SurveyResponseFile,
+      SurveyResponseDatetime,
+      SurveyResponseGrid,
     ]),
   ],
   providers: [SurveyContextService, ...SurveyHandlers],

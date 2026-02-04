@@ -163,6 +163,168 @@ export class TextStatisticsDto {
 }
 
 /**
+ * 파일 응답 아이템
+ */
+export class FileResponseItemDto {
+  @ApiProperty({
+    description: '직원 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  employeeId: string;
+
+  @ApiProperty({
+    description: '파일 URL',
+    example: 'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/surveys/xxx.jpg',
+  })
+  fileUrl: string;
+
+  @ApiProperty({
+    description: '파일명',
+    example: 'document.pdf',
+  })
+  fileName: string;
+
+  @ApiProperty({
+    description: '파일 크기 (bytes)',
+    example: 102400,
+  })
+  fileSize: number;
+
+  @ApiProperty({
+    description: 'MIME 타입',
+    example: 'application/pdf',
+  })
+  mimeType: string;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
+}
+
+/**
+ * 파일 업로드 질문 통계 (file_upload)
+ */
+export class FileStatisticsDto {
+  @ApiProperty({
+    description: '통계 타입',
+    example: 'file',
+  })
+  type: 'file';
+
+  @ApiProperty({
+    description: '응답 횟수',
+    example: 10,
+  })
+  responseCount: number;
+
+  @ApiProperty({
+    description: '파일 응답 목록 (최신순)',
+    type: [FileResponseItemDto],
+  })
+  responses: FileResponseItemDto[];
+}
+
+/**
+ * 날짜/시간 응답 아이템
+ */
+export class DatetimeResponseItemDto {
+  @ApiProperty({
+    description: '직원 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  employeeId: string;
+
+  @ApiProperty({
+    description: '날짜/시간 값',
+    example: '2024-12-25T15:30:00Z',
+  })
+  datetimeValue: Date;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
+}
+
+/**
+ * 날짜/시간 질문 통계 (datetime)
+ */
+export class DatetimeStatisticsDto {
+  @ApiProperty({
+    description: '통계 타입',
+    example: 'datetime',
+  })
+  type: 'datetime';
+
+  @ApiProperty({
+    description: '응답 횟수',
+    example: 8,
+  })
+  responseCount: number;
+
+  @ApiProperty({
+    description: '날짜/시간 응답 목록 (최신순)',
+    type: [DatetimeResponseItemDto],
+  })
+  responses: DatetimeResponseItemDto[];
+}
+
+/**
+ * 그리드 응답 아이템
+ */
+export class GridResponseItemDto {
+  @ApiProperty({
+    description: '직원 ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  employeeId: string;
+
+  @ApiProperty({
+    description: '행 이름',
+    example: '서비스 품질',
+  })
+  rowName: string;
+
+  @ApiProperty({
+    description: '열 값',
+    example: '매우 만족',
+  })
+  columnValue: string;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
+}
+
+/**
+ * 그리드 질문 통계 (grid_scale)
+ */
+export class GridStatisticsDto {
+  @ApiProperty({
+    description: '통계 타입',
+    example: 'grid',
+  })
+  type: 'grid';
+
+  @ApiProperty({
+    description: '응답 횟수',
+    example: 12,
+  })
+  responseCount: number;
+
+  @ApiProperty({
+    description: '그리드 응답 목록 (최신순)',
+    type: [GridResponseItemDto],
+  })
+  responses: GridResponseItemDto[];
+}
+
+/**
  * 질문별 통계 DTO
  */
 export class QuestionStatisticsDto {
@@ -210,13 +372,19 @@ export class QuestionStatisticsDto {
       { $ref: '#/components/schemas/CheckboxStatisticsDto' },
       { $ref: '#/components/schemas/ScaleStatisticsDto' },
       { $ref: '#/components/schemas/TextStatisticsDto' },
+      { $ref: '#/components/schemas/FileStatisticsDto' },
+      { $ref: '#/components/schemas/DatetimeStatisticsDto' },
+      { $ref: '#/components/schemas/GridStatisticsDto' },
     ],
   })
   statistics:
     | ChoiceStatisticsDto
     | CheckboxStatisticsDto
     | ScaleStatisticsDto
-    | TextStatisticsDto;
+    | TextStatisticsDto
+    | FileStatisticsDto
+    | DatetimeStatisticsDto
+    | GridStatisticsDto;
 }
 
 /**
