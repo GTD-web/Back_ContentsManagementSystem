@@ -422,17 +422,22 @@ export class GetSurveyStatisticsHandler
       optionCounts.set(response.selectedOption, count + 1);
     });
 
-    // 결과 배열 생성
-    const options = Array.from(optionCounts.entries()).map(
-      ([option, count]) => ({
-        option,
-        count,
-        percentage: totalResponses > 0 ? (count / totalResponses) * 100 : 0,
-      }),
-    );
+    // 질문의 모든 옵션을 포함 (응답 없는 옵션도 포함)
+    const allOptions = question.form?.options || [];
+    const options = allOptions.map((option) => ({
+      option,
+      count: optionCounts.get(option) || 0,
+      percentage: totalResponses > 0 ? ((optionCounts.get(option) || 0) / totalResponses) * 100 : 0,
+    }));
 
-    // 응답 수 많은 순으로 정렬
-    options.sort((a, b) => b.count - a.count);
+    // 응답 수 많은 순으로 정렬 (동일하면 원래 순서 유지)
+    options.sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      // count가 같으면 원래 순서 유지
+      return allOptions.indexOf(a.option) - allOptions.indexOf(b.option);
+    });
 
     return {
       statistics: {
@@ -475,17 +480,22 @@ export class GetSurveyStatisticsHandler
       optionCounts.set(response.selectedOption, count + 1);
     });
 
-    // 결과 배열 생성 (체크박스는 다중 선택이므로 응답자 수 대비 백분율)
-    const options = Array.from(optionCounts.entries()).map(
-      ([option, count]) => ({
-        option,
-        count,
-        percentage: totalResponses > 0 ? (count / totalResponses) * 100 : 0,
-      }),
-    );
+    // 질문의 모든 옵션을 포함 (응답 없는 옵션도 포함)
+    const allOptions = question.form?.options || [];
+    const options = allOptions.map((option) => ({
+      option,
+      count: optionCounts.get(option) || 0,
+      percentage: totalResponses > 0 ? ((optionCounts.get(option) || 0) / totalResponses) * 100 : 0,
+    }));
 
-    // 선택 수 많은 순으로 정렬
-    options.sort((a, b) => b.count - a.count);
+    // 선택 수 많은 순으로 정렬 (동일하면 원래 순서 유지)
+    options.sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      // count가 같으면 원래 순서 유지
+      return allOptions.indexOf(a.option) - allOptions.indexOf(b.option);
+    });
 
     return {
       statistics: {
