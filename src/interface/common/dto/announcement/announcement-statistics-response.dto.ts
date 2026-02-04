@@ -2,6 +2,35 @@ import { ApiProperty } from '@nestjs/swagger';
 import { InqueryType } from '@domain/sub/survey/inquery-type.types';
 
 /**
+ * 선택형 응답 아이템
+ */
+export class ChoiceResponseItemDto {
+  @ApiProperty({
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
+  })
+  employeeNumber: string;
+
+  @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
+
+  @ApiProperty({
+    description: '선택한 옵션',
+    example: '매우 만족',
+  })
+  selectedOption: string;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
+}
+
+/**
  * 선택형 옵션 통계
  */
 export class ChoiceOptionStatisticsDto {
@@ -39,6 +68,41 @@ export class ChoiceStatisticsDto {
     type: [ChoiceOptionStatisticsDto],
   })
   options: ChoiceOptionStatisticsDto[];
+
+  @ApiProperty({
+    description: '개별 응답 목록 (최신순)',
+    type: [ChoiceResponseItemDto],
+  })
+  responses: ChoiceResponseItemDto[];
+}
+
+/**
+ * 체크박스 응답 아이템
+ */
+export class CheckboxResponseItemDto {
+  @ApiProperty({
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
+  })
+  employeeNumber: string;
+
+  @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
+
+  @ApiProperty({
+    description: '선택한 옵션',
+    example: '대중교통',
+  })
+  selectedOption: string;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
 }
 
 /**
@@ -56,6 +120,12 @@ export class CheckboxStatisticsDto {
     type: [ChoiceOptionStatisticsDto],
   })
   options: ChoiceOptionStatisticsDto[];
+
+  @ApiProperty({
+    description: '개별 응답 목록 (최신순)',
+    type: [CheckboxResponseItemDto],
+  })
+  responses: CheckboxResponseItemDto[];
 }
 
 /**
@@ -79,6 +149,35 @@ export class ScaleDistributionDto {
     example: 36.4,
   })
   percentage: number;
+}
+
+/**
+ * 척도 응답 아이템
+ */
+export class ScaleResponseItemDto {
+  @ApiProperty({
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
+  })
+  employeeNumber: string;
+
+  @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
+
+  @ApiProperty({
+    description: '척도 값',
+    example: 7,
+  })
+  scaleValue: number;
+
+  @ApiProperty({
+    description: '제출 일시',
+    example: '2024-02-03T10:30:00Z',
+  })
+  submittedAt: Date;
 }
 
 /**
@@ -114,6 +213,12 @@ export class ScaleStatisticsDto {
     type: [ScaleDistributionDto],
   })
   distribution: ScaleDistributionDto[];
+
+  @ApiProperty({
+    description: '개별 응답 목록 (최신순)',
+    type: [ScaleResponseItemDto],
+  })
+  responses: ScaleResponseItemDto[];
 }
 
 /**
@@ -124,7 +229,7 @@ export class TextResponseItemDto {
     description: '직원 사번 (SSO employeeNumber)',
     example: '26002',
   })
-  employeeId: string;
+  employeeNumber: string;
 
   @ApiProperty({
     description: '직원 이름',
@@ -176,7 +281,7 @@ export class FileResponseItemDto {
     description: '직원 사번 (SSO employeeNumber)',
     example: '26002',
   })
-  employeeId: string;
+  employeeNumber: string;
 
   @ApiProperty({
     description: '직원 이름',
@@ -247,7 +352,7 @@ export class DatetimeResponseItemDto {
     description: '직원 사번 (SSO employeeNumber)',
     example: '26002',
   })
-  employeeId: string;
+  employeeNumber: string;
 
   @ApiProperty({
     description: '직원 이름',
@@ -299,7 +404,7 @@ export class GridResponseItemDto {
     description: '직원 사번 (SSO employeeNumber)',
     example: '26002',
   })
-  employeeId: string;
+  employeeNumber: string;
 
   @ApiProperty({
     description: '직원 이름',

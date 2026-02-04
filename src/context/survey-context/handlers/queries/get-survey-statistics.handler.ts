@@ -52,6 +52,7 @@ export interface ChoiceStatistics {
     count: number;
     percentage: number;
   }[];
+  responses: ChoiceResponseItem[];
 }
 
 /**
@@ -64,6 +65,7 @@ export interface CheckboxStatistics {
     count: number;
     percentage: number;
   }[];
+  responses: CheckboxResponseItem[];
 }
 
 /**
@@ -79,13 +81,44 @@ export interface ScaleStatistics {
     count: number;
     percentage: number;
   }[];
+  responses: ScaleResponseItem[];
+}
+
+/**
+ * 선택형 응답 아이템
+ */
+export interface ChoiceResponseItem {
+  employeeNumber: string;
+  employeeName: string;
+  selectedOption: string;
+  submittedAt: Date;
+}
+
+/**
+ * 체크박스 응답 아이템
+ */
+export interface CheckboxResponseItem {
+  employeeNumber: string;
+  employeeName: string;
+  selectedOption: string;
+  submittedAt: Date;
+}
+
+/**
+ * 척도 응답 아이템
+ */
+export interface ScaleResponseItem {
+  employeeNumber: string;
+  employeeName: string;
+  scaleValue: number;
+  submittedAt: Date;
 }
 
 /**
  * 텍스트 응답 아이템
  */
 export interface TextResponseItem {
-  employeeId: string;
+  employeeNumber: string;
   employeeName: string;
   textValue: string;
   submittedAt: Date;
@@ -104,7 +137,7 @@ export interface TextStatistics {
  * 파일 응답 아이템
  */
 export interface FileResponseItem {
-  employeeId: string;
+  employeeNumber: string;
   employeeName: string;
   fileUrl: string;
   fileName: string;
@@ -126,7 +159,7 @@ export interface FileStatistics {
  * 날짜/시간 응답 아이템
  */
 export interface DatetimeResponseItem {
-  employeeId: string;
+  employeeNumber: string;
   employeeName: string;
   datetimeValue: Date;
   submittedAt: Date;
@@ -145,7 +178,7 @@ export interface DatetimeStatistics {
  * 그리드 응답 아이템
  */
 export interface GridResponseItem {
-  employeeId: string;
+  employeeNumber: string;
   employeeName: string;
   rowName: string;
   columnValue: string;
@@ -306,19 +339,19 @@ export class GetSurveyStatisticsHandler
     switch (question.type) {
       case InqueryType.MULTIPLE_CHOICE:
       case InqueryType.DROPDOWN:
-        const choiceData = await this.선택형_통계를_수집한다(question);
+        const choiceData = await this.선택형_통계를_수집한다(question, employeeNameMap);
         statistics = choiceData.statistics;
         totalResponses = choiceData.totalResponses;
         break;
 
       case InqueryType.CHECKBOXES:
-        const checkboxData = await this.체크박스_통계를_수집한다(question);
+        const checkboxData = await this.체크박스_통계를_수집한다(question, employeeNameMap);
         statistics = checkboxData.statistics;
         totalResponses = checkboxData.totalResponses;
         break;
 
       case InqueryType.LINEAR_SCALE:
-        const scaleData = await this.척도_통계를_수집한다(question);
+        const scaleData = await this.척도_통계를_수집한다(question, employeeNameMap);
         statistics = scaleData.statistics;
         totalResponses = scaleData.totalResponses;
         break;
@@ -368,12 +401,16 @@ export class GetSurveyStatisticsHandler
   /**
    * 선택형 질문 통계를 수집한다 (multiple_choice, dropdown)
    */
-  private async 선택형_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 선택형_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: ChoiceStatistics;
     totalResponses: number;
   }> {
     const responses = await this.responseChoiceRepository.find({
       where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
     const totalResponses = responses.length;
@@ -401,6 +438,12 @@ export class GetSurveyStatisticsHandler
       statistics: {
         type: 'choice',
         options,
+        responses: responses.map((r) => ({
+          employeeNumber: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
+          selectedOption: r.selectedOption,
+          submittedAt: r.submittedAt,
+        })),
       },
       totalResponses,
     };
@@ -409,16 +452,20 @@ export class GetSurveyStatisticsHandler
   /**
    * 체크박스 질문 통계를 수집한다 (checkboxes)
    */
-  private async 체크박스_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 체크박스_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: CheckboxStatistics;
     totalResponses: number;
   }> {
     const responses = await this.responseCheckboxRepository.find({
       where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
     // 응답한 고유 직원 수
-    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeNumber || r.employeeId));
     const totalResponses = uniqueEmployees.size;
 
     // 옵션별 선택 수 집계
@@ -444,6 +491,12 @@ export class GetSurveyStatisticsHandler
       statistics: {
         type: 'checkbox',
         options,
+        responses: responses.map((r) => ({
+          employeeNumber: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
+          selectedOption: r.selectedOption,
+          submittedAt: r.submittedAt,
+        })),
       },
       totalResponses,
     };
@@ -452,12 +505,16 @@ export class GetSurveyStatisticsHandler
   /**
    * 척도 질문 통계를 수집한다 (linear_scale)
    */
-  private async 척도_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 척도_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: ScaleStatistics;
     totalResponses: number;
   }> {
     const responses = await this.responseScaleRepository.find({
       where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
     const totalResponses = responses.length;
@@ -470,6 +527,7 @@ export class GetSurveyStatisticsHandler
           min: 0,
           max: 0,
           distribution: [],
+          responses: [],
         },
         totalResponses: 0,
       };
@@ -505,6 +563,12 @@ export class GetSurveyStatisticsHandler
         min,
         max,
         distribution,
+        responses: responses.map((r) => ({
+          employeeNumber: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
+          scaleValue: r.scaleValue,
+          submittedAt: r.submittedAt,
+        })),
       },
       totalResponses,
     };
@@ -532,7 +596,7 @@ export class GetSurveyStatisticsHandler
         type: 'text',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeNumber || r.employeeId,
+          employeeNumber: r.employeeNumber || r.employeeId,
           employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           textValue: r.textValue,
           submittedAt: r.submittedAt,
@@ -569,7 +633,7 @@ export class GetSurveyStatisticsHandler
         type: 'file',
         responseCount,
         responses: responses.map((r) => ({
-          employeeId: r.employeeNumber || r.employeeId,
+          employeeNumber: r.employeeNumber || r.employeeId,
           employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           fileUrl: r.fileUrl,
           fileName: r.fileName,
@@ -604,7 +668,7 @@ export class GetSurveyStatisticsHandler
         type: 'datetime',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeNumber || r.employeeId,
+          employeeNumber: r.employeeNumber || r.employeeId,
           employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           datetimeValue: r.datetimeValue,
           submittedAt: r.submittedAt,
@@ -638,7 +702,7 @@ export class GetSurveyStatisticsHandler
         type: 'grid',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeNumber || r.employeeId,
+          employeeNumber: r.employeeNumber || r.employeeId,
           employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           rowName: r.rowName,
           columnValue: r.columnValue,
