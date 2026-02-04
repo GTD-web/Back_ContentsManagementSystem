@@ -504,13 +504,17 @@ export class GetSurveyStatisticsHandler
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
-    // 업로드된 파일 개수
-    const totalResponses = responses.length;
+    // totalResponses: 응답한 고유 직원 수 (1명이 여러 파일 업로드 가능)
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const totalResponses = uniqueEmployees.size;
+
+    // responseCount: 업로드된 총 파일 개수
+    const responseCount = responses.length;
 
     return {
       statistics: {
         type: 'file',
-        responseCount: totalResponses,
+        responseCount,
         responses: responses.map((r) => ({
           employeeId: r.employeeId,
           fileUrl: r.fileUrl,
