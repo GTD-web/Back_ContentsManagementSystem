@@ -504,9 +504,8 @@ export class GetSurveyStatisticsHandler
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
-    // 응답한 고유 직원 수
-    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
-    const totalResponses = uniqueEmployees.size;
+    // 업로드된 파일 개수
+    const totalResponses = responses.length;
 
     return {
       statistics: {
