@@ -216,23 +216,61 @@ export class SurveyService {
 
       // 2. 질문 업데이트 (있는 경우)
       if (data.questions !== undefined) {
-        // 기존 질문 모두 삭제
-        await queryRunner.manager.delete(SurveyQuestion, { surveyId: id });
+        // 기존 질문 조회
+        const existingQuestions = await queryRunner.manager.find(
+          SurveyQuestion,
+          {
+            where: { surveyId: id },
+          },
+        );
 
-        // 새로운 질문 생성
-        if (data.questions.length > 0) {
-          const questions = data.questions.map((q) =>
-            queryRunner.manager.create(SurveyQuestion, {
-              surveyId: id,
-              title: q.title,
-              type: q.type,
-              form: q.form || null,
-              isRequired: q.isRequired,
-              order: q.order,
-            }),
+        // 새로 전달된 질문 ID 목록
+        const newQuestionIds = data.questions
+          .filter((q) => q.id)
+          .map((q) => q.id!);
+
+        // 삭제할 질문: 기존 질문 중 새 목록에 없는 것만 삭제
+        const questionsToDelete = existingQuestions.filter(
+          (q) => !newQuestionIds.includes(q.id),
+        );
+
+        if (questionsToDelete.length > 0) {
+          await queryRunner.manager.delete(
+            SurveyQuestion,
+            questionsToDelete.map((q) => q.id),
           );
+        }
 
-          await queryRunner.manager.save(SurveyQuestion, questions);
+        // 질문 업데이트 또는 생성
+        for (const questionData of data.questions) {
+          if (questionData.id) {
+            // 기존 질문 업데이트 (ID가 있으면)
+            const existingQuestion = existingQuestions.find(
+              (q) => q.id === questionData.id,
+            );
+
+            if (existingQuestion) {
+              existingQuestion.title = questionData.title;
+              existingQuestion.type = questionData.type;
+              existingQuestion.form = questionData.form || null;
+              existingQuestion.isRequired = questionData.isRequired;
+              existingQuestion.order = questionData.order;
+
+              await queryRunner.manager.save(SurveyQuestion, existingQuestion);
+            }
+          } else {
+            // 새 질문 생성 (ID가 없으면)
+            const newQuestion = queryRunner.manager.create(SurveyQuestion, {
+              surveyId: id,
+              title: questionData.title,
+              type: questionData.type,
+              form: questionData.form || null,
+              isRequired: questionData.isRequired,
+              order: questionData.order,
+            });
+
+            await queryRunner.manager.save(SurveyQuestion, newQuestion);
+          }
         }
       }
 
