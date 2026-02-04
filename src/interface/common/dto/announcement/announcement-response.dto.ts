@@ -223,6 +223,20 @@ export class AnnouncementListItemDto {
 
   @ApiProperty({ description: '설문조사 포함 여부', example: false })
   hasSurvey: boolean;
+
+  @ApiProperty({ 
+    description: '읽음 여부 (사용자용 조회 시에만 포함)', 
+    example: false,
+    required: false,
+  })
+  isRead?: boolean;
+
+  @ApiProperty({ 
+    description: '설문 제출 완료 여부 (사용자용 조회 시에만 포함)', 
+    example: false,
+    required: false,
+  })
+  isSurveySubmitted?: boolean;
 }
 
 /**

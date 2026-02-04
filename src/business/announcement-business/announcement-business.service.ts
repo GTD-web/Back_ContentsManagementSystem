@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { AnnouncementContextService } from '@context/announcement-context/announcement-context.service';
@@ -182,7 +182,36 @@ export class AnnouncementBusinessService {
       return hasPermission;
     });
 
-    // 5. 페이징 처리
+    // 5. 읽음 여부 조회
+    const announcementIds = accessibleAnnouncements.map((a) => a.id);
+    const readRecords = await this.announcementReadRepository.find({
+      where: {
+        employeeNumber,
+        announcementId: In(announcementIds),
+      },
+    });
+    const readAnnouncementIds = new Set(readRecords.map((r) => r.announcementId));
+
+    // 6. 설문 제출 여부 조회
+    const surveyIds = accessibleAnnouncements
+      .filter((a) => !!a.survey)
+      .map((a) => a.survey!.id);
+    
+    let surveyCompletionMap = new Map<string, boolean>();
+    if (surveyIds.length > 0) {
+      const surveyCompletions = await this.surveyCompletionRepository.find({
+        where: {
+          employeeNumber,
+          surveyId: In(surveyIds),
+          isCompleted: true,
+        },
+      });
+      surveyCompletionMap = new Map(
+        surveyCompletions.map((sc) => [sc.surveyId, true]),
+      );
+    }
+
+    // 7. 페이징 처리
     const total = accessibleAnnouncements.length;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
@@ -191,7 +220,7 @@ export class AnnouncementBusinessService {
       endIndex,
     );
 
-    // 6. DTO로 변환
+    // 8. DTO로 변환 (읽음 여부 및 설문 제출 여부 포함)
     const items: AnnouncementListItemDto[] = paginatedAnnouncements.map(
       (announcement) => ({
         id: announcement.id,
@@ -206,6 +235,10 @@ export class AnnouncementBusinessService {
         updatedAt: announcement.updatedAt,
         expiredAt: announcement.expiredAt,
         hasSurvey: !!announcement.survey,
+        isRead: readAnnouncementIds.has(announcement.id),
+        isSurveySubmitted: announcement.survey
+          ? surveyCompletionMap.get(announcement.survey.id) || false
+          : false,
       }),
     );
 
