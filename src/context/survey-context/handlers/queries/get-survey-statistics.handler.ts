@@ -9,6 +9,9 @@ import { SurveyResponseChoice } from '@domain/sub/survey/responses/survey-respon
 import { SurveyResponseCheckbox } from '@domain/sub/survey/responses/survey-response-checkbox.entity';
 import { SurveyResponseScale } from '@domain/sub/survey/responses/survey-response-scale.entity';
 import { SurveyResponseText } from '@domain/sub/survey/responses/survey-response-text.entity';
+import { SurveyResponseFile } from '@domain/sub/survey/responses/survey-response-file.entity';
+import { SurveyResponseDatetime } from '@domain/sub/survey/responses/survey-response-datetime.entity';
+import { SurveyResponseGrid } from '@domain/sub/survey/responses/survey-response-grid.entity';
 import { InqueryType } from '@domain/sub/survey/inquery-type.types';
 
 /**
@@ -32,7 +35,10 @@ export interface QuestionStatistics {
     | ChoiceStatistics
     | CheckboxStatistics
     | ScaleStatistics
-    | TextStatistics;
+    | TextStatistics
+    | FileStatistics
+    | DatetimeStatistics
+    | GridStatistics;
 }
 
 /**
@@ -93,6 +99,64 @@ export interface TextStatistics {
 }
 
 /**
+ * 파일 응답 아이템
+ */
+export interface FileResponseItem {
+  employeeId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  submittedAt: Date;
+}
+
+/**
+ * 파일 업로드 질문 통계 (file_upload)
+ */
+export interface FileStatistics {
+  type: 'file';
+  responseCount: number;
+  responses: FileResponseItem[];
+}
+
+/**
+ * 날짜/시간 응답 아이템
+ */
+export interface DatetimeResponseItem {
+  employeeId: string;
+  datetimeValue: Date;
+  submittedAt: Date;
+}
+
+/**
+ * 날짜/시간 질문 통계 (datetime)
+ */
+export interface DatetimeStatistics {
+  type: 'datetime';
+  responseCount: number;
+  responses: DatetimeResponseItem[];
+}
+
+/**
+ * 그리드 응답 아이템
+ */
+export interface GridResponseItem {
+  employeeId: string;
+  rowName: string;
+  columnValue: string;
+  submittedAt: Date;
+}
+
+/**
+ * 그리드 질문 통계 (grid_scale)
+ */
+export interface GridStatistics {
+  type: 'grid';
+  responseCount: number;
+  responses: GridResponseItem[];
+}
+
+/**
  * 설문조사 통계 결과
  */
 export interface SurveyStatisticsResult {
@@ -126,6 +190,12 @@ export class GetSurveyStatisticsHandler
     private readonly responseScaleRepository: Repository<SurveyResponseScale>,
     @InjectRepository(SurveyResponseText)
     private readonly responseTextRepository: Repository<SurveyResponseText>,
+    @InjectRepository(SurveyResponseFile)
+    private readonly responseFileRepository: Repository<SurveyResponseFile>,
+    @InjectRepository(SurveyResponseDatetime)
+    private readonly responseDatetimeRepository: Repository<SurveyResponseDatetime>,
+    @InjectRepository(SurveyResponseGrid)
+    private readonly responseGridRepository: Repository<SurveyResponseGrid>,
   ) {}
 
   async execute(
@@ -181,7 +251,10 @@ export class GetSurveyStatisticsHandler
       | ChoiceStatistics
       | CheckboxStatistics
       | ScaleStatistics
-      | TextStatistics;
+      | TextStatistics
+      | FileStatistics
+      | DatetimeStatistics
+      | GridStatistics;
     let totalResponses = 0;
 
     switch (question.type) {
@@ -211,8 +284,26 @@ export class GetSurveyStatisticsHandler
         totalResponses = textData.totalResponses;
         break;
 
+      case InqueryType.FILE_UPLOAD:
+        const fileData = await this.파일_통계를_수집한다(question);
+        statistics = fileData.statistics;
+        totalResponses = fileData.totalResponses;
+        break;
+
+      case InqueryType.DATETIME:
+        const datetimeData = await this.날짜시간_통계를_수집한다(question);
+        statistics = datetimeData.statistics;
+        totalResponses = datetimeData.totalResponses;
+        break;
+
+      case InqueryType.GRID_SCALE:
+        const gridData = await this.그리드_통계를_수집한다(question);
+        statistics = gridData.statistics;
+        totalResponses = gridData.totalResponses;
+        break;
+
       default:
-        // 기타 타입은 텍스트 통계로 처리
+        // 알 수 없는 타입은 빈 텍스트 통계로 처리
         statistics = { type: 'text', responseCount: 0, responses: [] };
         totalResponses = 0;
     }
@@ -394,6 +485,98 @@ export class GetSurveyStatisticsHandler
         responses: responses.map((r) => ({
           employeeId: r.employeeId,
           textValue: r.textValue,
+          submittedAt: r.submittedAt,
+        })),
+      },
+      totalResponses,
+    };
+  }
+
+  /**
+   * 파일 업로드 질문 통계를 수집한다 (file_upload)
+   */
+  private async 파일_통계를_수집한다(question: SurveyQuestion): Promise<{
+    statistics: FileStatistics;
+    totalResponses: number;
+  }> {
+    const responses = await this.responseFileRepository.find({
+      where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
+    });
+
+    // 응답한 고유 직원 수
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const totalResponses = uniqueEmployees.size;
+
+    return {
+      statistics: {
+        type: 'file',
+        responseCount: totalResponses,
+        responses: responses.map((r) => ({
+          employeeId: r.employeeId,
+          fileUrl: r.fileUrl,
+          fileName: r.fileName,
+          fileSize: r.fileSize,
+          mimeType: r.mimeType,
+          submittedAt: r.submittedAt,
+        })),
+      },
+      totalResponses,
+    };
+  }
+
+  /**
+   * 날짜/시간 질문 통계를 수집한다 (datetime)
+   */
+  private async 날짜시간_통계를_수집한다(question: SurveyQuestion): Promise<{
+    statistics: DatetimeStatistics;
+    totalResponses: number;
+  }> {
+    const responses = await this.responseDatetimeRepository.find({
+      where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
+    });
+
+    const totalResponses = responses.length;
+
+    return {
+      statistics: {
+        type: 'datetime',
+        responseCount: totalResponses,
+        responses: responses.map((r) => ({
+          employeeId: r.employeeId,
+          datetimeValue: r.datetimeValue,
+          submittedAt: r.submittedAt,
+        })),
+      },
+      totalResponses,
+    };
+  }
+
+  /**
+   * 그리드 질문 통계를 수집한다 (grid_scale)
+   */
+  private async 그리드_통계를_수집한다(question: SurveyQuestion): Promise<{
+    statistics: GridStatistics;
+    totalResponses: number;
+  }> {
+    const responses = await this.responseGridRepository.find({
+      where: { questionId: question.id },
+      order: { submittedAt: 'DESC' }, // 최신순 정렬
+    });
+
+    // 응답한 고유 직원 수
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const totalResponses = uniqueEmployees.size;
+
+    return {
+      statistics: {
+        type: 'grid',
+        responseCount: totalResponses,
+        responses: responses.map((r) => ({
+          employeeId: r.employeeId,
+          rowName: r.rowName,
+          columnValue: r.columnValue,
           submittedAt: r.submittedAt,
         })),
       },
