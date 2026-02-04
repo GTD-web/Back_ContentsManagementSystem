@@ -445,24 +445,120 @@ export class AnnouncementBusinessService {
       `공지사항 대상 직원 상세 정보 조회 시작 - ID: ${announcement.id}`,
     );
 
-    // 1. 대상 직원 ID 목록 추출
-    const targetEmployeeIds =
-      await this.공지사항_대상_직원_목록을_추출한다(announcement);
+    // 1. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+    
+    // 2. 직원 맵 생성 (UUID와 employeeNumber 둘 다 키로 사용)
+    const employeeMapByUuid = new Map<string, any>();
+    const employeeMapByNumber = new Map<string, any>();
+    
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          const employeeInfo = {
+            employeeNumber: emp.employeeNumber,
+            name: emp.name || '알 수 없음',
+            departmentId: dept.id || null,
+            departmentName: dept.departmentName || dept.name || '알 수 없음',
+          };
+          
+          // UUID로 매핑
+          if (emp.id) {
+            employeeMapByUuid.set(emp.id, employeeInfo);
+          }
+          // employeeNumber로 매핑
+          if (emp.employeeNumber) {
+            employeeMapByNumber.set(emp.employeeNumber, employeeInfo);
+          }
+        });
+      }
+      
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+    
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
 
-    if (targetEmployeeIds.length === 0) {
+    this.logger.debug(
+      `조직 정보에서 직원 맵 생성 완료 - UUID 기준: ${employeeMapByUuid.size}명, 사번 기준: ${employeeMapByNumber.size}명`,
+    );
+
+    // 3. 대상 직원 employeeNumber 목록 추출
+    const targetEmployeeNumbers = new Set<string>();
+
+    // 3-1. permissionEmployeeIds (UUID) → employeeNumber로 변환
+    if (
+      announcement.permissionEmployeeIds &&
+      announcement.permissionEmployeeIds.length > 0
+    ) {
+      announcement.permissionEmployeeIds.forEach((uuid) => {
+        const employeeInfo = employeeMapByUuid.get(uuid);
+        if (employeeInfo && employeeInfo.employeeNumber) {
+          targetEmployeeNumbers.add(employeeInfo.employeeNumber);
+        }
+      });
+    }
+
+    // 3-2. 부서/직급/직책으로 필터링된 직원들 (employeeNumber)
+    if (
+      announcement.permissionDepartmentIds &&
+      announcement.permissionDepartmentIds.length > 0
+    ) {
+      const employees = this.조직에서_부서별_직원ID를_추출한다(
+        orgInfo,
+        announcement.permissionDepartmentIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (
+      announcement.permissionRankIds &&
+      announcement.permissionRankIds.length > 0
+    ) {
+      const employees = this.조직에서_직급별_직원ID를_추출한다(
+        orgInfo,
+        announcement.permissionRankIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (
+      announcement.permissionPositionIds &&
+      announcement.permissionPositionIds.length > 0
+    ) {
+      const employees = this.조직에서_직책별_직원ID를_추출한다(
+        orgInfo,
+        announcement.permissionPositionIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    // 3-3. 전사공개이면서 권한 필터가 없는 경우 모든 직원
+    const hasPermissionFilters =
+      (announcement.permissionEmployeeIds &&
+        announcement.permissionEmployeeIds.length > 0) ||
+      (announcement.permissionRankIds &&
+        announcement.permissionRankIds.length > 0) ||
+      (announcement.permissionPositionIds &&
+        announcement.permissionPositionIds.length > 0) ||
+      (announcement.permissionDepartmentIds &&
+        announcement.permissionDepartmentIds.length > 0);
+
+    if (announcement.isPublic && !hasPermissionFilters) {
+      const allEmployees = this.조직에서_모든_직원ID를_추출한다(orgInfo);
+      allEmployees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (targetEmployeeNumbers.size === 0) {
       this.logger.log('대상 직원이 없습니다.');
       return [];
     }
 
-    // 2. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
-    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
-    const employeeMap = this.조직에서_직원_정보_맵을_생성한다(orgInfo);
-
-    this.logger.debug(
-      `조직 정보에서 직원 맵 생성 완료 - 총 ${employeeMap.size}명`,
-    );
-
-    // 3. 읽음 여부 조회 (employeeNumber 기준)
+    // 4. 읽음 여부 조회 (employeeNumber 기준)
     const readRecords = await this.announcementReadRepository.find({
       where: { announcementId: announcement.id },
     });
@@ -470,7 +566,7 @@ export class AnnouncementBusinessService {
       readRecords.map((r) => r.employeeNumber),
     );
 
-    // 4. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준)
+    // 5. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준)
     let surveyCompletionMap = new Map<string, boolean>();
     if (announcement.survey) {
       const surveyCompletions = await this.surveyCompletionRepository.find({
@@ -484,14 +580,9 @@ export class AnnouncementBusinessService {
       );
     }
 
-    // 5. 각 직원의 상세 정보 조합
-    const unknownEmployees: string[] = [];
-    const targetEmployees = targetEmployeeIds.map((employeeNumber) => {
-      const employeeInfo = employeeMap.get(employeeNumber);
-
-      if (!employeeInfo) {
-        unknownEmployees.push(employeeNumber);
-      }
+    // 6. 각 직원의 상세 정보 조합
+    const targetEmployees = Array.from(targetEmployeeNumbers).map((employeeNumber) => {
+      const employeeInfo = employeeMapByNumber.get(employeeNumber);
 
       return {
         employeeNumber, // SSO 사번 (employeeNumber)
@@ -502,55 +593,6 @@ export class AnnouncementBusinessService {
         hasSurveyCompleted: surveyCompletionMap.get(employeeNumber) || false,
       };
     });
-
-    // 6. 알 수 없는 직원들의 출처 로깅
-    if (unknownEmployees.length > 0) {
-      this.logger.warn(
-        `⚠️ 조직 정보에서 찾을 수 없는 직원 ${unknownEmployees.length}명: ${unknownEmployees.join(', ')}`,
-      );
-
-      // 직원 출처 분석
-      const sources: string[] = [];
-      if (
-        announcement.permissionEmployeeIds &&
-        announcement.permissionEmployeeIds.length > 0
-      ) {
-        const fromPermissionEmployees = unknownEmployees.filter((id) =>
-          announcement.permissionEmployeeIds?.includes(id),
-        );
-        if (fromPermissionEmployees.length > 0) {
-          sources.push(
-            `permissionEmployeeIds에서 ${fromPermissionEmployees.length}명 (${fromPermissionEmployees.slice(0, 5).join(', ')}${fromPermissionEmployees.length > 5 ? '...' : ''})`,
-          );
-        }
-      }
-      if (
-        announcement.permissionDepartmentIds &&
-        announcement.permissionDepartmentIds.length > 0
-      ) {
-        sources.push(
-          `permissionDepartmentIds 부서에서 추출 (${announcement.permissionDepartmentIds.join(', ')})`,
-        );
-      }
-      if (
-        announcement.permissionRankIds &&
-        announcement.permissionRankIds.length > 0
-      ) {
-        sources.push(
-          `permissionRankIds 직급에서 추출 (${announcement.permissionRankIds.join(', ')})`,
-        );
-      }
-      if (
-        announcement.permissionPositionIds &&
-        announcement.permissionPositionIds.length > 0
-      ) {
-        sources.push(
-          `permissionPositionIds 직책에서 추출 (${announcement.permissionPositionIds.join(', ')})`,
-        );
-      }
-
-      this.logger.warn(`출처: ${sources.join(' | ')}`);
-    }
 
     this.logger.log(
       `공지사항 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명`,
