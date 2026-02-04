@@ -127,6 +127,12 @@ export class TextResponseItemDto {
   employeeId: string;
 
   @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
+
+  @ApiProperty({
     description: '텍스트 응답 내용',
     example: '제품 품질이 매우 우수합니다.',
   })
@@ -167,14 +173,21 @@ export class TextStatisticsDto {
  */
 export class FileResponseItemDto {
   @ApiProperty({
-    description: '직원 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
   })
   employeeId: string;
 
   @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
+
+  @ApiProperty({
     description: '파일 URL',
-    example: 'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/surveys/xxx.jpg',
+    example:
+      'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/surveys/xxx.jpg',
   })
   fileUrl: string;
 
@@ -231,10 +244,16 @@ export class FileStatisticsDto {
  */
 export class DatetimeResponseItemDto {
   @ApiProperty({
-    description: '직원 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
   })
   employeeId: string;
+
+  @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
 
   @ApiProperty({
     description: '날짜/시간 값',
@@ -277,10 +296,16 @@ export class DatetimeStatisticsDto {
  */
 export class GridResponseItemDto {
   @ApiProperty({
-    description: '직원 ID',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: '직원 사번 (SSO employeeNumber)',
+    example: '26002',
   })
   employeeId: string;
+
+  @ApiProperty({
+    description: '직원 이름',
+    example: '홍길동',
+  })
+  employeeName: string;
 
   @ApiProperty({
     description: '행 이름',

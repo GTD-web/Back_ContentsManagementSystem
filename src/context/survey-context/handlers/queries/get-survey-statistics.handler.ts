@@ -13,6 +13,7 @@ import { SurveyResponseFile } from '@domain/sub/survey/responses/survey-response
 import { SurveyResponseDatetime } from '@domain/sub/survey/responses/survey-response-datetime.entity';
 import { SurveyResponseGrid } from '@domain/sub/survey/responses/survey-response-grid.entity';
 import { InqueryType } from '@domain/sub/survey/inquery-type.types';
+import { CompanyContextService } from '@context/company-context/company-context.service';
 
 /**
  * 설문조사 통계 조회 쿼리
@@ -85,6 +86,7 @@ export interface ScaleStatistics {
  */
 export interface TextResponseItem {
   employeeId: string;
+  employeeName: string;
   textValue: string;
   submittedAt: Date;
 }
@@ -103,6 +105,7 @@ export interface TextStatistics {
  */
 export interface FileResponseItem {
   employeeId: string;
+  employeeName: string;
   fileUrl: string;
   fileName: string;
   fileSize: number;
@@ -124,6 +127,7 @@ export interface FileStatistics {
  */
 export interface DatetimeResponseItem {
   employeeId: string;
+  employeeName: string;
   datetimeValue: Date;
   submittedAt: Date;
 }
@@ -142,6 +146,7 @@ export interface DatetimeStatistics {
  */
 export interface GridResponseItem {
   employeeId: string;
+  employeeName: string;
   rowName: string;
   columnValue: string;
   submittedAt: Date;
@@ -196,6 +201,7 @@ export class GetSurveyStatisticsHandler
     private readonly responseDatetimeRepository: Repository<SurveyResponseDatetime>,
     @InjectRepository(SurveyResponseGrid)
     private readonly responseGridRepository: Repository<SurveyResponseGrid>,
+    private readonly companyContextService: CompanyContextService,
   ) {}
 
   async execute(
@@ -224,11 +230,14 @@ export class GetSurveyStatisticsHandler
       where: { surveyId: survey.id, isCompleted: true },
     });
 
-    // 3. 질문별 통계 수집
+    // 3. 조직 정보 조회 (직원 이름 매핑용)
+    const employeeNameMap = await this.직원_이름_매핑을_생성한다();
+
+    // 4. 질문별 통계 수집
     const questions = await Promise.all(
       survey.questions
         .sort((a, b) => a.order - b.order)
-        .map((question) => this.질문별_통계를_수집한다(question)),
+        .map((question) => this.질문별_통계를_수집한다(question, employeeNameMap)),
     );
 
     this.logger.log(`설문조사 통계 조회 완료 - 설문 ID: ${survey.id}`);
@@ -242,10 +251,47 @@ export class GetSurveyStatisticsHandler
   }
 
   /**
+   * 직원 이름 매핑을 생성한다 (사번 -> 이름)
+   * @private
+   */
+  private async 직원_이름_매핑을_생성한다(): Promise<Map<string, string>> {
+    try {
+      const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+      const employeeNameMap = new Map<string, string>();
+
+      const extractFromDept = (dept: any) => {
+        if (dept.employees) {
+          dept.employees.forEach((emp: any) => {
+            if (emp.employeeNumber) {
+              employeeNameMap.set(emp.employeeNumber, emp.name || '알 수 없음');
+            }
+          });
+        }
+        
+        const children = dept.childDepartments || dept.children;
+        if (children) {
+          children.forEach((child: any) => extractFromDept(child));
+        }
+      };
+
+      if (orgInfo.departments) {
+        orgInfo.departments.forEach((dept) => extractFromDept(dept));
+      }
+
+      this.logger.debug(`직원 이름 매핑 생성 완료 - 총 ${employeeNameMap.size}명`);
+      return employeeNameMap;
+    } catch (error) {
+      this.logger.error('직원 이름 매핑 생성 실패', error.stack);
+      return new Map<string, string>();
+    }
+  }
+
+  /**
    * 질문별 통계를 수집한다
    */
   private async 질문별_통계를_수집한다(
     question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
   ): Promise<QuestionStatistics> {
     let statistics:
       | ChoiceStatistics
@@ -279,25 +325,25 @@ export class GetSurveyStatisticsHandler
 
       case InqueryType.SHORT_ANSWER:
       case InqueryType.PARAGRAPH:
-        const textData = await this.텍스트_통계를_수집한다(question);
+        const textData = await this.텍스트_통계를_수집한다(question, employeeNameMap);
         statistics = textData.statistics;
         totalResponses = textData.totalResponses;
         break;
 
       case InqueryType.FILE_UPLOAD:
-        const fileData = await this.파일_통계를_수집한다(question);
+        const fileData = await this.파일_통계를_수집한다(question, employeeNameMap);
         statistics = fileData.statistics;
         totalResponses = fileData.totalResponses;
         break;
 
       case InqueryType.DATETIME:
-        const datetimeData = await this.날짜시간_통계를_수집한다(question);
+        const datetimeData = await this.날짜시간_통계를_수집한다(question, employeeNameMap);
         statistics = datetimeData.statistics;
         totalResponses = datetimeData.totalResponses;
         break;
 
       case InqueryType.GRID_SCALE:
-        const gridData = await this.그리드_통계를_수집한다(question);
+        const gridData = await this.그리드_통계를_수집한다(question, employeeNameMap);
         statistics = gridData.statistics;
         totalResponses = gridData.totalResponses;
         break;
@@ -467,7 +513,10 @@ export class GetSurveyStatisticsHandler
   /**
    * 텍스트 질문 통계를 수집한다 (short_answer, paragraph)
    */
-  private async 텍스트_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 텍스트_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: TextStatistics;
     totalResponses: number;
   }> {
@@ -483,7 +532,8 @@ export class GetSurveyStatisticsHandler
         type: 'text',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeId,
+          employeeId: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           textValue: r.textValue,
           submittedAt: r.submittedAt,
         })),
@@ -495,7 +545,10 @@ export class GetSurveyStatisticsHandler
   /**
    * 파일 업로드 질문 통계를 수집한다 (file_upload)
    */
-  private async 파일_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 파일_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: FileStatistics;
     totalResponses: number;
   }> {
@@ -505,7 +558,7 @@ export class GetSurveyStatisticsHandler
     });
 
     // totalResponses: 응답한 고유 직원 수 (1명이 여러 파일 업로드 가능)
-    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeNumber || r.employeeId));
     const totalResponses = uniqueEmployees.size;
 
     // responseCount: 업로드된 총 파일 개수
@@ -516,7 +569,8 @@ export class GetSurveyStatisticsHandler
         type: 'file',
         responseCount,
         responses: responses.map((r) => ({
-          employeeId: r.employeeId,
+          employeeId: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           fileUrl: r.fileUrl,
           fileName: r.fileName,
           fileSize: r.fileSize,
@@ -531,7 +585,10 @@ export class GetSurveyStatisticsHandler
   /**
    * 날짜/시간 질문 통계를 수집한다 (datetime)
    */
-  private async 날짜시간_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 날짜시간_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: DatetimeStatistics;
     totalResponses: number;
   }> {
@@ -547,7 +604,8 @@ export class GetSurveyStatisticsHandler
         type: 'datetime',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeId,
+          employeeId: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           datetimeValue: r.datetimeValue,
           submittedAt: r.submittedAt,
         })),
@@ -559,7 +617,10 @@ export class GetSurveyStatisticsHandler
   /**
    * 그리드 질문 통계를 수집한다 (grid_scale)
    */
-  private async 그리드_통계를_수집한다(question: SurveyQuestion): Promise<{
+  private async 그리드_통계를_수집한다(
+    question: SurveyQuestion,
+    employeeNameMap: Map<string, string>,
+  ): Promise<{
     statistics: GridStatistics;
     totalResponses: number;
   }> {
@@ -569,7 +630,7 @@ export class GetSurveyStatisticsHandler
     });
 
     // 응답한 고유 직원 수
-    const uniqueEmployees = new Set(responses.map((r) => r.employeeId));
+    const uniqueEmployees = new Set(responses.map((r) => r.employeeNumber || r.employeeId));
     const totalResponses = uniqueEmployees.size;
 
     return {
@@ -577,7 +638,8 @@ export class GetSurveyStatisticsHandler
         type: 'grid',
         responseCount: totalResponses,
         responses: responses.map((r) => ({
-          employeeId: r.employeeId,
+          employeeId: r.employeeNumber || r.employeeId,
+          employeeName: employeeNameMap.get(r.employeeNumber) || '알 수 없음',
           rowName: r.rowName,
           columnValue: r.columnValue,
           submittedAt: r.submittedAt,

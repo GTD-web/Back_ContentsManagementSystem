@@ -126,15 +126,17 @@ export class UserAnnouncementController {
     // - 사용자의 부서/직급/직책이 포함된 제한공개 공지사항
     // - 사용자 ID가 permissionEmployeeIds에 포함된 공지사항
     const result =
-      await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다({
-        userId: user.id,
-        employeeNumber: user.employeeNumber,
-        page: pageNum,
-        limit: limitNum,
-        orderBy: 'order',
-        categoryId: categoryId,
-        excludeExpired: excludeExpiredFilter,
-      });
+      await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다(
+        {
+          userId: user.id,
+          employeeNumber: user.employeeNumber,
+          page: pageNum,
+          limit: limitNum,
+          orderBy: 'order',
+          categoryId: categoryId,
+          excludeExpired: excludeExpiredFilter,
+        },
+      );
 
     return {
       items: result.items,
@@ -247,7 +249,9 @@ export class UserAnnouncementController {
                         (a) => a.questionId === q.id,
                       );
                       if (choiceAnswer) {
-                        myAnswer = { selectedOption: choiceAnswer.selectedOption };
+                        myAnswer = {
+                          selectedOption: choiceAnswer.selectedOption,
+                        };
                       }
                       break;
 
@@ -256,7 +260,9 @@ export class UserAnnouncementController {
                         (a) => a.questionId === q.id,
                       );
                       if (checkboxAnswer) {
-                        myAnswer = { selectedOptions: checkboxAnswer.selectedOptions };
+                        myAnswer = {
+                          selectedOptions: checkboxAnswer.selectedOptions,
+                        };
                       }
                       break;
 
@@ -292,7 +298,9 @@ export class UserAnnouncementController {
                         (a) => a.questionId === q.id,
                       );
                       if (datetimeAnswer) {
-                        myAnswer = { datetimeValue: datetimeAnswer.datetimeValue };
+                        myAnswer = {
+                          datetimeValue: datetimeAnswer.datetimeValue,
+                        };
                       }
                       break;
                   }
@@ -377,7 +385,8 @@ export class UserAnnouncementController {
     examples: {
       basic: {
         summary: '기본 설문 응답 (JSON)',
-        description: '텍스트, 선택형, 척도형, 체크박스 등 다양한 질문 타입 응답',
+        description:
+          '텍스트, 선택형, 척도형, 체크박스 등 다양한 질문 타입 응답',
         value: {
           answers: [
             {
@@ -469,21 +478,26 @@ export class UserAnnouncementController {
     console.log('✅ FormData 파싱 완료:', parsedDto);
 
     // answers 배열 검증
-    if (!parsedDto.answers || !Array.isArray(parsedDto.answers) || parsedDto.answers.length === 0) {
+    if (
+      !parsedDto.answers ||
+      !Array.isArray(parsedDto.answers) ||
+      parsedDto.answers.length === 0
+    ) {
       throw new Error('answers 배열이 필요합니다');
     }
 
     console.log('🔄 질문 타입별로 자동 변환 시작');
-    
+
     // 설문조사 정보 조회
-    const survey = await this.surveyService.공지사항ID로_설문조사를_조회한다(id);
+    const survey =
+      await this.surveyService.공지사항ID로_설문조사를_조회한다(id);
     if (!survey) {
       throw new Error('설문조사를 찾을 수 없습니다');
     }
 
     // 질문 ID -> 질문 타입 매핑
     const questionTypeMap = new Map(
-      survey.questions.map(q => [q.id, q.type])
+      survey.questions.map((q) => [q.id, q.type]),
     );
 
     // answers 배열을 질문 타입별로 분류
@@ -498,9 +512,11 @@ export class UserAnnouncementController {
 
     for (const answer of parsedDto.answers) {
       const questionType = questionTypeMap.get(answer.questionId);
-      
+
       if (!questionType) {
-        console.warn(`⚠️ 질문 ID ${answer.questionId}의 타입을 찾을 수 없습니다`);
+        console.warn(
+          `⚠️ 질문 ID ${answer.questionId}의 타입을 찾을 수 없습니다`,
+        );
         continue;
       }
 
@@ -524,7 +540,9 @@ export class UserAnnouncementController {
         case 'checkboxes':
           answersData.checkboxAnswers.push({
             questionId: answer.questionId,
-            selectedOptions: Array.isArray(answer.value) ? answer.value : [answer.value],
+            selectedOptions: Array.isArray(answer.value)
+              ? answer.value
+              : [answer.value],
           });
           break;
 
@@ -575,7 +593,7 @@ export class UserAnnouncementController {
 
     if (files && files.length > 0) {
       console.log(`📎 파일 ${files.length}개 업로드 시작`);
-      
+
       // 파일 업로드 (surveys 폴더에 저장)
       const uploadedFiles = await this.fileUploadService.uploadFiles(
         files,
@@ -584,14 +602,19 @@ export class UserAnnouncementController {
       console.log('✅ 파일 업로드 완료:', uploadedFiles);
 
       // fileQuestionIds가 있으면 각 파일을 해당 질문에 매핑
-      if (parsedDto.fileQuestionIds && Array.isArray(parsedDto.fileQuestionIds)) {
+      if (
+        parsedDto.fileQuestionIds &&
+        Array.isArray(parsedDto.fileQuestionIds)
+      ) {
         const fileQuestionMap = new Map<string, typeof uploadedFiles>();
 
         // 각 파일을 질문 ID별로 그룹화
         uploadedFiles.forEach((file, index) => {
           const questionId = parsedDto.fileQuestionIds[index];
           if (!questionId) {
-            console.warn(`⚠️ 파일 인덱스 ${index}에 대한 questionId가 없습니다`);
+            console.warn(
+              `⚠️ 파일 인덱스 ${index}에 대한 questionId가 없습니다`,
+            );
             return;
           }
 
@@ -616,7 +639,10 @@ export class UserAnnouncementController {
       answersData.fileAnswers = fileAnswers;
     }
 
-    console.log('📊 최종 설문 응답 데이터:', JSON.stringify(answersData, null, 2));
+    console.log(
+      '📊 최종 설문 응답 데이터:',
+      JSON.stringify(answersData, null, 2),
+    );
 
     // 설문 응답 제출
     const result = await this.surveyService.설문_응답을_제출한다(
@@ -669,7 +695,8 @@ export class UserAnnouncementController {
   })
   @ApiResponse({
     status: 404,
-    description: '공지사항/설문을 찾을 수 없거나, 해당 파일이 없거나 삭제 권한이 없음',
+    description:
+      '공지사항/설문을 찾을 수 없거나, 해당 파일이 없거나 삭제 권한이 없음',
   })
   async 공지사항_설문_응답_파일을_삭제한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -710,7 +737,10 @@ export class UserAnnouncementController {
         } else if (Array.isArray(parsed[field])) {
           console.log(`✅ ${field} 이미 배열 형식:`, parsed[field]);
         } else {
-          console.warn(`⚠️ ${field}가 문자열도 배열도 아닙니다:`, typeof parsed[field]);
+          console.warn(
+            `⚠️ ${field}가 문자열도 배열도 아닙니다:`,
+            typeof parsed[field],
+          );
           parsed[field] = [];
         }
       } else {

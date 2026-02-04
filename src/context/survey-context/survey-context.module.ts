@@ -14,6 +14,7 @@ import { SurveyResponseDatetime } from '@domain/sub/survey/responses/survey-resp
 import { SurveyResponseGrid } from '@domain/sub/survey/responses/survey-response-grid.entity';
 import { SurveyContextService } from './survey-context.service';
 import { SurveyHandlers } from './handlers';
+import { CompanyContextModule } from '@context/company-context/company-context.module';
 
 /**
  * 설문조사 컨텍스트 모듈
@@ -24,6 +25,7 @@ import { SurveyHandlers } from './handlers';
   imports: [
     CqrsModule,
     SurveyModule,
+    CompanyContextModule,
     TypeOrmModule.forFeature([
       Survey,
       SurveyQuestion,
