@@ -128,6 +128,12 @@ export class AnnouncementController {
     description: '카테고리 ID (UUID)',
     type: String,
   })
+  @ApiQuery({
+    name: 'excludeExpired',
+    required: false,
+    description: '마감된 공지사항 제외 여부 (기본값: false)',
+    type: Boolean,
+  })
   async 공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -136,9 +142,11 @@ export class AnnouncementController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('excludeExpired') excludeExpired?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
+    const excludeExpiredFilter = excludeExpired === 'true';
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
@@ -152,6 +160,7 @@ export class AnnouncementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
+        excludeExpired: excludeExpiredFilter,
       });
 
     return {
@@ -223,6 +232,12 @@ export class AnnouncementController {
     description: '카테고리 ID (UUID)',
     type: String,
   })
+  @ApiQuery({
+    name: 'excludeExpired',
+    required: false,
+    description: '마감된 공지사항 제외 여부 (기본값: false)',
+    type: Boolean,
+  })
   async 고정_공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -231,9 +246,11 @@ export class AnnouncementController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('excludeExpired') excludeExpired?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
+    const excludeExpiredFilter = excludeExpired === 'true';
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
@@ -246,6 +263,7 @@ export class AnnouncementController {
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
+        excludeExpired: excludeExpiredFilter,
       });
 
     return {

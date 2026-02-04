@@ -130,6 +130,7 @@ export class AnnouncementContextService {
     startDate?: Date;
     endDate?: Date;
     categoryId?: string;
+    excludeExpired?: boolean;
   }): Promise<AnnouncementListResult> {
     const query = new GetAnnouncementListQuery(
       params.isPublic,
@@ -140,6 +141,7 @@ export class AnnouncementContextService {
       params.startDate,
       params.endDate,
       params.categoryId,
+      params.excludeExpired,
     );
     return await this.queryBus.execute(query);
   }

@@ -84,6 +84,7 @@ export class AnnouncementBusinessService {
     startDate?: Date;
     endDate?: Date;
     categoryId?: string;
+    excludeExpired?: boolean;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
@@ -136,6 +137,7 @@ export class AnnouncementBusinessService {
     startDate?: Date;
     endDate?: Date;
     categoryId?: string;
+    excludeExpired?: boolean;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
@@ -340,6 +342,7 @@ export class AnnouncementBusinessService {
     startDate?: Date;
     endDate?: Date;
     categoryId?: string;
+    excludeExpired?: boolean;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;

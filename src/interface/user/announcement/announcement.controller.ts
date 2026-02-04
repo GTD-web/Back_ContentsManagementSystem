@@ -104,14 +104,22 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
+  @ApiQuery({
+    name: 'excludeExpired',
+    required: false,
+    description: '마감된 공지사항 제외 여부 (기본값: false)',
+    type: Boolean,
+  })
   async 공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('excludeExpired') excludeExpired?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
+    const excludeExpiredFilter = excludeExpired === 'true';
 
     // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
@@ -125,6 +133,7 @@ export class UserAnnouncementController {
         limit: limitNum,
         orderBy: 'order',
         categoryId: categoryId,
+        excludeExpired: excludeExpiredFilter,
       });
 
     return {
