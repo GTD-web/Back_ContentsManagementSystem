@@ -65,7 +65,7 @@ export class FileUploadService {
       this.logger.log(`파일 업로드 완료 - URL: ${fileUrl}`);
 
       return {
-        fileName: file.originalname,
+        fileName: Buffer.from(file.originalname, 'latin1').toString('utf8'),
         fileUrl,
         fileSize: file.size,
         mimeType: file.mimetype,
