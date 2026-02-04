@@ -20,6 +20,7 @@ import {
   ApiQuery,
   ApiParam,
   ApiConsumes,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
@@ -44,7 +45,16 @@ import {
   AnnouncementCategoryResponseDto,
   AnnouncementCategoryListResponseDto,
 } from '@interface/common/dto/announcement/announcement-response.dto';
-import { AnnouncementSurveyStatisticsResponseDto } from '@interface/common/dto/announcement/announcement-statistics-response.dto';
+import {
+  AnnouncementSurveyStatisticsResponseDto,
+  ChoiceStatisticsDto,
+  CheckboxStatisticsDto,
+  ScaleStatisticsDto,
+  TextStatisticsDto,
+  FileStatisticsDto,
+  DatetimeStatisticsDto,
+  GridStatisticsDto,
+} from '@interface/common/dto/announcement/announcement-statistics-response.dto';
 import { ReplaceAnnouncementPermissionsDto } from './dto/replace-announcement-permissions.dto';
 import { DismissPermissionLogsDto } from './dto/dismiss-permission-logs.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -56,6 +66,15 @@ import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-
 
 @ApiTags('A-9. 관리자 - 공지사항')
 @ApiBearerAuth('Bearer')
+@ApiExtraModels(
+  ChoiceStatisticsDto,
+  CheckboxStatisticsDto,
+  ScaleStatisticsDto,
+  TextStatisticsDto,
+  FileStatisticsDto,
+  DatetimeStatisticsDto,
+  GridStatisticsDto,
+)
 @Controller('admin/announcements')
 export class AnnouncementController {
   constructor(
