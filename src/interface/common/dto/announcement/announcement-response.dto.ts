@@ -155,8 +155,14 @@ export class AnnouncementResponseDto {
   @ApiProperty({ description: '생성자 ID', required: false, nullable: true })
   createdBy: string | null;
 
+  @ApiProperty({ description: '생성자 이름', required: false, nullable: true })
+  createdByName?: string | null;
+
   @ApiProperty({ description: '수정자 ID', required: false, nullable: true })
   updatedBy: string | null;
+
+  @ApiProperty({ description: '수정자 이름', required: false, nullable: true })
+  updatedByName?: string | null;
 
   @ApiProperty({ description: '카테고리 이름', example: '일반 공지', required: false })
   categoryName?: string;

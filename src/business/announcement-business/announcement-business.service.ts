@@ -454,6 +454,19 @@ export class AnnouncementBusinessService {
       categoryName: category?.name,
     };
 
+    // 작성자/수정자 이름 조회
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+    
+    if (announcement.createdBy) {
+      const createdByInfo = this.조직에서_직원_정보를_UUID로_찾기(orgInfo, announcement.createdBy);
+      result.createdByName = createdByInfo?.name || null;
+    }
+    
+    if (announcement.updatedBy) {
+      const updatedByInfo = this.조직에서_직원_정보를_UUID로_찾기(orgInfo, announcement.updatedBy);
+      result.updatedByName = updatedByInfo?.name || null;
+    }
+
     // 대상 직원 정보 포함 옵션이 true면 추가
     if (includeTargetEmployees) {
       const targetEmployeesList =
@@ -1568,6 +1581,68 @@ export class AnnouncementBusinessService {
       if (dept.employees) {
         for (const emp of dept.employees) {
           if (emp.employeeNumber === employeeId) {
+            result = {
+              name: emp.name || '알 수 없음',
+              departmentId: dept.id || null,
+              departmentName: dept.departmentName || dept.name || '알 수 없음',
+              rankId: emp.rankId || undefined,
+              positionId: emp.positionId || undefined,
+            };
+            return true;
+          }
+        }
+      }
+
+      // SSO API는 childDepartments로 응답함
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        for (const child of children) {
+          if (searchInDept(child)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    if (orgInfo.departments) {
+      for (const dept of orgInfo.departments) {
+        if (searchInDept(dept)) {
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 조직에서 직원 정보를 UUID로 찾기
+   * @private
+   */
+  private 조직에서_직원_정보를_UUID로_찾기(
+    orgInfo: OrganizationInfo,
+    employeeUuid: string,
+  ): {
+    name: string;
+    departmentId: string | null;
+    departmentName: string;
+    rankId?: string;
+    positionId?: string;
+  } | null {
+    let result: {
+      name: string;
+      departmentId: string | null;
+      departmentName: string;
+      rankId?: string;
+      positionId?: string;
+    } | null = null;
+
+    const searchInDept = (dept: any): boolean => {
+      if (dept.employees) {
+        for (const emp of dept.employees) {
+          if (emp.id === employeeUuid) {
             result = {
               name: emp.name || '알 수 없음',
               departmentId: dept.id || null,
