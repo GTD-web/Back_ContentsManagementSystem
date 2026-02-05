@@ -735,23 +735,32 @@ export class AnnouncementBusinessService {
     );
 
     // 2. 설문조사 처리
-    // survey가 명시적으로 전달된 경우에만 처리
-    // undefined, 빈 문자열, 빈 객체는 무시
-    if (survey !== undefined && survey !== '' && !this.isEmptyObject(survey)) {
-      // 기존 설문조사 확인
+    // survey가 명시적으로 전달되고 유효한 데이터가 있는 경우에만 처리
+    // survey === null: 삭제 요청
+    // survey === undefined 또는 빈 값: 무시 (공지사항만 수정)
+    // survey에 유효한 데이터: 생성 시도 (이미 있으면 에러)
+    
+    if (survey === null) {
+      // 명시적으로 null이 전달된 경우: 설문조사 삭제
+      const existingSurvey =
+        await this.surveyContextService.공지사항의_설문조사를_조회한다(id);
+      
+      if (existingSurvey) {
+        this.logger.log(`설문조사 삭제 시작 - 공지사항 ID: ${id}`);
+        await this.surveyContextService.설문조사를_삭제한다(existingSurvey.id);
+        this.logger.log(`설문조사 삭제 완료 - 공지사항 ID: ${id}`);
+      }
+    } else if (
+      survey !== undefined &&
+      survey !== '' &&
+      !this.isEmptyObject(survey) &&
+      this.설문조사_데이터가_유효한가(survey)
+    ) {
+      // survey에 유효한 데이터가 있는 경우
       const existingSurvey =
         await this.surveyContextService.공지사항의_설문조사를_조회한다(id);
 
-      if (survey === null) {
-        // 설문조사 삭제 요청
-        if (existingSurvey) {
-          this.logger.log(`설문조사 삭제 시작 - 공지사항 ID: ${id}`);
-          await this.surveyContextService.설문조사를_삭제한다(
-            existingSurvey.id,
-          );
-          this.logger.log(`설문조사 삭제 완료 - 공지사항 ID: ${id}`);
-        }
-      } else if (existingSurvey) {
+      if (existingSurvey) {
         // 기존 설문조사가 있으면 수정 불가 (snapshot 개념)
         this.logger.warn(
           `설문조사 수정 시도 차단 - 설문조사는 snapshot이므로 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요. (설문 ID: ${existingSurvey.id})`,
@@ -768,9 +777,9 @@ export class AnnouncementBusinessService {
         });
         this.logger.log(`설문조사 생성 완료 - 공지사항 ID: ${id}`);
       }
-    } else if (survey !== undefined) {
+    } else if (survey !== undefined && survey !== '') {
       this.logger.log(
-        `설문조사 필드가 빈 값으로 전달되어 무시됨 - 공지사항 ID: ${id}`,
+        `설문조사 필드가 전달되었으나 유효한 데이터가 없어 무시됨 - 공지사항 ID: ${id}`,
       );
     }
 
@@ -1058,6 +1067,25 @@ export class AnnouncementBusinessService {
       return false;
     }
     return Object.keys(obj).length === 0;
+  }
+
+  /**
+   * 설문조사 데이터가 유효한지 확인
+   * @private
+   */
+  private 설문조사_데이터가_유효한가(survey: any): boolean {
+    // survey가 객체가 아니면 유효하지 않음
+    if (typeof survey !== 'object' || survey === null) {
+      return false;
+    }
+
+    // title이나 questions가 있으면 유효한 설문조사 데이터로 간주
+    if (survey.title || (survey.questions && Array.isArray(survey.questions))) {
+      return true;
+    }
+
+    // 그 외에는 유효하지 않은 것으로 간주
+    return false;
   }
 
   /**
