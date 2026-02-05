@@ -603,22 +603,20 @@ export class UserAnnouncementController {
     if (files && files.length > 0) {
       console.log(`📎 파일 ${files.length}개 업로드 시작`);
 
-      // 파일 업로드 (surveys 폴더에 저장)
-      const uploadedFiles = await this.fileUploadService.uploadFiles(
-        files,
-        'surveys',
-      );
-      console.log('✅ 파일 업로드 완료:', uploadedFiles);
+      // 파일 업로드를 위한 메타데이터 준비
+      // 공지사항명/설문조사질문명/사용자명/ 경로로 저장
+      const announcementTitle = announcement.title || '제목없음';
+      const userName = user.name || user.employeeNumber || '사용자';
 
       // fileQuestionIds가 있으면 각 파일을 해당 질문에 매핑
       if (
         parsedDto.fileQuestionIds &&
         Array.isArray(parsedDto.fileQuestionIds)
       ) {
-        const fileQuestionMap = new Map<string, typeof uploadedFiles>();
+        const fileQuestionMap = new Map<string, typeof files>();
 
         // 각 파일을 질문 ID별로 그룹화
-        uploadedFiles.forEach((file, index) => {
+        files.forEach((file, index) => {
           const questionId = parsedDto.fileQuestionIds[index];
           if (!questionId) {
             console.warn(
@@ -632,14 +630,37 @@ export class UserAnnouncementController {
           fileQuestionMap.set(questionId, existing);
         });
 
-        // fileAnswers 형식으로 변환
-        fileAnswers = Array.from(fileQuestionMap.entries()).map(
-          ([questionId, files]) => ({
+        // 각 질문별로 파일 업로드 및 fileAnswers 형식으로 변환
+        for (const [questionId, questionFiles] of fileQuestionMap.entries()) {
+          // 질문 정보 조회
+          const question = survey.questions.find((q) => q.id === questionId);
+          const questionTitle = question?.title || '질문';
+
+          // 경로 세그먼트: [공지사항명, 질문명, 사용자명]
+          const pathSegments = [announcementTitle, questionTitle, userName];
+
+          // 파일 업로드
+          const uploadedFiles = await this.fileUploadService.uploadFilesWithPath(
+            questionFiles,
+            pathSegments,
+          );
+
+          fileAnswers.push({
             questionId,
-            files,
-          }),
+            files: uploadedFiles,
+          });
+        }
+
+        console.log('✅ 파일-질문 매핑 및 업로드 완료:', fileAnswers);
+      } else {
+        // fileQuestionIds가 없는 경우 (레거시 지원)
+        // 모든 파일을 기본 경로로 업로드
+        const pathSegments = [announcementTitle, '설문조사', userName];
+        const uploadedFiles = await this.fileUploadService.uploadFilesWithPath(
+          files,
+          pathSegments,
         );
-        console.log('✅ 파일-질문 매핑 완료:', fileAnswers);
+        console.log('✅ 파일 업로드 완료 (기본 경로):', uploadedFiles);
       }
     }
 
