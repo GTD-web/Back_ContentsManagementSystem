@@ -474,7 +474,7 @@ export class GetSurveyStatisticsHandler
     const responses = await this.responseCheckboxRepository.find({
       where: { 
         questionId: question.id,
-        // Checkbox은 hard delete만 지원하므로 deletedAt 없음
+        deletedAt: null as any, // Soft Delete된 응답 제외
       },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });

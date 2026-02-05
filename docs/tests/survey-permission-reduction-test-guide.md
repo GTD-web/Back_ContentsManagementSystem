@@ -13,11 +13,11 @@
 - `SurveyCompletion`: ✅ Soft Delete
 - `SurveyResponseText`: ✅ Soft Delete + 복구
 - `SurveyResponseChoice`: ✅ Soft Delete + 복구
+- `SurveyResponseCheckbox`: ✅ Soft Delete + 복구 (마이그레이션 완료)
 - `SurveyResponseScale`: ✅ Soft Delete + 복구
 - `SurveyResponseGrid`: ✅ Soft Delete + 복구
 - `SurveyResponseFile`: ✅ Soft Delete + 복구
 - `SurveyResponseDatetime`: ✅ Soft Delete + 복구
-- `SurveyResponseCheckbox`: ⚠️ Hard Delete만 지원 (엔티티 구조상)
 
 ### 2. **권한 축소 감지 및 자동 삭제**
 공지사항 수정 시 자동으로:

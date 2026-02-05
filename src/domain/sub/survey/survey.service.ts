@@ -887,29 +887,49 @@ export class SurveyService {
         );
       }
 
-      // 2-3. 체크박스 응답 저장 (다중 선택)
-      // Hard delete만 지원하므로 기존 방식 유지: 기존 삭제 후 새로 생성
+      // 2-3. 체크박스 응답 저장 (기존 레코드 복구 또는 새로 생성)
+      // 다중 선택이므로 복잡한 로직 필요
       if (answers.checkboxAnswers && answers.checkboxAnswers.length > 0) {
-        // 기존 체크박스 응답 삭제 (hard delete)
-        if (questionIds.length > 0) {
-          await queryRunner.manager.delete(SurveyResponseCheckbox, {
-            employeeId,
-            questionId: In(
-              answers.checkboxAnswers.map((a) => a.questionId),
-            ),
-          });
-        }
-
-        // 새 체크박스 응답 저장
         for (const answer of answers.checkboxAnswers) {
+          // 2-3-1. 해당 질문의 모든 기존 체크박스 응답 soft delete (선택 해제 처리)
+          await queryRunner.manager
+            .createQueryBuilder()
+            .update(SurveyResponseCheckbox)
+            .set({ deletedAt: submittedAt })
+            .where('questionId = :questionId', { questionId: answer.questionId })
+            .andWhere('employeeId = :employeeId', { employeeId })
+            .andWhere('deletedAt IS NULL')
+            .execute();
+
+          // 2-3-2. 새로 선택한 옵션들을 복구 또는 생성
           for (const option of answer.selectedOptions) {
-            await queryRunner.manager.save(SurveyResponseCheckbox, {
-              questionId: answer.questionId,
-              employeeId: employeeId,
-              employeeNumber: employeeNumber,
-              selectedOption: option,
-              submittedAt,
-            });
+            const existing = await queryRunner.manager.findOne(
+              SurveyResponseCheckbox,
+              {
+                where: {
+                  questionId: answer.questionId,
+                  employeeId: employeeId,
+                  selectedOption: option,
+                },
+                withDeleted: true,
+              },
+            );
+
+            if (existing) {
+              // 기존 레코드 복구
+              existing.submittedAt = submittedAt;
+              existing.deletedAt = null as any;
+              await queryRunner.manager.save(SurveyResponseCheckbox, existing);
+            } else {
+              // 새 레코드 생성
+              await queryRunner.manager.save(SurveyResponseCheckbox, {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+                employeeNumber: employeeNumber,
+                selectedOption: option,
+                submittedAt,
+              });
+            }
           }
         }
         this.logger.debug(
@@ -1198,12 +1218,15 @@ export class SurveyService {
       );
       totalDeleted += completions.affected || 0;
 
-      // 2. 각 응답 테이블별 soft delete
+      // 2. 각 응답 테이블별 soft delete (checkbox 포함)
       const deleteResults = await Promise.all([
         queryRunner.manager.softDelete(SurveyResponseText, {
           employeeNumber: In(employeeNumbers),
         }),
         queryRunner.manager.softDelete(SurveyResponseChoice, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseCheckbox, {
           employeeNumber: In(employeeNumbers),
         }),
         queryRunner.manager.softDelete(SurveyResponseScale, {
@@ -1220,18 +1243,9 @@ export class SurveyService {
         }),
       ]);
 
-      // Checkbox은 Hard Delete만 지원하므로 실제 삭제
-      const checkboxResult = await queryRunner.manager.delete(
-        SurveyResponseCheckbox,
-        {
-          employeeNumber: In(employeeNumbers),
-        },
-      );
-
       deleteResults.forEach((result) => {
         totalDeleted += result.affected || 0;
       });
-      totalDeleted += checkboxResult.affected || 0;
 
       await queryRunner.commitTransaction();
 
@@ -1333,7 +1347,17 @@ export class SurveyService {
         .execute();
       totalRestored += choiceResult.affected || 0;
 
-      // 4. SurveyResponseScale 복구
+      // 4. SurveyResponseCheckbox 복구
+      const checkboxResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseCheckbox)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += checkboxResult.affected || 0;
+
+      // 5. SurveyResponseScale 복구
       const scaleResult = await queryRunner.manager
         .createQueryBuilder()
         .update(SurveyResponseScale)
@@ -1343,7 +1367,7 @@ export class SurveyService {
         .execute();
       totalRestored += scaleResult.affected || 0;
 
-      // 5. SurveyResponseGrid 복구
+      // 6. SurveyResponseGrid 복구
       const gridResult = await queryRunner.manager
         .createQueryBuilder()
         .update(SurveyResponseGrid)
@@ -1353,7 +1377,7 @@ export class SurveyService {
         .execute();
       totalRestored += gridResult.affected || 0;
 
-      // 6. SurveyResponseFile 복구
+      // 7. SurveyResponseFile 복구
       const fileResult = await queryRunner.manager
         .createQueryBuilder()
         .update(SurveyResponseFile)
@@ -1363,7 +1387,7 @@ export class SurveyService {
         .execute();
       totalRestored += fileResult.affected || 0;
 
-      // 7. SurveyResponseDatetime 복구
+      // 8. SurveyResponseDatetime 복구
       const datetimeResult = await queryRunner.manager
         .createQueryBuilder()
         .update(SurveyResponseDatetime)
@@ -1372,8 +1396,6 @@ export class SurveyService {
         .andWhere('deletedAt IS NOT NULL')
         .execute();
       totalRestored += datetimeResult.affected || 0;
-
-      // Checkbox은 hard delete이므로 복구 불가
 
       await queryRunner.commitTransaction();
 

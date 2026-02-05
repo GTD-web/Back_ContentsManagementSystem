@@ -1,21 +1,19 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  VersionColumn,
   Index,
 } from 'typeorm';
+import { BaseEntity } from '@libs/database/base/base.entity';
 
 /**
  * SurveyResponseCheckbox Entity (설문 응답 - 체크박스)
  * 
  * 체크박스 응답 (다중 선택 가능)
  * 
- * ⚠️ Hard Delete 사용: 
- * - 사용자가 체크박스 선택 취소 시 레코드 완전 삭제
- * - Soft Delete를 사용하지 않음 (UK 제약조건 문제)
+ * ✅ Soft Delete 사용 (프로덕션 데이터 보호)
+ * - BaseEntity 상속으로 deletedAt 필드 자동 추가
+ * - 권한 제거 시 soft delete 처리
+ * - 권한 재추가 시 복구 가능
  */
 @Entity('survey_response_checkboxes')
 @Index('uk_survey_response_checkbox', ['questionId', 'employeeId', 'selectedOption'], {
@@ -23,12 +21,7 @@ import {
 })
 @Index('idx_survey_response_checkbox_employee_id', ['employeeId'])
 @Index('idx_survey_response_checkbox_employee_number', ['employeeNumber'])
-export class SurveyResponseCheckbox {
-  @PrimaryGeneratedColumn('uuid', {
-    comment: '응답 ID',
-  })
-  id: string;
-
+export class SurveyResponseCheckbox extends BaseEntity<SurveyResponseCheckbox> {
   @Column({
     type: 'uuid',
     comment: '질문 ID',
@@ -62,36 +55,10 @@ export class SurveyResponseCheckbox {
   })
   submittedAt: Date;
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    comment: '생성 일시',
-  })
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    type: 'timestamp',
-    comment: '수정 일시',
-  })
-  updatedAt: Date;
-
-  // ⚠️ deletedAt 없음 (Hard Delete 사용)
-
-  @Column({
-    type: 'uuid',
-    nullable: true,
-    comment: '생성자 ID (외부 시스템 직원 ID - SSO)',
-  })
-  createdBy: string | null;
-
-  @Column({
-    type: 'uuid',
-    nullable: true,
-    comment: '수정자 ID (외부 시스템 직원 ID - SSO)',
-  })
-  updatedBy: string | null;
-
-  @VersionColumn({
-    comment: '버전 (Optimistic Locking)',
-  })
-  version: number;
+  /**
+   * 엔티티를 DTO로 변환한다
+   */
+  DTO로_변환한다(): SurveyResponseCheckbox {
+    return this;
+  }
 }
