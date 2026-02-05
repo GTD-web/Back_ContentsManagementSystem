@@ -70,6 +70,88 @@ export class UserAnnouncementController {
   }
 
   /**
+   * 공지사항 전체 목록을 조회한다 (사용자용 - 고정+비고정, 검색)
+   */
+  @Get('all')
+  @ApiOperation({
+    summary: '공지사항 전체 목록 조회 (사용자용 - 고정+비고정, 검색 가능)',
+    description:
+      '사용자 권한에 따라 접근 가능한 고정 및 비고정 공지사항을 모두 조회합니다. ' +
+      '검색 기능을 사용할 수 있습니다. ' +
+      '마감된 공지사항은 자동으로 제외됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '공지사항 전체 목록 조회 성공',
+    type: AnnouncementListResponseDto,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호 (기본값: 1)',
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 개수 (기본값: 10)',
+    type: Number,
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID 필터',
+    type: String,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목, 내용, 작성자 이름, 카테고리 이름 검색)',
+    type: String,
+    example: '홍길동',
+  })
+  async 공지사항_전체_목록을_조회한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
+  ): Promise<AnnouncementListResponseDto> {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
+
+    // 사용자 권한에 따른 필터링 로직 적용
+    // - 전사공개(isPublic: true) 공지사항
+    // - 사용자의 부서/직급/직책이 포함된 제한공개 공지사항
+    // - 사용자 ID가 permissionEmployeeIds에 포함된 공지사항
+    const result =
+      await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다(
+        {
+          userId: user.id,
+          employeeNumber: user.employeeNumber,
+          // isFixed 조건 없음 - 고정/비고정 모두 조회
+          page: pageNum,
+          limit: limitNum,
+          orderBy: 'createdAt',
+          categoryId: categoryId,
+          excludeExpired: excludeExpiredFilter,
+          search: search,
+        },
+      );
+
+    return {
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+    };
+  }
+
+  /**
    * 공지사항 목록을 조회한다 (사용자용 - 비고정 공지만)
    */
   @Get()
@@ -105,19 +187,11 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '검색어 (제목 및 내용 검색)',
-    type: String,
-    example: '신년',
-  })
   async 공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
-    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
@@ -138,7 +212,6 @@ export class UserAnnouncementController {
           orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
-          search: search,
         },
       );
 
@@ -187,19 +260,11 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '검색어 (제목 및 내용 검색)',
-    type: String,
-    example: '신년',
-  })
   async 고정_공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
-    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
@@ -220,7 +285,6 @@ export class UserAnnouncementController {
           orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
-          search: search,
         },
       );
 

@@ -1,9 +1,10 @@
 import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Announcement } from '@domain/core/announcement/announcement.entity';
 import { AnnouncementListResult } from '../../interfaces/announcement-context.interface';
 import { Logger } from '@nestjs/common';
+import { CompanyContextService } from '@context/company-context/company-context.service';
 
 /**
  * 공지사항 목록 조회 쿼리
@@ -33,6 +34,7 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
   constructor(
     @InjectRepository(Announcement)
     private readonly announcementRepository: Repository<Announcement>,
+    private readonly companyContextService: CompanyContextService,
   ) {}
 
   async execute(
@@ -127,20 +129,64 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
       }
     }
 
-    // 검색 조건 (제목 또는 내용에 검색어 포함)
+    // 검색 조건 (제목, 내용, 작성자 이름, 카테고리 이름)
     if (search && search.trim() !== '') {
-      const searchPattern = `%${search.trim()}%`;
-      if (hasWhere) {
-        queryBuilder.andWhere(
-          '(announcement.title LIKE :search OR announcement.content LIKE :search)',
-          { search: searchPattern },
+      const searchTerm = search.trim();
+      const searchPattern = `%${searchTerm}%`;
+
+      // 작성자 이름으로 검색하기 위해 SSO에서 직원 정보 조회
+      let matchingEmployeeIds: string[] = [];
+      try {
+        const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+        
+        // 모든 부서의 직원을 순회하며 이름에 검색어가 포함된 직원 ID 수집
+        for (const dept of orgInfo.departments) {
+          if (dept.employees && dept.employees.length > 0) {
+            const matchingEmployees = dept.employees.filter(emp => 
+              emp.name && emp.name.includes(searchTerm)
+            );
+            matchingEmployeeIds.push(...matchingEmployees.map(emp => emp.id));
+          }
+        }
+        
+        this.logger.debug(
+          `검색어 "${searchTerm}"에 해당하는 직원 ${matchingEmployeeIds.length}명 발견`,
         );
+      } catch (error) {
+        this.logger.warn(
+          `작성자 이름 검색 중 오류 발생 (제목/내용/카테고리 검색은 계속 진행): ${error.message}`,
+        );
+      }
+
+      // 검색 조건 구성
+      if (matchingEmployeeIds.length > 0) {
+        // 작성자 이름으로 검색된 직원이 있는 경우
+        if (hasWhere) {
+          queryBuilder.andWhere(
+            '(announcement.title LIKE :search OR announcement.content LIKE :search OR category.name LIKE :search OR announcement.createdBy IN (:...employeeIds))',
+            { search: searchPattern, employeeIds: matchingEmployeeIds },
+          );
+        } else {
+          queryBuilder.where(
+            '(announcement.title LIKE :search OR announcement.content LIKE :search OR category.name LIKE :search OR announcement.createdBy IN (:...employeeIds))',
+            { search: searchPattern, employeeIds: matchingEmployeeIds },
+          );
+          hasWhere = true;
+        }
       } else {
-        queryBuilder.where(
-          '(announcement.title LIKE :search OR announcement.content LIKE :search)',
-          { search: searchPattern },
-        );
-        hasWhere = true;
+        // 작성자 이름으로 검색된 직원이 없는 경우 (제목, 내용, 카테고리만 검색)
+        if (hasWhere) {
+          queryBuilder.andWhere(
+            '(announcement.title LIKE :search OR announcement.content LIKE :search OR category.name LIKE :search)',
+            { search: searchPattern },
+          );
+        } else {
+          queryBuilder.where(
+            '(announcement.title LIKE :search OR announcement.content LIKE :search OR category.name LIKE :search)',
+            { search: searchPattern },
+          );
+          hasWhere = true;
+        }
       }
     }
 

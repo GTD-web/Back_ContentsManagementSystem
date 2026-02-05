@@ -154,13 +154,6 @@ export class AnnouncementController {
     description: '마감된 공지사항 제외 여부 (기본값: false)',
     type: Boolean,
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '검색어 (제목 및 내용 검색)',
-    type: String,
-    example: '신년',
-  })
   async 공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -170,7 +163,6 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
-    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -189,7 +181,6 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
-        search: search,
       });
 
     return {
@@ -267,13 +258,6 @@ export class AnnouncementController {
     description: '마감된 공지사항 제외 여부 (기본값: false)',
     type: Boolean,
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '검색어 (제목 및 내용 검색)',
-    type: String,
-    example: '신년',
-  })
   async 고정_공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -283,7 +267,6 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
-    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -301,7 +284,6 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
-        search: search,
       });
 
     return {
@@ -314,23 +296,116 @@ export class AnnouncementController {
   }
 
   /**
-   * 공지사항 전체 목록을 조회한다 (페이지네이션 없음)
+   * 공지사항 전체 목록을 조회한다 (고정+비고정, 페이지네이션, 검색)
    */
   @Get('all')
   @ApiOperation({
-    summary: '공지사항 전체 목록 조회',
-    description: '페이지네이션 없이 모든 공지사항을 조회합니다.',
+    summary: '공지사항 전체 목록 조회 (고정+비고정, 검색 가능)',
+    description:
+      '고정 및 비고정 공지사항을 모두 조회합니다. 검색 기능을 사용할 수 있습니다.',
   })
   @ApiResponse({
     status: 200,
     description: '공지사항 전체 목록 조회 성공',
-    type: [AnnouncementListItemDto],
+    type: AnnouncementListResponseDto,
   })
-  async 공지사항_전체_목록을_조회한다(): Promise<AnnouncementListItemDto[]> {
-    const items =
-      await this.announcementBusinessService.공지사항_전체_목록을_조회한다();
+  @ApiQuery({
+    name: 'isPublic',
+    required: false,
+    description: '공개 여부 필터',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'orderBy',
+    required: false,
+    description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시, 기본값: createdAt)',
+    enum: ['order', 'createdAt'],
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호 (기본값: 1)',
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 개수 (기본값: 10)',
+    type: Number,
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: '시작일 (YYYY-MM-DD 형식)',
+    type: String,
+    example: '2024-01-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: '종료일 (YYYY-MM-DD 형식)',
+    type: String,
+    example: '2024-12-31',
+  })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID (UUID)',
+    type: String,
+  })
+  @ApiQuery({
+    name: 'excludeExpired',
+    required: false,
+    description: '마감된 공지사항 제외 여부 (기본값: false)',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목, 내용, 작성자 이름, 카테고리 이름 검색)',
+    type: String,
+    example: '홍길동',
+  })
+  async 공지사항_전체_목록을_조회한다(
+    @Query('isPublic') isPublic?: string,
+    @Query('orderBy') orderBy?: 'order' | 'createdAt',
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('excludeExpired') excludeExpired?: string,
+    @Query('search') search?: string,
+  ): Promise<AnnouncementListResponseDto> {
+    const isPublicFilter =
+      isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
+    const excludeExpiredFilter = excludeExpired === 'true';
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
 
-    return items;
+    const result =
+      await this.announcementBusinessService.공지사항_목록을_조회한다({
+        isPublic: isPublicFilter,
+        // isFixed 조건 없음 - 고정/비고정 모두 조회
+        orderBy: orderBy || 'createdAt',
+        page: pageNum,
+        limit: limitNum,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        categoryId: categoryId || undefined,
+        excludeExpired: excludeExpiredFilter,
+        search: search,
+      });
+
+    return {
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+    };
   }
 
   /**

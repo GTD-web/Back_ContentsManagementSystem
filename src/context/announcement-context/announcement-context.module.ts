@@ -18,6 +18,7 @@ import {
   DeleteAnnouncementHandler,
 } from './handlers';
 import { SsoModule } from '@domain/common/sso/sso.module';
+import { CompanyContextModule } from '@context/company-context/company-context.module';
 
 const QueryHandlers = [
   GetAnnouncementListHandler,
@@ -45,6 +46,7 @@ const CommandHandlers = [
     TypeOrmModule.forFeature([Announcement, AnnouncementPermissionLog]),
     AnnouncementModule,
     SsoModule,
+    CompanyContextModule,
   ],
   providers: [
     AnnouncementContextService,
