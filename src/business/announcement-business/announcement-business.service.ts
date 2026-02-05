@@ -184,17 +184,18 @@ export class AnnouncementBusinessService {
       return hasPermission;
     });
 
-    // 5. 읽음 여부 조회
+    // 5. 읽음 여부 조회 (soft deleted 제외)
     const announcementIds = accessibleAnnouncements.map((a) => a.id);
     const readRecords = await this.announcementReadRepository.find({
       where: {
         employeeNumber,
         announcementId: In(announcementIds),
+        deletedAt: null as any, // soft deleted 제외
       },
     });
     const readAnnouncementIds = new Set(readRecords.map((r) => r.announcementId));
 
-    // 6. 설문 제출 여부 조회
+    // 6. 설문 제출 여부 조회 (soft deleted 제외)
     const surveyIds = accessibleAnnouncements
       .filter((a) => !!a.survey)
       .map((a) => a.survey!.id);
@@ -206,6 +207,7 @@ export class AnnouncementBusinessService {
           employeeNumber,
           surveyId: In(surveyIds),
           isCompleted: true,
+          deletedAt: null as any, // soft deleted 제외
         },
       });
       surveyCompletionMap = new Map(
@@ -607,21 +609,25 @@ export class AnnouncementBusinessService {
       return [];
     }
 
-    // 4. 읽음 여부 조회 (employeeNumber 기준)
+    // 4. 읽음 여부 조회 (employeeNumber 기준, soft deleted 제외)
     const readRecords = await this.announcementReadRepository.find({
-      where: { announcementId: announcement.id },
+      where: { 
+        announcementId: announcement.id,
+        deletedAt: null as any, // soft deleted 제외
+      },
     });
     const readEmployeeNumbers = new Set(
       readRecords.map((r) => r.employeeNumber),
     );
 
-    // 5. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준)
+    // 5. 설문 응답 완료 여부 조회 (설문이 있는 경우, employeeNumber 기준, soft deleted 제외)
     let surveyCompletionMap = new Map<string, boolean>();
     if (announcement.survey) {
       const surveyCompletions = await this.surveyCompletionRepository.find({
         where: {
           surveyId: announcement.survey.id,
           isCompleted: true,
+          deletedAt: null as any, // soft deleted 제외
         },
       });
       surveyCompletionMap = new Map(
@@ -773,16 +779,6 @@ export class AnnouncementBusinessService {
     existingAnnouncement: Announcement,
     newData: Partial<UpdateAnnouncementDto>,
   ): Promise<void> {
-    // 설문조사가 없으면 스킵
-    const survey =
-      await this.surveyContextService.공지사항의_설문조사를_조회한다(
-        announcementId,
-      );
-
-    if (!survey) {
-      return;
-    }
-
     // isPublic이 true로 변경되면 모든 제한 무의미 (스킵)
     if (newData.isPublic === true) {
       return;
@@ -799,32 +795,48 @@ export class AnnouncementBusinessService {
         `권한 축소 감지 - ${removedEmployeeIds.length}명의 직원 권한 제거됨 (employeeIds)`,
       );
 
-      // employeeId를 employeeNumber로 변환
-      const employeeNumbers =
-        await this.surveyContextService.employeeId를_employeeNumber로_변환한다(
-          survey.id,
+      // 1. 공지사항 읽음 기록 삭제
+      const readResult =
+        await this.announcementContextService.직원들의_읽음_기록을_삭제한다(
+          announcementId,
           removedEmployeeIds,
         );
+      this.logger.log(
+        `제거된 직원들의 읽음 기록 삭제 완료 - ${readResult.deletedCount}개 레코드`,
+      );
 
-      if (employeeNumbers.length > 0) {
-        this.logger.log(
-          `변환된 사번 ${employeeNumbers.length}개: ${employeeNumbers.join(', ')}`,
+      // 2. 설문 응답 삭제 (설문이 있는 경우만)
+      const survey =
+        await this.surveyContextService.공지사항의_설문조사를_조회한다(
+          announcementId,
         );
 
-        // 해당 직원들의 설문 응답 삭제
-        const result =
-          await this.surveyContextService.직원들의_설문_응답을_삭제한다(
+      if (survey) {
+        // employeeId를 employeeNumber로 변환
+        const employeeNumbers =
+          await this.surveyContextService.employeeId를_employeeNumber로_변환한다(
             survey.id,
-            employeeNumbers,
+            removedEmployeeIds,
           );
 
-        this.logger.log(
-          `제거된 직원들의 설문 응답 삭제 완료 - ${result.deletedCount}개 레코드`,
-        );
-      } else {
-        this.logger.log(
-          `제거된 직원 중 설문 응답이 있는 사람 없음`,
-        );
+        if (employeeNumbers.length > 0) {
+          this.logger.log(
+            `변환된 사번 ${employeeNumbers.length}개: ${employeeNumbers.join(', ')}`,
+          );
+
+          // 해당 직원들의 설문 응답 삭제
+          const surveyResult =
+            await this.surveyContextService.직원들의_설문_응답을_삭제한다(
+              survey.id,
+              employeeNumbers,
+            );
+
+          this.logger.log(
+            `제거된 직원들의 설문 응답 삭제 완료 - ${surveyResult.deletedCount}개 레코드`,
+          );
+        } else {
+          this.logger.log(`제거된 직원 중 설문 응답이 있는 사람 없음`);
+        }
       }
     }
 

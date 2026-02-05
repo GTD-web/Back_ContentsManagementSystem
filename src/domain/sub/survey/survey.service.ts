@@ -814,72 +814,93 @@ export class SurveyService {
       const questionIds =
         survey.questions?.map((q) => q.id) || [];
 
-      // 2-1. 기존 응답 삭제 (재제출 시 덮어쓰기) - 파일은 제외, DELETE 엔드포인트로만 제거
-      if (questionIds.length > 0) {
-        await queryRunner.manager.delete(SurveyResponseText, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        await queryRunner.manager.delete(SurveyResponseChoice, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        await queryRunner.manager.delete(SurveyResponseCheckbox, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        await queryRunner.manager.delete(SurveyResponseScale, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        await queryRunner.manager.delete(SurveyResponseGrid, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        // SurveyResponseFile은 삭제하지 않음 → 기존 파일 유지, 새 파일만 추가. 제거는 DELETE /survey/answers/files 로만 가능
-        await queryRunner.manager.delete(SurveyResponseDatetime, {
-          employeeId,
-          questionId: In(questionIds),
-        });
-        this.logger.debug('기존 설문 응답 삭제 완료 (덮어쓰기, 파일 제외)');
-      }
-
       const submittedAt = new Date();
 
-      // 3-1. 텍스트 응답 저장
+      // 2-1. 텍스트 응답 저장 (기존 레코드 복구 또는 새로 생성)
       if (answers.textAnswers && answers.textAnswers.length > 0) {
         for (const answer of answers.textAnswers) {
-          await queryRunner.manager.save(SurveyResponseText, {
-            questionId: answer.questionId,
-            employeeId: employeeId,
-            employeeNumber: employeeNumber,
-            textValue: answer.textValue,
-            submittedAt,
-          });
+          // 기존 레코드 찾기 (soft deleted 포함)
+          const existing = await queryRunner.manager.findOne(
+            SurveyResponseText,
+            {
+              where: {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+              },
+              withDeleted: true,
+            },
+          );
+
+          if (existing) {
+            // 기존 레코드 복구 및 업데이트
+            existing.textValue = answer.textValue;
+            existing.submittedAt = submittedAt;
+            existing.deletedAt = null as any;
+            await queryRunner.manager.save(SurveyResponseText, existing);
+          } else {
+            // 새 레코드 생성
+            await queryRunner.manager.save(SurveyResponseText, {
+              questionId: answer.questionId,
+              employeeId: employeeId,
+              employeeNumber: employeeNumber,
+              textValue: answer.textValue,
+              submittedAt,
+            });
+          }
         }
         this.logger.debug(
           `텍스트 응답 ${answers.textAnswers.length}개 저장 완료`,
         );
       }
 
-      // 3-2. 선택형 응답 저장
+      // 2-2. 선택형 응답 저장 (기존 레코드 복구 또는 새로 생성)
       if (answers.choiceAnswers && answers.choiceAnswers.length > 0) {
         for (const answer of answers.choiceAnswers) {
-          await queryRunner.manager.save(SurveyResponseChoice, {
-            questionId: answer.questionId,
-            employeeId: employeeId,
-            employeeNumber: employeeNumber,
-            selectedOption: answer.selectedOption,
-            submittedAt,
-          });
+          const existing = await queryRunner.manager.findOne(
+            SurveyResponseChoice,
+            {
+              where: {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+              },
+              withDeleted: true,
+            },
+          );
+
+          if (existing) {
+            existing.selectedOption = answer.selectedOption;
+            existing.submittedAt = submittedAt;
+            existing.deletedAt = null as any;
+            await queryRunner.manager.save(SurveyResponseChoice, existing);
+          } else {
+            await queryRunner.manager.save(SurveyResponseChoice, {
+              questionId: answer.questionId,
+              employeeId: employeeId,
+              employeeNumber: employeeNumber,
+              selectedOption: answer.selectedOption,
+              submittedAt,
+            });
+          }
         }
         this.logger.debug(
           `선택형 응답 ${answers.choiceAnswers.length}개 저장 완료`,
         );
       }
 
-      // 3-3. 체크박스 응답 저장 (다중 선택)
+      // 2-3. 체크박스 응답 저장 (다중 선택)
+      // Hard delete만 지원하므로 기존 방식 유지: 기존 삭제 후 새로 생성
       if (answers.checkboxAnswers && answers.checkboxAnswers.length > 0) {
+        // 기존 체크박스 응답 삭제 (hard delete)
+        if (questionIds.length > 0) {
+          await queryRunner.manager.delete(SurveyResponseCheckbox, {
+            employeeId,
+            questionId: In(
+              answers.checkboxAnswers.map((a) => a.questionId),
+            ),
+          });
+        }
+
+        // 새 체크박스 응답 저장
         for (const answer of answers.checkboxAnswers) {
           for (const option of answer.selectedOptions) {
             await queryRunner.manager.save(SurveyResponseCheckbox, {
@@ -896,34 +917,71 @@ export class SurveyService {
         );
       }
 
-      // 3-4. 척도 응답 저장
+      // 2-4. 척도 응답 저장 (기존 레코드 복구 또는 새로 생성)
       if (answers.scaleAnswers && answers.scaleAnswers.length > 0) {
         for (const answer of answers.scaleAnswers) {
-          await queryRunner.manager.save(SurveyResponseScale, {
-            questionId: answer.questionId,
-            employeeId: employeeId,
-            employeeNumber: employeeNumber,
-            scaleValue: answer.scaleValue,
-            submittedAt,
-          });
+          const existing = await queryRunner.manager.findOne(
+            SurveyResponseScale,
+            {
+              where: {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+              },
+              withDeleted: true,
+            },
+          );
+
+          if (existing) {
+            existing.scaleValue = answer.scaleValue;
+            existing.submittedAt = submittedAt;
+            existing.deletedAt = null as any;
+            await queryRunner.manager.save(SurveyResponseScale, existing);
+          } else {
+            await queryRunner.manager.save(SurveyResponseScale, {
+              questionId: answer.questionId,
+              employeeId: employeeId,
+              employeeNumber: employeeNumber,
+              scaleValue: answer.scaleValue,
+              submittedAt,
+            });
+          }
         }
         this.logger.debug(
           `척도 응답 ${answers.scaleAnswers.length}개 저장 완료`,
         );
       }
 
-      // 3-5. 그리드 응답 저장
+      // 2-5. 그리드 응답 저장 (기존 레코드 복구 또는 새로 생성)
       if (answers.gridAnswers && answers.gridAnswers.length > 0) {
         for (const answer of answers.gridAnswers) {
           for (const gridItem of answer.gridAnswers) {
-            await queryRunner.manager.save(SurveyResponseGrid, {
-              questionId: answer.questionId,
-              employeeId: employeeId,
-              employeeNumber: employeeNumber,
-              rowName: gridItem.rowName,
-              columnValue: gridItem.columnValue,
-              submittedAt,
-            });
+            const existing = await queryRunner.manager.findOne(
+              SurveyResponseGrid,
+              {
+                where: {
+                  questionId: answer.questionId,
+                  employeeId: employeeId,
+                  rowName: gridItem.rowName,
+                },
+                withDeleted: true,
+              },
+            );
+
+            if (existing) {
+              existing.columnValue = gridItem.columnValue;
+              existing.submittedAt = submittedAt;
+              existing.deletedAt = null as any;
+              await queryRunner.manager.save(SurveyResponseGrid, existing);
+            } else {
+              await queryRunner.manager.save(SurveyResponseGrid, {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+                employeeNumber: employeeNumber,
+                rowName: gridItem.rowName,
+                columnValue: gridItem.columnValue,
+                submittedAt,
+              });
+            }
           }
         }
         this.logger.debug(
@@ -931,20 +989,43 @@ export class SurveyService {
         );
       }
 
-      // 3-6. 파일 응답 저장
+      // 2-6. 파일 응답 저장 (기존 파일 유지, 새 파일만 추가)
       if (answers.fileAnswers && answers.fileAnswers.length > 0) {
         for (const answer of answers.fileAnswers) {
           for (const file of answer.files) {
-            await queryRunner.manager.save(SurveyResponseFile, {
-              questionId: answer.questionId,
-              employeeId: employeeId,
-              employeeNumber: employeeNumber,
-              fileUrl: file.fileUrl,
-              fileName: file.fileName,
-              fileSize: file.fileSize,
-              mimeType: file.mimeType,
-              submittedAt,
-            });
+            // 파일은 항상 새로 추가 (중복 체크는 fileUrl 기준)
+            const existing = await queryRunner.manager.findOne(
+              SurveyResponseFile,
+              {
+                where: {
+                  questionId: answer.questionId,
+                  employeeId: employeeId,
+                  fileUrl: file.fileUrl,
+                },
+                withDeleted: true,
+              },
+            );
+
+            if (existing) {
+              // 기존 파일 레코드 복구
+              existing.fileName = file.fileName;
+              existing.fileSize = file.fileSize;
+              existing.mimeType = file.mimeType;
+              existing.submittedAt = submittedAt;
+              existing.deletedAt = null as any;
+              await queryRunner.manager.save(SurveyResponseFile, existing);
+            } else {
+              await queryRunner.manager.save(SurveyResponseFile, {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+                employeeNumber: employeeNumber,
+                fileUrl: file.fileUrl,
+                fileName: file.fileName,
+                fileSize: file.fileSize,
+                mimeType: file.mimeType,
+                submittedAt,
+              });
+            }
           }
         }
         this.logger.debug(
@@ -952,23 +1033,41 @@ export class SurveyService {
         );
       }
 
-      // 3-7. 날짜/시간 응답 저장
+      // 2-7. 날짜/시간 응답 저장 (기존 레코드 복구 또는 새로 생성)
       if (answers.datetimeAnswers && answers.datetimeAnswers.length > 0) {
         for (const answer of answers.datetimeAnswers) {
-          await queryRunner.manager.save(SurveyResponseDatetime, {
-            questionId: answer.questionId,
-            employeeId: employeeId,
-            employeeNumber: employeeNumber,
-            datetimeValue: new Date(answer.datetimeValue),
-            submittedAt,
-          });
+          const existing = await queryRunner.manager.findOne(
+            SurveyResponseDatetime,
+            {
+              where: {
+                questionId: answer.questionId,
+                employeeId: employeeId,
+              },
+              withDeleted: true,
+            },
+          );
+
+          if (existing) {
+            existing.datetimeValue = new Date(answer.datetimeValue);
+            existing.submittedAt = submittedAt;
+            existing.deletedAt = null as any;
+            await queryRunner.manager.save(SurveyResponseDatetime, existing);
+          } else {
+            await queryRunner.manager.save(SurveyResponseDatetime, {
+              questionId: answer.questionId,
+              employeeId: employeeId,
+              employeeNumber: employeeNumber,
+              datetimeValue: new Date(answer.datetimeValue),
+              submittedAt,
+            });
+          }
         }
         this.logger.debug(
           `날짜/시간 응답 ${answers.datetimeAnswers.length}개 저장 완료`,
         );
       }
 
-      // 4. 응답한 질문 수 계산 (이번 요청 + 기존 파일 응답 질문 포함)
+      // 3. 응답한 질문 수 계산 (이번 요청 + 기존 파일 응답 질문 포함)
       const answeredQuestionIds = new Set<string>();
       if (answers.textAnswers)
         answers.textAnswers.forEach((a) =>
@@ -998,12 +1097,16 @@ export class SurveyService {
         answers.datetimeAnswers.forEach((a) =>
           answeredQuestionIds.add(a.questionId),
         );
-      // 기존 파일 응답이 있는 질문도 포함 (파일은 재제출 시 삭제하지 않으므로)
+      // 기존 파일 응답이 있는 질문도 포함 (soft deleted 제외)
       if (questionIds.length > 0) {
         const existingFiles = await queryRunner.manager.find(
           SurveyResponseFile,
           {
-            where: { employeeId, questionId: In(questionIds) },
+            where: { 
+              employeeId, 
+              questionId: In(questionIds),
+              deletedAt: null as any, // soft deleted 제외
+            },
             select: ['questionId'],
           },
         );
@@ -1014,21 +1117,26 @@ export class SurveyService {
       const totalQuestions = survey.questions?.length || 0;
       const isCompleted = answeredQuestions === totalQuestions;
 
-      // 5. SurveyCompletion 생성/업데이트
+      // 4. SurveyCompletion 생성/업데이트/복구
+      // withDeleted: true를 사용하여 soft deleted 레코드도 검색
       const existingCompletion = await queryRunner.manager.findOne(
         SurveyCompletion,
         {
           where: { surveyId: survey.id, employeeNumber },
+          withDeleted: true, // soft deleted 레코드도 찾기
         },
       );
 
       if (existingCompletion) {
+        // 기존 레코드가 있으면 업데이트 (삭제 취소 포함)
         existingCompletion.answeredQuestions = answeredQuestions;
         existingCompletion.totalQuestions = totalQuestions;
         existingCompletion.isCompleted = isCompleted;
         existingCompletion.completedAt = isCompleted ? new Date() : null;
+        existingCompletion.deletedAt = null as any; // soft delete 복구
         await queryRunner.manager.save(SurveyCompletion, existingCompletion);
       } else {
+        // 새로운 레코드 생성
         await queryRunner.manager.save(SurveyCompletion, {
           surveyId: survey.id,
           employeeId, // 내부 UUID

@@ -161,4 +161,17 @@ export class AnnouncementContextService {
   async 부서_변경_대상_목록을_조회한다(): Promise<Announcement[]> {
     return await this.announcementService.부서_변경_대상_목록을_조회한다();
   }
+
+  /**
+   * 직원들의 공지사항 읽음 기록을 삭제한다 (Soft Delete)
+   */
+  async 직원들의_읽음_기록을_삭제한다(
+    announcementId: string,
+    employeeIds: string[],
+  ): Promise<{ deletedCount: number }> {
+    return await this.announcementService.직원들의_읽음_기록을_삭제한다(
+      announcementId,
+      employeeIds,
+    );
+  }
 }

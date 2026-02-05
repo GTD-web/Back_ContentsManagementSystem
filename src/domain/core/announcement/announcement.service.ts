@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { Announcement } from './announcement.entity';
 import { AnnouncementRead } from './announcement-read.entity';
 
@@ -245,14 +245,24 @@ export class AnnouncementService {
     // 공지사항 존재 확인
     await this.ID로_공지사항을_조회한다(announcementId);
 
-    // 이미 읽음 표시가 있는지 확인
+    // 이미 읽음 표시가 있는지 확인 (soft deleted 포함)
     let read = await this.readRepository.findOne({
       where: { announcementId, employeeId },
+      withDeleted: true, // soft deleted 레코드도 찾기
     });
 
     if (read) {
-      this.logger.debug(`이미 읽음 표시가 있습니다.`);
-      return read;
+      if (read.deletedAt) {
+        // Soft deleted 레코드가 있으면 복구
+        this.logger.debug(`삭제된 읽음 표시 복구`);
+        read.deletedAt = null as any;
+        read.readAt = new Date(); // 읽은 시간 업데이트
+        return await this.readRepository.save(read);
+      } else {
+        // 이미 활성 읽음 표시가 있음
+        this.logger.debug(`이미 읽음 표시가 있습니다.`);
+        return read;
+      }
     }
 
     // Lazy Creation: 읽을 때만 레코드 생성
@@ -276,7 +286,11 @@ export class AnnouncementService {
     employeeId: string,
   ): Promise<boolean> {
     const count = await this.readRepository.count({
-      where: { announcementId, employeeId },
+      where: { 
+        announcementId, 
+        employeeId,
+        deletedAt: null as any, // soft deleted 제외
+      },
     });
 
     return count > 0;
@@ -627,5 +641,34 @@ export class AnnouncementService {
     if (announcement.title.length < 3) {
       throw new ConflictException('제목은 최소 3자 이상이어야 합니다.');
     }
+  }
+
+  /**
+   * 직원들의 공지사항 읽음 기록을 삭제한다 (Soft Delete)
+   */
+  async 직원들의_읽음_기록을_삭제한다(
+    announcementId: string,
+    employeeIds: string[],
+  ): Promise<{ deletedCount: number }> {
+    if (employeeIds.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    this.logger.log(
+      `공지사항 읽음 기록 삭제 시작 - 공지사항: ${announcementId}, 직원: ${employeeIds.length}명`,
+    );
+
+    const result = await this.readRepository.softDelete({
+      announcementId,
+      employeeId: In(employeeIds),
+    });
+
+    const deletedCount = result.affected || 0;
+
+    this.logger.log(
+      `공지사항 읽음 기록 삭제 완료 - ${deletedCount}개 레코드`,
+    );
+
+    return { deletedCount };
   }
 }
