@@ -158,4 +158,15 @@ export class SurveyContextService {
       employeeNumbers,
     );
   }
+
+  /**
+   * 설문조사 순서만 수정한다
+   * (snapshot 개념이므로 질문 내용은 수정하지 않고 순서만 변경)
+   */
+  async 설문조사_순서를_수정한다(
+    surveyId: string,
+    order: number,
+  ): Promise<void> {
+    return await this.surveyService.설문조사_순서를_수정한다(surveyId, order);
+  }
 }

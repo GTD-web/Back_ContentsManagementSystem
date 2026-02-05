@@ -778,6 +778,40 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 설문조사 순서만 변경한다 (질문 내용은 수정하지 않음)
+   */
+  async 설문조사_순서를_변경한다(
+    announcementId: string,
+    order: number,
+  ): Promise<void> {
+    this.logger.log(
+      `설문조사 순서 변경 시작 - 공지사항 ID: ${announcementId}, 순서: ${order}`,
+    );
+
+    // 기존 설문조사 확인
+    const existingSurvey =
+      await this.surveyContextService.공지사항의_설문조사를_조회한다(
+        announcementId,
+      );
+
+    if (!existingSurvey) {
+      throw new Error(
+        `설문조사를 찾을 수 없습니다. 공지사항 ID: ${announcementId}`,
+      );
+    }
+
+    // 순서만 변경
+    await this.surveyContextService.설문조사_순서를_수정한다(
+      existingSurvey.id,
+      order,
+    );
+
+    this.logger.log(
+      `설문조사 순서 변경 완료 - 설문 ID: ${existingSurvey.id}, 순서: ${order}`,
+    );
+  }
+
+  /**
    * 권한 축소 시 제거된 사용자/그룹/직책의 설문 응답을 삭제한다
    * @private
    */

@@ -19,6 +19,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
+  ApiBody,
   ApiConsumes,
   ApiExtraModels,
 } from '@nestjs/swagger';
@@ -900,6 +901,64 @@ export class AnnouncementController {
       updateDto.announcements,
       user.id,
     );
+  }
+
+  /**
+   * 공지사항 설문조사 순서를 변경한다
+   */
+  @Put(':id/survey/order')
+  @ApiOperation({
+    summary: '공지사항 설문조사 순서 변경',
+    description:
+      '공지사항에 연결된 설문조사의 순서만 변경합니다.\n\n' +
+      '**주요 특징:**\n' +
+      '- 설문조사는 snapshot 개념이므로 질문 내용은 수정할 수 없습니다\n' +
+      '- 순서(order)만 변경 가능합니다\n' +
+      '- 응답 데이터에는 영향을 주지 않습니다\n\n' +
+      '**필수 필드:**\n' +
+      '- `order`: 정렬 순서 (숫자)',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['order'],
+      properties: {
+        order: {
+          type: 'number',
+          description: '설문조사 정렬 순서',
+          example: 1,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '설문조사 순서 변경 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항 또는 설문조사를 찾을 수 없음',
+  })
+  async 공지사항_설문조사_순서를_변경한다(
+    @Param('id') id: string,
+    @Body() dto: { order: number },
+  ): Promise<{ success: boolean }> {
+    await this.announcementBusinessService.설문조사_순서를_변경한다(
+      id,
+      dto.order,
+    );
+    return { success: true };
   }
 
   /**
