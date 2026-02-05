@@ -26,7 +26,20 @@
 - 해당 직원들의 **읽음 기록** Soft Delete
 - 해당 직원들의 **설문 응답** Soft Delete
 
-### 3. **재추가 시 자동 복구 (프로덕션 데이터 보호)**
+### 3. **질문 개별 변경 감지 및 응답 삭제**
+설문조사 질문 수정 시 자동으로:
+- 각 질문을 개별적으로 비교 (title, type, form, isRequired)
+- 변경된 질문만 감지하여 해당 질문의 응답만 Soft Delete
+- 변경되지 않은 질문의 응답은 유지
+- **장점**: 질문 하나만 수정해도 다른 질문의 응답은 영향 없음
+
+**변경 감지 기준**:
+- 질문 제목 변경
+- 질문 타입 변경 (단문형 → 선택형 등)
+- 질문 form 변경 (선택지, 척도 범위 등)
+- 필수 여부 변경
+
+### 4. **재추가 시 자동 복구 (프로덕션 데이터 보호)**
 제거된 사용자를 다시 권한에 추가하면:
 - 공지사항 수정 API 호출 시 **즉시 자동 복구**
   - `announcement_reads`: 이전 읽음 기록 복구 (`deletedAt = NULL`)
@@ -129,6 +142,97 @@ AND "employeeNumber" = 'employee-2';
 
 ---
 
+### 시나리오 4: 질문 개별 수정 시 해당 질문 응답만 삭제
+
+**1. 초기 설정: 3개 질문이 있는 설문조사**
+```json
+{
+  "questions": [
+    { "id": "q1", "title": "이름", "type": "text", "order": 1 },
+    { "id": "q2", "title": "만족도", "type": "choice", "order": 2 },
+    { "id": "q3", "title": "의견", "type": "textarea", "order": 3 }
+  ]
+}
+```
+
+**2. 사용자들이 설문 제출**
+- employee-1이 모든 질문에 답변 완료
+
+**3. Q2 질문만 수정 (만족도 → 추천도)**
+```json
+{
+  "questions": [
+    { "id": "q1", "title": "이름", "type": "text", "order": 1 },
+    { "id": "q2", "title": "추천도", "type": "choice", "order": 2 },  // 제목 변경
+    { "id": "q3", "title": "의견", "type": "textarea", "order": 3 }
+  ]
+}
+```
+
+**4. 예상 결과**
+- ✅ Q2의 응답만 `deletedAt` 설정됨
+- ✅ Q1, Q3의 응답은 그대로 유지됨
+- ✅ 로그: "질문 변경 감지 - \"만족도\" → 해당 질문의 응답 삭제 예정"
+- ✅ 로그: "질문 응답 삭제 완료 - 질문 ID: q2, 삭제된 레코드: N개"
+
+**5. DB 확인**
+```sql
+-- Q2 응답만 삭제되었는지 확인
+SELECT "questionId", "deletedAt" 
+FROM survey_response_choice
+WHERE "employeeNumber" = 'employee-1'
+ORDER BY "questionId";
+
+-- 예상 결과:
+-- q1: deletedAt = NULL (유지)
+-- q2: deletedAt = 2026-02-05... (삭제됨)
+-- q3: deletedAt = NULL (유지)
+```
+
+---
+
+### 시나리오 5: 질문 타입 변경
+
+**1. 질문 타입 변경 (선택형 → 척도형)**
+```json
+{
+  "questions": [
+    { "id": "q2", "title": "만족도", "type": "linear_scale", "form": { "min": 1, "max": 5 }, "order": 2 }
+  ]
+}
+```
+
+**2. 예상 결과**
+- ✅ 타입이 변경되었으므로 기존 `choice` 응답 삭제
+- ✅ 새로운 `linear_scale` 응답 받을 준비됨
+
+---
+
+### 시나리오 6: 질문 선택지 변경
+
+**1. 선택지 변경**
+```json
+{
+  "questions": [
+    { 
+      "id": "q2", 
+      "title": "만족도", 
+      "type": "choice",
+      "form": {
+        "options": ["매우 불만", "불만", "보통", "만족", "매우 만족"]  // 변경됨
+      },
+      "order": 2 
+    }
+  ]
+}
+```
+
+**2. 예상 결과**
+- ✅ `form` 내용이 변경되었으므로 기존 응답 삭제
+- ✅ 사용자는 새로운 선택지로 다시 제출해야 함
+
+---
+
 ### 시나리오 2: 모든 권한 제거
 
 ```json
@@ -224,6 +328,27 @@ ORDER BY "createdAt";
 -- createdAt은 유지, updatedAt과 submittedAt만 변경됨
 ```
 
+### 5. 질문 개별 수정 후 응답 삭제 확인
+```sql
+-- 특정 질문의 응답만 삭제되었는지 확인
+SELECT "questionId", "deletedAt", "createdAt"
+FROM survey_response_choice
+WHERE "employeeNumber" = 'employee-1'
+ORDER BY "questionId";
+
+-- 예상 결과:
+-- 변경된 질문의 응답만 deletedAt이 설정됨
+-- 다른 질문들의 응답은 deletedAt = NULL로 유지
+
+-- 특정 질문 ID로 삭제 여부 확인
+SELECT COUNT(*) as total,
+       COUNT(CASE WHEN "deletedAt" IS NULL THEN 1 END) as active,
+       COUNT(CASE WHEN "deletedAt" IS NOT NULL THEN 1 END) as deleted
+FROM survey_response_texts
+WHERE "questionId" = 'q2';
+-- 해당 질문의 응답이 모두 soft delete되었는지 확인
+```
+
 ### 2. 삭제 전후 비교
 ```sql
 -- 삭제 전
@@ -253,6 +378,11 @@ SELECT COUNT(*) FROM survey_completions WHERE "deletedAt" IS NULL;
 ✅ "추가된 직원들의 읽음 기록 복구 완료 - N개 레코드"
 ✅ "이전 응답 기록이 있는 사번 N개: xxx, yyy"
 ✅ "추가된 직원들의 설문 응답 복구 완료 - N개 레코드"
+
+# 질문 수정 시 (개별 질문 응답 삭제)
+✅ "질문 변경 감지 - \"[이전 제목]\" → 해당 질문의 응답 삭제 예정"
+✅ "질문 응답 삭제 시작 - 질문 ID: xxx"
+✅ "질문 응답 삭제 완료 - 질문 ID: xxx, 삭제된 레코드: N개"
 ```
 
 ---
@@ -311,6 +441,13 @@ WHERE "employeeNumber" = 'employee-2';
   - [ ] 사용자가 다시 읽거나 제출하지 않아도 즉시 반영됨
 - [ ] **응답 레코드 ID 유지 확인** (복구 시 새 레코드 생성 안됨)
 - [ ] **`createdAt` 시간 보존 확인** (최초 생성 시간 유지)
+- [ ] **질문 개별 수정 시 해당 질문 응답만 삭제**
+  - [ ] 질문 제목만 변경 시 해당 질문 응답만 삭제
+  - [ ] 질문 타입 변경 시 해당 질문 응답만 삭제
+  - [ ] 질문 선택지 변경 시 해당 질문 응답만 삭제
+  - [ ] 변경되지 않은 다른 질문들의 응답은 유지됨
+  - [ ] 로그: "질문 변경 감지 - \"[제목]\" → 해당 질문의 응답 삭제 예정"
+  - [ ] 로그: "질문 응답 삭제 완료 - 질문 ID: xxx, 삭제된 레코드: N개"
 - [ ] 설문조사가 없는 공지사항에서도 에러 없이 작동하는지 확인
 - [ ] 로그가 제대로 출력되는지 확인
 - [ ] `isPublic: true` 변경 시 응답 삭제/복구 안 되는지 확인
@@ -322,13 +459,17 @@ WHERE "employeeNumber" = 'employee-2';
 권한 축소 시 제거된 사용자의 설문 응답이 자동으로 Soft Delete 처리되며,  
 재추가 시 **즉시 자동으로** 기존 응답 레코드를 복구하여 프로덕션 데이터를 안전하게 보호합니다.
 
+**질문 수정 시에는 변경된 질문의 응답만 선택적으로 Soft Delete되어, 다른 질문들의 응답은 보존됩니다.**
+
 ### 🔐 프로덕션 안전성
 - ✅ 레코드 ID 유지 (외래 키 무결성 보장)
 - ✅ 생성 시간 보존 (데이터 이력 추적 가능)
 - ✅ Soft Delete (실수 복구 가능)
 - ✅ **자동 복구** (사용자 액션 불필요)
+- ✅ **질문별 세분화된 응답 관리** (불필요한 데이터 삭제 방지)
 
 ### ⚡ 사용자 경험
 - ✅ 권한 재추가 시 **즉시 이전 상태로 복원**
 - ✅ 다시 읽거나 제출할 필요 없음
 - ✅ 설문 응답 덮어쓰기 가능 (원하면 재제출 가능)
+- ✅ 질문 수정 시 다른 질문의 응답은 영향 없음

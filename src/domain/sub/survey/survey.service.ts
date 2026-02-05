@@ -273,6 +273,25 @@ export class SurveyService {
               );
 
               if (existingQuestion) {
+                // 질문 내용이 변경되었는지 확인
+                const hasQuestionChanged = this.질문이_변경되었는지_확인한다(
+                  existingQuestion,
+                  questionData,
+                );
+
+                if (hasQuestionChanged) {
+                  this.logger.log(
+                    `질문 변경 감지 - "${existingQuestion.title}" → 해당 질문의 응답 삭제 예정`,
+                  );
+
+                  // 해당 질문의 모든 응답 soft delete
+                  await this.질문의_응답을_삭제한다(
+                    queryRunner,
+                    existingQuestion.id,
+                  );
+                }
+
+                // 질문 정보 업데이트
                 existingQuestion.title = questionData.title;
                 existingQuestion.type = questionData.type;
                 existingQuestion.form = questionData.form || null;
@@ -367,6 +386,81 @@ export class SurveyService {
         `프론트엔드가 전송하지 않은 질문 ID ${matchedCount}개를 자동으로 매칭했습니다.`,
       );
     }
+  }
+
+  /**
+   * 개별 질문이 변경되었는지 확인한다
+   * @private
+   */
+  private 질문이_변경되었는지_확인한다(
+    existingQuestion: SurveyQuestion,
+    newQuestionData: {
+      title: string;
+      type: string;
+      form?: any;
+      isRequired: boolean;
+      order: number;
+    },
+  ): boolean {
+    // 제목이 다르면 변경됨
+    if (existingQuestion.title !== newQuestionData.title) {
+      return true;
+    }
+
+    // 타입이 다르면 변경됨
+    if (existingQuestion.type !== newQuestionData.type) {
+      return true;
+    }
+
+    // form이 다르면 변경됨 (options, scale 등)
+    const existingForm = existingQuestion.form || {};
+    const newForm = newQuestionData.form || {};
+    
+    if (JSON.stringify(existingForm) !== JSON.stringify(newForm)) {
+      return true;
+    }
+
+    // 필수 여부가 다르면 변경됨
+    if (existingQuestion.isRequired !== newQuestionData.isRequired) {
+      return true;
+    }
+
+    // 모든 검사 통과 - 변경 없음
+    return false;
+  }
+
+  /**
+   * 특정 질문의 모든 응답을 soft delete한다
+   * @private
+   */
+  private async 질문의_응답을_삭제한다(
+    queryRunner: any,
+    questionId: string,
+  ): Promise<number> {
+    this.logger.log(`질문 응답 삭제 시작 - 질문 ID: ${questionId}`);
+
+    let totalDeleted = 0;
+
+    // 각 응답 타입별로 soft delete
+    const deleteResults = await Promise.all([
+      queryRunner.manager.softDelete(SurveyResponseText, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseChoice, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseCheckbox, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseScale, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseGrid, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseFile, { questionId }),
+      queryRunner.manager.softDelete(SurveyResponseDatetime, { questionId }),
+    ]);
+
+    deleteResults.forEach((result) => {
+      totalDeleted += result.affected || 0;
+    });
+
+    this.logger.log(
+      `질문 응답 삭제 완료 - 질문 ID: ${questionId}, 삭제된 레코드: ${totalDeleted}개`,
+    );
+
+    return totalDeleted;
   }
 
   /**
