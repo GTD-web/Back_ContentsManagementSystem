@@ -70,14 +70,15 @@ export class UserAnnouncementController {
   }
 
   /**
-   * 공지사항 목록을 조회한다 (사용자용)
+   * 공지사항 목록을 조회한다 (사용자용 - 비고정 공지만)
    */
   @Get()
   @ApiOperation({
-    summary: '공지사항 목록 조회 (사용자용)',
+    summary: '공지사항 목록 조회 (사용자용 - 비고정 공지)',
     description:
-      '사용자 권한에 따라 접근 가능한 공지사항 목록을 조회합니다. ' +
-      '전사공개 또는 사용자가 속한 부서/직급/직책에 해당하는 공지사항만 조회됩니다.',
+      '사용자 권한에 따라 접근 가능한 비고정 공지사항 목록을 조회합니다. ' +
+      '전사공개 또는 사용자가 속한 부서/직급/직책에 해당하는 공지사항만 조회됩니다. ' +
+      'isFixed=false인 공지사항만 반환됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -123,6 +124,80 @@ export class UserAnnouncementController {
         {
           userId: user.id,
           employeeNumber: user.employeeNumber,
+          isFixed: false, // 비고정 공지만 조회
+          page: pageNum,
+          limit: limitNum,
+          orderBy: 'order',
+          categoryId: categoryId,
+          excludeExpired: excludeExpiredFilter,
+        },
+      );
+
+    return {
+      items: result.items,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+    };
+  }
+
+  /**
+   * 고정 공지사항 목록을 조회한다 (사용자용)
+   */
+  @Get('fixed')
+  @ApiOperation({
+    summary: '고정 공지사항 목록 조회 (사용자용)',
+    description:
+      '사용자 권한에 따라 접근 가능한 고정 공지사항 목록을 조회합니다. ' +
+      '전사공개 또는 사용자가 속한 부서/직급/직책에 해당하는 공지사항만 조회됩니다. ' +
+      'isFixed=true인 공지사항만 반환됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '고정 공지사항 목록 조회 성공',
+    type: AnnouncementListResponseDto,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호 (기본값: 1)',
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 개수 (기본값: 10)',
+    type: Number,
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    description: '카테고리 ID 필터',
+    type: String,
+  })
+  async 고정_공지사항_목록을_조회한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('categoryId') categoryId?: string,
+  ): Promise<AnnouncementListResponseDto> {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
+
+    // 사용자 권한에 따른 필터링 로직 적용
+    // - 전사공개(isPublic: true) 공지사항
+    // - 사용자의 부서/직급/직책이 포함된 제한공개 공지사항
+    // - 사용자 ID가 permissionEmployeeIds에 포함된 공지사항
+    const result =
+      await this.announcementBusinessService.공지사항_목록을_사용자_권한으로_조회한다(
+        {
+          userId: user.id,
+          employeeNumber: user.employeeNumber,
+          isFixed: true, // 고정 공지만 조회
           page: pageNum,
           limit: limitNum,
           orderBy: 'order',
