@@ -459,7 +459,7 @@ export class UserAnnouncementController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청 (설문이 없거나 이미 응답함)',
+    description: '잘못된 요청 (설문이 없거나 이미 응답함, 또는 마감된 공지사항)',
   })
   async 공지사항_설문에_응답한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -474,6 +474,13 @@ export class UserAnnouncementController {
       hasFiles: files ? files.length : 0,
       dto: dto,
     });
+
+    // 공지사항 조회 및 마감 체크
+    const announcement =
+      await this.announcementBusinessService.공지사항을_조회한다(id);
+    if (announcement.endDate && new Date(announcement.endDate) < new Date()) {
+      throw new BadRequestException('마감된 공지사항입니다.');
+    }
 
     // FormData 파싱
     const parsedDto = this.parseFormDataDto(dto);
@@ -696,6 +703,10 @@ export class UserAnnouncementController {
     },
   })
   @ApiResponse({
+    status: 400,
+    description: '마감된 공지사항입니다',
+  })
+  @ApiResponse({
     status: 404,
     description:
       '공지사항/설문을 찾을 수 없거나, 해당 파일이 없거나 삭제 권한이 없음',
@@ -708,6 +719,14 @@ export class UserAnnouncementController {
     if (!fileUrl || typeof fileUrl !== 'string' || fileUrl.trim() === '') {
       throw new BadRequestException('fileUrl 쿼리 파라미터가 필요합니다.');
     }
+
+    // 공지사항 조회 및 마감 체크
+    const announcement =
+      await this.announcementBusinessService.공지사항을_조회한다(id);
+    if (announcement.endDate && new Date(announcement.endDate) < new Date()) {
+      throw new BadRequestException('마감된 공지사항입니다.');
+    }
+
     return this.surveyService.설문_응답_파일을_삭제한다(
       id,
       user.id,
