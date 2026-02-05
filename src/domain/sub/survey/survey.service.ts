@@ -224,52 +224,76 @@ export class SurveyService {
           },
         );
 
-        // 새로 전달된 질문 ID 목록
-        const newQuestionIds = data.questions
-          .filter((q) => q.id)
-          .map((q) => q.id!);
-
-        // 삭제할 질문: 기존 질문 중 새 목록에 없는 것만 삭제
-        const questionsToDelete = existingQuestions.filter(
-          (q) => !newQuestionIds.includes(q.id),
+        // 설문조사 구조 변경 여부 확인
+        const hasStructureChanged = this.설문조사_구조가_변경되었는지_확인한다(
+          existingQuestions,
+          data.questions,
         );
 
-        if (questionsToDelete.length > 0) {
-          await queryRunner.manager.delete(
-            SurveyQuestion,
-            questionsToDelete.map((q) => q.id),
+        if (!hasStructureChanged) {
+          this.logger.log(
+            `설문조사 구조 변경 없음 - 기존 질문 유지 (ID: ${id})`,
           );
-        }
+          // 구조 변경이 없으면 질문 업데이트 스킵
+          // 기존 질문과 응답 매핑 모두 안전하게 유지됨
+        } else {
+          this.logger.log(
+            `설문조사 구조 변경 감지 - 질문 업데이트 시작 (ID: ${id})`,
+          );
 
-        // 질문 업데이트 또는 생성
-        for (const questionData of data.questions) {
-          if (questionData.id) {
-            // 기존 질문 업데이트 (ID가 있으면)
-            const existingQuestion = existingQuestions.find(
-              (q) => q.id === questionData.id,
+          // 새로 전달된 질문 ID 목록
+          const newQuestionIds = data.questions
+            .filter((q) => q.id)
+            .map((q) => q.id!);
+
+          // 삭제할 질문: 기존 질문 중 새 목록에 없는 것만 삭제
+          const questionsToDelete = existingQuestions.filter(
+            (q) => !newQuestionIds.includes(q.id),
+          );
+
+          if (questionsToDelete.length > 0) {
+            this.logger.warn(
+              `질문 ${questionsToDelete.length}개 Soft Delete 예정 - 복구 가능`,
             );
-
-            if (existingQuestion) {
-              existingQuestion.title = questionData.title;
-              existingQuestion.type = questionData.type;
-              existingQuestion.form = questionData.form || null;
-              existingQuestion.isRequired = questionData.isRequired;
-              existingQuestion.order = questionData.order;
-
-              await queryRunner.manager.save(SurveyQuestion, existingQuestion);
+            // Hard Delete 대신 Soft Delete 사용
+            for (const question of questionsToDelete) {
+              await queryRunner.manager.softDelete(SurveyQuestion, question.id);
             }
-          } else {
-            // 새 질문 생성 (ID가 없으면)
-            const newQuestion = queryRunner.manager.create(SurveyQuestion, {
-              surveyId: id,
-              title: questionData.title,
-              type: questionData.type,
-              form: questionData.form || null,
-              isRequired: questionData.isRequired,
-              order: questionData.order,
-            });
+          }
 
-            await queryRunner.manager.save(SurveyQuestion, newQuestion);
+          // 질문 업데이트 또는 생성
+          for (const questionData of data.questions) {
+            if (questionData.id) {
+              // 기존 질문 업데이트 (ID가 있으면)
+              const existingQuestion = existingQuestions.find(
+                (q) => q.id === questionData.id,
+              );
+
+              if (existingQuestion) {
+                existingQuestion.title = questionData.title;
+                existingQuestion.type = questionData.type;
+                existingQuestion.form = questionData.form || null;
+                existingQuestion.isRequired = questionData.isRequired;
+                existingQuestion.order = questionData.order;
+
+                await queryRunner.manager.save(SurveyQuestion, existingQuestion);
+              }
+            } else {
+              // 새 질문 생성 (ID가 없으면)
+              this.logger.warn(
+                `새 질문 생성 - 기존 응답 매핑 없음: ${questionData.title}`,
+              );
+              const newQuestion = queryRunner.manager.create(SurveyQuestion, {
+                surveyId: id,
+                title: questionData.title,
+                type: questionData.type,
+                form: questionData.form || null,
+                isRequired: questionData.isRequired,
+                order: questionData.order,
+              });
+
+              await queryRunner.manager.save(SurveyQuestion, newQuestion);
+            }
           }
         }
       }
@@ -289,6 +313,60 @@ export class SurveyService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  /**
+   * 설문조사 구조가 변경되었는지 확인한다
+   * @private
+   */
+  private 설문조사_구조가_변경되었는지_확인한다(
+    existingQuestions: SurveyQuestion[],
+    newQuestions: Array<{
+      id?: string;
+      title: string;
+      type: string;
+      form?: any;
+      isRequired: boolean;
+      order: number;
+    }>,
+  ): boolean {
+    // 질문 수가 다르면 변경됨
+    if (existingQuestions.length !== newQuestions.length) {
+      return true;
+    }
+
+    // 질문이 없으면 변경 없음
+    if (existingQuestions.length === 0) {
+      return false;
+    }
+
+    // order 기준으로 정렬
+    const sortedExisting = [...existingQuestions].sort((a, b) => a.order - b.order);
+    const sortedNew = [...newQuestions].sort((a, b) => a.order - b.order);
+
+    // 각 질문을 순서대로 비교
+    for (let i = 0; i < sortedExisting.length; i++) {
+      const existing = sortedExisting[i];
+      const newQ = sortedNew[i];
+
+      // ID가 다르면 (또는 ID가 없으면) 변경됨
+      if (newQ.id !== existing.id) {
+        return true;
+      }
+
+      // 타입이 다르면 변경됨 (응답 구조가 완전히 달라짐)
+      if (newQ.type !== existing.type) {
+        return true;
+      }
+
+      // form이 변경되었는지 확인 (options, scale 등)
+      if (JSON.stringify(newQ.form) !== JSON.stringify(existing.form)) {
+        return true;
+      }
+    }
+
+    // 모든 검사 통과 - 구조 변경 없음
+    return false;
   }
 
   /**
