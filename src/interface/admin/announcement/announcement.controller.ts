@@ -296,18 +296,18 @@ export class AnnouncementController {
   }
 
   /**
-   * 공지사항 전체 목록을 조회한다 (고정+비고정, 페이지네이션, 검색)
+   * 공지사항 전체 목록을 조회한다 (고정+비고정, 검색)
    */
   @Get('all')
   @ApiOperation({
     summary: '공지사항 전체 목록 조회 (고정+비고정, 검색 가능)',
     description:
-      '고정 및 비고정 공지사항을 모두 조회합니다. 검색 기능을 사용할 수 있습니다.',
+      '고정 및 비고정 공지사항을 모두 조회합니다. 검색 기능을 사용할 수 있습니다. 페이지네이션 없이 모든 결과를 반환합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '공지사항 전체 목록 조회 성공',
-    type: AnnouncementListResponseDto,
+    type: [AnnouncementListItemDto],
   })
   @ApiQuery({
     name: 'isPublic',
@@ -320,20 +320,6 @@ export class AnnouncementController {
     required: false,
     description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시, 기본값: createdAt)',
     enum: ['order', 'createdAt'],
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: '페이지 번호 (기본값: 1)',
-    type: Number,
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: '페이지당 개수 (기본값: 10)',
-    type: Number,
-    example: 10,
   })
   @ApiQuery({
     name: 'startDate',
@@ -371,27 +357,23 @@ export class AnnouncementController {
   async 공지사항_전체_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
     @Query('search') search?: string,
-  ): Promise<AnnouncementListResponseDto> {
+  ): Promise<AnnouncementListItemDto[]> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
     const excludeExpiredFilter = excludeExpired === 'true';
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 10;
 
     const result =
       await this.announcementBusinessService.공지사항_목록을_조회한다({
         isPublic: isPublicFilter,
         // isFixed 조건 없음 - 고정/비고정 모두 조회
         orderBy: orderBy || 'createdAt',
-        page: pageNum,
-        limit: limitNum,
+        page: 1,
+        limit: 999999, // 모든 결과를 가져오기 위한 큰 값
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
@@ -399,13 +381,7 @@ export class AnnouncementController {
         search: search,
       });
 
-    return {
-      items: result.items,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: Math.ceil(result.total / result.limit),
-    };
+    return result.items;
   }
 
   /**

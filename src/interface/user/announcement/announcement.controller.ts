@@ -31,6 +31,7 @@ import { AnnouncementRead } from '@domain/core/announcement/announcement-read.en
 import {
   AnnouncementResponseDto,
   AnnouncementListResponseDto,
+  AnnouncementListItemDto,
 } from '@interface/common/dto/announcement/announcement-response.dto';
 import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-survey-answer.dto';
 import { MyAnswersDto } from '@interface/common/dto/survey/survey-response.dto';
@@ -78,26 +79,12 @@ export class UserAnnouncementController {
     description:
       '사용자 권한에 따라 접근 가능한 고정 및 비고정 공지사항을 모두 조회합니다. ' +
       '검색 기능을 사용할 수 있습니다. ' +
-      '마감된 공지사항은 자동으로 제외됩니다.',
+      '마감된 공지사항은 자동으로 제외됩니다. 페이지네이션 없이 모든 결과를 반환합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '공지사항 전체 목록 조회 성공',
-    type: AnnouncementListResponseDto,
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: '페이지 번호 (기본값: 1)',
-    type: Number,
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: '페이지당 개수 (기본값: 10)',
-    type: Number,
-    example: 10,
+    type: [AnnouncementListItemDto],
   })
   @ApiQuery({
     name: 'categoryId',
@@ -114,13 +101,9 @@ export class UserAnnouncementController {
   })
   async 공지사항_전체_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
-  ): Promise<AnnouncementListResponseDto> {
-    const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 10) : 10;
+  ): Promise<AnnouncementListItemDto[]> {
     const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
 
     // 사용자 권한에 따른 필터링 로직 적용
@@ -133,8 +116,8 @@ export class UserAnnouncementController {
           userId: user.id,
           employeeNumber: user.employeeNumber,
           // isFixed 조건 없음 - 고정/비고정 모두 조회
-          page: pageNum,
-          limit: limitNum,
+          page: 1,
+          limit: 999999, // 모든 결과를 가져오기 위한 큰 값
           orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
@@ -142,13 +125,7 @@ export class UserAnnouncementController {
         },
       );
 
-    return {
-      items: result.items,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: Math.ceil(result.total / result.limit),
-    };
+    return result.items;
   }
 
   /**
