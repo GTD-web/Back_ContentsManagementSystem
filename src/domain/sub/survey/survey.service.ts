@@ -1563,4 +1563,61 @@ export class SurveyService {
 
     this.logger.log(`설문조사 순서 변경 완료 - ID: ${surveyId}, 순서: ${order}`);
   }
+
+  /**
+   * 설문조사 질문 순서를 일괄 변경한다
+   * (snapshot 개념이므로 질문 내용은 수정하지 않고 순서만 변경)
+   */
+  async 설문조사_질문_순서를_일괄_변경한다(
+    surveyId: string,
+    questions: Array<{ id: string; order: number }>,
+  ): Promise<number> {
+    if (!questions || questions.length === 0) {
+      return 0;
+    }
+
+    this.logger.log(
+      `설문조사 질문 순서 일괄 변경 - 설문 ID: ${surveyId}, 질문 수: ${questions.length}`,
+    );
+
+    const queryRunner =
+      this.surveyRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      let updatedCount = 0;
+
+      for (const question of questions) {
+        const result = await queryRunner.manager
+          .createQueryBuilder()
+          .update(SurveyQuestion)
+          .set({ order: question.order })
+          .where('id = :id', { id: question.id })
+          .andWhere('surveyId = :surveyId', { surveyId })
+          .execute();
+
+        if (result.affected && result.affected > 0) {
+          updatedCount += result.affected;
+        }
+      }
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `설문조사 질문 순서 일괄 변경 완료 - 설문 ID: ${surveyId}, 변경된 질문 수: ${updatedCount}`,
+      );
+
+      return updatedCount;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `설문조사 질문 순서 일괄 변경 실패: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }

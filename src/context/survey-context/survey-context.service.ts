@@ -169,4 +169,17 @@ export class SurveyContextService {
   ): Promise<void> {
     return await this.surveyService.설문조사_순서를_수정한다(surveyId, order);
   }
+
+  /**
+   * 설문조사 질문 순서를 일괄 변경한다
+   */
+  async 설문조사_질문_순서를_일괄_변경한다(
+    surveyId: string,
+    questions: Array<{ id: string; order: number }>,
+  ): Promise<number> {
+    return await this.surveyService.설문조사_질문_순서를_일괄_변경한다(
+      surveyId,
+      questions,
+    );
+  }
 }

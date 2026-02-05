@@ -812,6 +812,43 @@ export class AnnouncementBusinessService {
   }
 
   /**
+   * 설문조사 질문 순서를 일괄 변경한다
+   */
+  async 설문조사_질문_순서를_일괄_변경한다(
+    announcementId: string,
+    questions: Array<{ id: string; order: number }>,
+  ): Promise<number> {
+    this.logger.log(
+      `설문조사 질문 순서 일괄 변경 시작 - 공지사항 ID: ${announcementId}, 질문 수: ${questions.length}`,
+    );
+
+    // 기존 설문조사 확인
+    const existingSurvey =
+      await this.surveyContextService.공지사항의_설문조사를_조회한다(
+        announcementId,
+      );
+
+    if (!existingSurvey) {
+      throw new Error(
+        `설문조사를 찾을 수 없습니다. 공지사항 ID: ${announcementId}`,
+      );
+    }
+
+    // 질문 순서 일괄 변경
+    const updatedCount =
+      await this.surveyContextService.설문조사_질문_순서를_일괄_변경한다(
+        existingSurvey.id,
+        questions,
+      );
+
+    this.logger.log(
+      `설문조사 질문 순서 일괄 변경 완료 - 설문 ID: ${existingSurvey.id}, 변경된 질문 수: ${updatedCount}`,
+    );
+
+    return updatedCount;
+  }
+
+  /**
    * 권한 축소 시 제거된 사용자/그룹/직책의 설문 응답을 삭제한다
    * @private
    */

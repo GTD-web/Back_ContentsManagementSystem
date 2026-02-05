@@ -962,6 +962,96 @@ export class AnnouncementController {
   }
 
   /**
+   * 공지사항 설문조사 질문 순서를 일괄 변경한다
+   */
+  @Put(':id/survey/questions/order')
+  @ApiOperation({
+    summary: '공지사항 설문조사 질문 순서 일괄 변경',
+    description:
+      '공지사항에 연결된 설문조사의 질문들 순서를 일괄 변경합니다.\n\n' +
+      '**주요 특징:**\n' +
+      '- 설문조사는 snapshot 개념이므로 질문 내용은 수정할 수 없습니다\n' +
+      '- 질문들의 순서(order)만 변경 가능합니다\n' +
+      '- 응답 데이터에는 영향을 주지 않습니다\n\n' +
+      '**필수 필드:**\n' +
+      '- `questions`: 질문 ID와 order를 포함한 객체 배열\n' +
+      '  - 각 객체: `{ id: string, order: number }`\n\n' +
+      '**예시:**\n' +
+      '```json\n' +
+      '{\n' +
+      '  "questions": [\n' +
+      '    { "id": "질문1-UUID", "order": 0 },\n' +
+      '    { "id": "질문2-UUID", "order": 1 },\n' +
+      '    { "id": "질문3-UUID", "order": 2 }\n' +
+      '  ]\n' +
+      '}\n' +
+      '```',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '공지사항 ID',
+    type: String,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['questions'],
+      properties: {
+        questions: {
+          type: 'array',
+          description: '질문 ID와 순서 배열',
+          items: {
+            type: 'object',
+            required: ['id', 'order'],
+            properties: {
+              id: {
+                type: 'string',
+                description: '질문 ID (UUID)',
+                example: 'a6a3ab28-bde3-49ad-ba89-2a611424019b',
+              },
+              order: {
+                type: 'number',
+                description: '질문 순서',
+                example: 0,
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '질문 순서 변경 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        updatedCount: { type: 'number', example: 8 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (변경할 질문이 없음)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '공지사항 또는 설문조사를 찾을 수 없음',
+  })
+  async 공지사항_설문조사_질문_순서를_일괄_변경한다(
+    @Param('id') id: string,
+    @Body() dto: { questions: Array<{ id: string; order: number }> },
+  ): Promise<{ success: boolean; updatedCount: number }> {
+    const updatedCount =
+      await this.announcementBusinessService.설문조사_질문_순서를_일괄_변경한다(
+        id,
+        dto.questions,
+      );
+    return { success: true, updatedCount };
+  }
+
+  /**
    * 공지사항을 수정한다
    */
   @Put(':id')
