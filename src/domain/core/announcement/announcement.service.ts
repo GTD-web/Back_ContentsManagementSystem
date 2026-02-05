@@ -671,4 +671,37 @@ export class AnnouncementService {
 
     return { deletedCount };
   }
+
+  /**
+   * 직원들의 공지사항 읽음 기록을 복구한다 (deletedAt = NULL)
+   */
+  async 직원들의_읽음_기록을_복구한다(
+    announcementId: string,
+    employeeIds: string[],
+  ): Promise<{ restoredCount: number }> {
+    if (employeeIds.length === 0) {
+      return { restoredCount: 0 };
+    }
+
+    this.logger.log(
+      `공지사항 읽음 기록 복구 시작 - 공지사항: ${announcementId}, 직원: ${employeeIds.length}명`,
+    );
+
+    const result = await this.readRepository
+      .createQueryBuilder()
+      .update()
+      .set({ deletedAt: null as any })
+      .where('announcementId = :announcementId', { announcementId })
+      .andWhere('employeeId IN (:...employeeIds)', { employeeIds })
+      .andWhere('deletedAt IS NOT NULL')
+      .execute();
+
+    const restoredCount = result.affected || 0;
+
+    this.logger.log(
+      `공지사항 읽음 기록 복구 완료 - ${restoredCount}개 레코드`,
+    );
+
+    return { restoredCount };
+  }
 }

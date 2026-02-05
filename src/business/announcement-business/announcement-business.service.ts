@@ -727,6 +727,13 @@ export class AnnouncementBusinessService {
       announcementData,
     );
 
+    // 1.6. 권한 확대 감지 및 이전 기록 복구
+    await this.권한_확대_시_이전_기록을_복구한다(
+      id,
+      existingAnnouncement,
+      announcementData,
+    );
+
     // 2. 설문조사 처리
     // survey가 명시적으로 전달된 경우에만 처리
     // undefined, 빈 문자열, 빈 객체는 무시
@@ -866,6 +873,109 @@ export class AnnouncementBusinessService {
 
     // 기존에 있었는데 새로운 목록에 없는 ID들
     return existingIds.filter((id) => !newIds.includes(id));
+  }
+
+  /**
+   * 추가된 권한 ID 목록을 찾는다
+   * @private
+   */
+  private 추가된_권한을_찾는다(
+    existingIds: string[],
+    newIds: string[] | null | undefined,
+  ): string[] {
+    // newIds가 undefined면 권한 변경 없음
+    if (newIds === undefined) {
+      return [];
+    }
+
+    // newIds가 null이면 권한 추가 없음
+    if (newIds === null) {
+      return [];
+    }
+
+    // 기존에 없었는데 새로운 목록에 있는 ID들
+    return newIds.filter((id) => !existingIds.includes(id));
+  }
+
+  /**
+   * 권한 확대 시 이전에 삭제된 기록을 복구한다
+   * @private
+   */
+  private async 권한_확대_시_이전_기록을_복구한다(
+    announcementId: string,
+    existingAnnouncement: Announcement,
+    newData: Partial<UpdateAnnouncementDto>,
+  ): Promise<void> {
+    // isPublic이 true로 변경되면 모든 제한 무의미 (스킵)
+    if (newData.isPublic === true) {
+      return;
+    }
+
+    // 추가된 직원 ID(employeeId - UUID) 찾기
+    const addedEmployeeIds = this.추가된_권한을_찾는다(
+      existingAnnouncement.permissionEmployeeIds || [],
+      newData.permissionEmployeeIds,
+    );
+
+    if (addedEmployeeIds.length > 0) {
+      this.logger.log(
+        `권한 확대 감지 - ${addedEmployeeIds.length}명의 직원 권한 추가됨 (employeeIds)`,
+      );
+
+      // 1. 공지사항 읽음 기록 복구
+      const readResult =
+        await this.announcementContextService.직원들의_읽음_기록을_복구한다(
+          announcementId,
+          addedEmployeeIds,
+        );
+      
+      if (readResult.restoredCount > 0) {
+        this.logger.log(
+          `추가된 직원들의 읽음 기록 복구 완료 - ${readResult.restoredCount}개 레코드`,
+        );
+      }
+
+      // 2. 설문 응답 복구 (설문이 있는 경우만)
+      const survey =
+        await this.surveyContextService.공지사항의_설문조사를_조회한다(
+          announcementId,
+        );
+
+      if (survey) {
+        // employeeId를 employeeNumber로 변환
+        // 이전에 응답한 적이 있는 직원만 변환됨
+        const employeeNumbers =
+          await this.surveyContextService.employeeId를_employeeNumber로_변환한다(
+            survey.id,
+            addedEmployeeIds,
+          );
+
+        if (employeeNumbers.length > 0) {
+          this.logger.log(
+            `이전 응답 기록이 있는 사번 ${employeeNumbers.length}개: ${employeeNumbers.join(', ')}`,
+          );
+
+          // 해당 직원들의 설문 응답 복구
+          const surveyResult =
+            await this.surveyContextService.직원들의_설문_응답을_복구한다(
+              survey.id,
+              employeeNumbers,
+            );
+
+          if (surveyResult.restoredCount > 0) {
+            this.logger.log(
+              `추가된 직원들의 설문 응답 복구 완료 - ${surveyResult.restoredCount}개 레코드`,
+            );
+          }
+        } else {
+          this.logger.log(
+            `추가된 직원 중 이전 설문 응답 기록이 있는 사람 없음`,
+          );
+        }
+      }
+    }
+
+    // TODO: 부서/직급/직책 권한 확대 시에도 처리 필요
   }
 
   /**

@@ -144,4 +144,18 @@ export class SurveyContextService {
       employeeIds,
     );
   }
+
+  /**
+   * 특정 직원들의 설문 응답을 복구한다 (deletedAt = NULL)
+   * (공지사항 권한 재추가 시 사용)
+   */
+  async 직원들의_설문_응답을_복구한다(
+    surveyId: string,
+    employeeNumbers: string[],
+  ): Promise<{ restoredCount: number }> {
+    return await this.surveyService.직원들의_설문_응답을_복구한다(
+      surveyId,
+      employeeNumbers,
+    );
+  }
 }

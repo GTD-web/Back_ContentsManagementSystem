@@ -1275,4 +1275,120 @@ export class SurveyService {
       .map((c) => c.employeeNumber)
       .filter((num) => num !== null && num !== undefined);
   }
+
+  /**
+   * 직원들의 설문 응답을 복구한다 (deletedAt = NULL)
+   * (공지사항 권한 재추가 시 사용)
+   */
+  async 직원들의_설문_응답을_복구한다(
+    surveyId: string,
+    employeeNumbers: string[],
+  ): Promise<{ restoredCount: number }> {
+    if (!employeeNumbers || employeeNumbers.length === 0) {
+      return { restoredCount: 0 };
+    }
+
+    this.logger.log(
+      `설문 응답 복구 시작 - 설문 ID: ${surveyId}, 대상 직원: ${employeeNumbers.length}명`,
+    );
+
+    const queryRunner =
+      this.surveyRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      let totalRestored = 0;
+
+      // 1. SurveyCompletion 복구
+      const completionResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyCompletion)
+        .set({ deletedAt: null as any })
+        .where('surveyId = :surveyId', { surveyId })
+        .andWhere('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += completionResult.affected || 0;
+
+      // 2. SurveyResponseText 복구
+      const textResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseText)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += textResult.affected || 0;
+
+      // 3. SurveyResponseChoice 복구
+      const choiceResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseChoice)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += choiceResult.affected || 0;
+
+      // 4. SurveyResponseScale 복구
+      const scaleResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseScale)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += scaleResult.affected || 0;
+
+      // 5. SurveyResponseGrid 복구
+      const gridResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseGrid)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += gridResult.affected || 0;
+
+      // 6. SurveyResponseFile 복구
+      const fileResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseFile)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += fileResult.affected || 0;
+
+      // 7. SurveyResponseDatetime 복구
+      const datetimeResult = await queryRunner.manager
+        .createQueryBuilder()
+        .update(SurveyResponseDatetime)
+        .set({ deletedAt: null as any })
+        .where('employeeNumber IN (:...employeeNumbers)', { employeeNumbers })
+        .andWhere('deletedAt IS NOT NULL')
+        .execute();
+      totalRestored += datetimeResult.affected || 0;
+
+      // Checkbox은 hard delete이므로 복구 불가
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `설문 응답 복구 완료 - 설문 ID: ${surveyId}, 복구된 레코드: ${totalRestored}개`,
+      );
+
+      return { restoredCount: totalRestored };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `설문 응답 복구 실패: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }

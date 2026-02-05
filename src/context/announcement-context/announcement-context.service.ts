@@ -174,4 +174,17 @@ export class AnnouncementContextService {
       employeeIds,
     );
   }
+
+  /**
+   * 직원들의 공지사항 읽음 기록을 복구한다 (deletedAt = NULL)
+   */
+  async 직원들의_읽음_기록을_복구한다(
+    announcementId: string,
+    employeeIds: string[],
+  ): Promise<{ restoredCount: number }> {
+    return await this.announcementService.직원들의_읽음_기록을_복구한다(
+      announcementId,
+      employeeIds,
+    );
+  }
 }
