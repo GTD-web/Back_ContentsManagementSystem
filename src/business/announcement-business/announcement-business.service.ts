@@ -788,7 +788,7 @@ export class AnnouncementBusinessService {
       return;
     }
 
-    // 제거된 직원 ID 찾기
+    // 제거된 직원 ID(employeeId - UUID) 찾기
     const removedEmployeeIds = this.제거된_권한을_찾는다(
       existingAnnouncement.permissionEmployeeIds || [],
       newData.permissionEmployeeIds,
@@ -796,19 +796,36 @@ export class AnnouncementBusinessService {
 
     if (removedEmployeeIds.length > 0) {
       this.logger.log(
-        `권한 축소 감지 - ${removedEmployeeIds.length}명의 직원 권한 제거됨`,
+        `권한 축소 감지 - ${removedEmployeeIds.length}명의 직원 권한 제거됨 (employeeIds)`,
       );
 
-      // 해당 직원들의 설문 응답 삭제
-      const result =
-        await this.surveyContextService.직원들의_설문_응답을_삭제한다(
+      // employeeId를 employeeNumber로 변환
+      const employeeNumbers =
+        await this.surveyContextService.employeeId를_employeeNumber로_변환한다(
           survey.id,
           removedEmployeeIds,
         );
 
-      this.logger.log(
-        `제거된 직원들의 설문 응답 삭제 완료 - ${result.deletedCount}개 레코드`,
-      );
+      if (employeeNumbers.length > 0) {
+        this.logger.log(
+          `변환된 사번 ${employeeNumbers.length}개: ${employeeNumbers.join(', ')}`,
+        );
+
+        // 해당 직원들의 설문 응답 삭제
+        const result =
+          await this.surveyContextService.직원들의_설문_응답을_삭제한다(
+            survey.id,
+            employeeNumbers,
+          );
+
+        this.logger.log(
+          `제거된 직원들의 설문 응답 삭제 완료 - ${result.deletedCount}개 레코드`,
+        );
+      } else {
+        this.logger.log(
+          `제거된 직원 중 설문 응답이 있는 사람 없음`,
+        );
+      }
     }
 
     // TODO: 부서/직급/직책 권한 축소 시에도 처리 필요

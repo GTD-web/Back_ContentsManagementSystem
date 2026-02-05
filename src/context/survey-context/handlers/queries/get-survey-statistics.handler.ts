@@ -258,9 +258,13 @@ export class GetSurveyStatisticsHandler
       );
     }
 
-    // 2. 완료자 수 조회
+    // 2. 완료자 수 조회 (deletedAt IS NULL만)
     const totalCompletions = await this.completionRepository.count({
-      where: { surveyId: survey.id, isCompleted: true },
+      where: { 
+        surveyId: survey.id, 
+        isCompleted: true,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
     });
 
     // 3. 조직 정보 조회 (직원 이름 매핑용)
@@ -409,7 +413,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseChoiceRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -465,7 +472,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseCheckboxRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        // Checkbox은 hard delete만 지원하므로 deletedAt 없음
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -523,7 +533,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseScaleRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -595,7 +608,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseTextRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -627,7 +643,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseFileRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -667,7 +686,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseDatetimeRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 
@@ -699,7 +721,10 @@ export class GetSurveyStatisticsHandler
     totalResponses: number;
   }> {
     const responses = await this.responseGridRepository.find({
-      where: { questionId: question.id },
+      where: { 
+        questionId: question.id,
+        deletedAt: null as any, // Soft Delete된 응답 제외
+      },
       order: { submittedAt: 'DESC' }, // 최신순 정렬
     });
 

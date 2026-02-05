@@ -1143,4 +1143,28 @@ export class SurveyService {
       await queryRunner.release();
     }
   }
+
+  /**
+   * employeeId(UUID)를 employeeNumber(사번)로 변환한다
+   */
+  async employeeId를_employeeNumber로_변환한다(
+    surveyId: string,
+    employeeIds: string[],
+  ): Promise<string[]> {
+    if (!employeeIds || employeeIds.length === 0) {
+      return [];
+    }
+
+    const completions = await this.completionRepository.find({
+      where: {
+        surveyId,
+        employeeId: In(employeeIds),
+      },
+      select: ['employeeNumber'],
+    });
+
+    return completions
+      .map((c) => c.employeeNumber)
+      .filter((num) => num !== null && num !== undefined);
+  }
 }
