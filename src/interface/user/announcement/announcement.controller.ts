@@ -104,22 +104,15 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
-  @ApiQuery({
-    name: 'excludeExpired',
-    required: false,
-    description: '마감된 공지사항 제외 여부 (기본값: false)',
-    type: Boolean,
-  })
   async 공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
-    @Query('excludeExpired') excludeExpired?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
-    const excludeExpiredFilter = excludeExpired === 'true';
+    const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
 
     // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
@@ -174,6 +167,10 @@ export class UserAnnouncementController {
     type: AnnouncementResponseDto,
   })
   @ApiResponse({
+    status: 400,
+    description: '마감된 공지사항입니다',
+  })
+  @ApiResponse({
     status: 404,
     description: '공지사항을 찾을 수 없거나 접근 권한이 없음',
   })
@@ -187,7 +184,12 @@ export class UserAnnouncementController {
     const announcement =
       await this.announcementBusinessService.공지사항을_조회한다(id);
 
-    // 2. 읽음 처리 (중복 확인 후 없으면 생성)
+    // 2. 마감된 공지사항 체크
+    if (announcement.endDate && new Date(announcement.endDate) < new Date()) {
+      throw new BadRequestException('마감된 공지사항입니다.');
+    }
+
+    // 3. 읽음 처리 (중복 확인 후 없으면 생성)
     // employeeNumber (사번)로 중복 확인
     const existingRead = await this.announcementReadRepository.findOne({
       where: {
@@ -205,7 +207,7 @@ export class UserAnnouncementController {
       });
     }
 
-    // 3. 설문 응답 내역 조회 (설문이 있는 경우)
+    // 4. 설문 응답 내역 조회 (설문이 있는 경우)
     let myAnswers: MyAnswersDto | null = null;
     if (announcement.survey) {
       myAnswers = await this.surveyService.사용자의_설문_응답을_조회한다(
