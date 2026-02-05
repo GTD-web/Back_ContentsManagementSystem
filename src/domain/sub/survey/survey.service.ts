@@ -1254,6 +1254,7 @@ export class SurveyService {
 
   /**
    * employeeId(UUID)를 employeeNumber(사번)로 변환한다
+   * soft deleted 레코드도 포함하여 검색 (복구 시 필요)
    */
   async employeeId를_employeeNumber로_변환한다(
     surveyId: string,
@@ -1269,6 +1270,7 @@ export class SurveyService {
         employeeId: In(employeeIds),
       },
       select: ['employeeNumber'],
+      withDeleted: true, // soft deleted 레코드도 포함 (복구 시 필요)
     });
 
     return completions
