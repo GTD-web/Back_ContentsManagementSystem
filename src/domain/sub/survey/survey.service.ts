@@ -224,6 +224,9 @@ export class SurveyService {
           },
         );
 
+        // 프론트엔드가 ID를 보내지 않는 경우를 위해 자동 매칭
+        this.질문에_기존_ID를_자동으로_매칭한다(existingQuestions, data.questions);
+
         // 설문조사 구조 변경 여부 확인
         const hasStructureChanged = this.설문조사_구조가_변경되었는지_확인한다(
           existingQuestions,
@@ -312,6 +315,57 @@ export class SurveyService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  /**
+   * 질문에 기존 ID를 자동으로 매칭한다
+   * 프론트엔드가 ID를 보내지 않는 경우를 대비한 안전장치
+   * @private
+   */
+  private 질문에_기존_ID를_자동으로_매칭한다(
+    existingQuestions: SurveyQuestion[],
+    newQuestions: Array<{
+      id?: string;
+      title: string;
+      type: string;
+      form?: any;
+      isRequired: boolean;
+      order: number;
+    }>,
+  ): void {
+    // order 기준으로 정렬
+    const sortedExisting = [...existingQuestions].sort((a, b) => a.order - b.order);
+    const sortedNew = [...newQuestions].sort((a, b) => a.order - b.order);
+
+    let matchedCount = 0;
+
+    for (let i = 0; i < sortedNew.length; i++) {
+      const newQ = sortedNew[i];
+      
+      // 이미 ID가 있으면 스킵
+      if (newQ.id) {
+        continue;
+      }
+
+      // order와 type이 같은 기존 질문 찾기
+      const matchingExisting = sortedExisting.find(
+        (existing) => 
+          existing.order === newQ.order && 
+          existing.type === newQ.type
+      );
+
+      if (matchingExisting) {
+        // ID 자동 할당
+        newQ.id = matchingExisting.id;
+        matchedCount++;
+      }
+    }
+
+    if (matchedCount > 0) {
+      this.logger.log(
+        `프론트엔드가 전송하지 않은 질문 ID ${matchedCount}개를 자동으로 매칭했습니다.`,
+      );
     }
   }
 
