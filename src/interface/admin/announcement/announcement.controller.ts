@@ -1014,7 +1014,7 @@ export class AnnouncementController {
   @ApiBody({
     description: '질문 순서 변경 데이터',
     examples: {
-      '8개 질문 순서 변경': {
+      example1: {
         summary: '8개 질문의 순서를 재정렬',
         description: '실제 공지사항에서 가져온 질문 ID들을 사용한 예시',
         value: {
@@ -1054,7 +1054,7 @@ export class AnnouncementController {
           ],
         },
       },
-      '질문 순서 변경 (7번을 맨 위로)': {
+      example2: {
         summary: '마지막 질문을 첫 번째로 이동',
         description: '7번 질문(좋아하는 가게)을 0번으로, 나머지는 한 칸씩 뒤로',
         value: {
@@ -1094,7 +1094,7 @@ export class AnnouncementController {
           ],
         },
       },
-      '3개 질문만 순서 변경': {
+      example3: {
         summary: '일부 질문만 순서 변경',
         description: '변경이 필요한 질문들만 포함해도 됩니다',
         value: {
