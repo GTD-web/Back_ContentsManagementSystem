@@ -111,7 +111,7 @@ export class AnnouncementController {
   @ApiQuery({
     name: 'orderBy',
     required: false,
-    description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시)',
+    description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시, 기본값: createdAt)',
     enum: ['order', 'createdAt'],
   })
   @ApiQuery({
@@ -154,6 +154,13 @@ export class AnnouncementController {
     description: '마감된 공지사항 제외 여부 (기본값: false)',
     type: Boolean,
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목 및 내용 검색)',
+    type: String,
+    example: '신년',
+  })
   async 공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -163,6 +170,7 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
+    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -174,13 +182,14 @@ export class AnnouncementController {
       await this.announcementBusinessService.공지사항_목록을_조회한다({
         isPublic: isPublicFilter,
         isFixed: false, // 비고정 공지만 조회
-        orderBy: orderBy || 'order',
+        orderBy: orderBy || 'createdAt',
         page: pageNum,
         limit: limitNum,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
+        search: search,
       });
 
     return {
@@ -215,7 +224,7 @@ export class AnnouncementController {
   @ApiQuery({
     name: 'orderBy',
     required: false,
-    description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시)',
+    description: '정렬 기준 (order: 정렬순서, createdAt: 생성일시, 기본값: createdAt)',
     enum: ['order', 'createdAt'],
   })
   @ApiQuery({
@@ -258,6 +267,13 @@ export class AnnouncementController {
     description: '마감된 공지사항 제외 여부 (기본값: false)',
     type: Boolean,
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목 및 내용 검색)',
+    type: String,
+    example: '신년',
+  })
   async 고정_공지사항_목록을_조회한다(
     @Query('isPublic') isPublic?: string,
     @Query('orderBy') orderBy?: 'order' | 'createdAt',
@@ -267,6 +283,7 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
+    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
@@ -277,13 +294,14 @@ export class AnnouncementController {
     const result =
       await this.announcementBusinessService.고정_공지사항_목록을_조회한다({
         isPublic: isPublicFilter,
-        orderBy: orderBy || 'order',
+        orderBy: orderBy || 'createdAt',
         page: pageNum,
         limit: limitNum,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
+        search: search,
       });
 
     return {

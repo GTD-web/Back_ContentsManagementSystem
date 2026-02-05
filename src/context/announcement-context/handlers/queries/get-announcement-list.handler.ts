@@ -19,6 +19,7 @@ export class GetAnnouncementListQuery {
     public readonly endDate?: Date,
     public readonly categoryId?: string,
     public readonly excludeExpired?: boolean,
+    public readonly search?: string,
   ) {}
 }
 
@@ -47,10 +48,11 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
       endDate,
       categoryId,
       excludeExpired,
+      search,
     } = query;
 
     this.logger.debug(
-      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}, 마감제외: ${excludeExpired}`,
+      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}, 마감제외: ${excludeExpired}, 검색: ${search}`,
     );
 
     const queryBuilder =
@@ -120,6 +122,23 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
         queryBuilder.where(
           '(announcement.expiredAt IS NULL OR announcement.expiredAt > :now)',
           { now: new Date() },
+        );
+        hasWhere = true;
+      }
+    }
+
+    // 검색 조건 (제목 또는 내용에 검색어 포함)
+    if (search && search.trim() !== '') {
+      const searchPattern = `%${search.trim()}%`;
+      if (hasWhere) {
+        queryBuilder.andWhere(
+          '(announcement.title LIKE :search OR announcement.content LIKE :search)',
+          { search: searchPattern },
+        );
+      } else {
+        queryBuilder.where(
+          '(announcement.title LIKE :search OR announcement.content LIKE :search)',
+          { search: searchPattern },
         );
         hasWhere = true;
       }

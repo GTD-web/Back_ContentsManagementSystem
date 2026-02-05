@@ -105,11 +105,19 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목 및 내용 검색)',
+    type: String,
+    example: '신년',
+  })
   async 공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
@@ -127,9 +135,10 @@ export class UserAnnouncementController {
           isFixed: false, // 비고정 공지만 조회
           page: pageNum,
           limit: limitNum,
-          orderBy: 'order',
+          orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
+          search: search,
         },
       );
 
@@ -178,11 +187,19 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목 및 내용 검색)',
+    type: String,
+    example: '신년',
+  })
   async 고정_공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
@@ -200,9 +217,10 @@ export class UserAnnouncementController {
           isFixed: true, // 고정 공지만 조회
           page: pageNum,
           limit: limitNum,
-          orderBy: 'order',
+          orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
+          search: search,
         },
       );
 
