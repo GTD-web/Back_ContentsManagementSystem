@@ -21,6 +21,7 @@ import {
 } from './interfaces/survey-context.interface';
 import { Survey } from '@domain/sub/survey/survey.entity';
 import { SurveyCompletion } from '@domain/sub/survey/survey-completion.entity';
+import { SurveyService } from '@domain/sub/survey/survey.service';
 
 /**
  * 설문조사 컨텍스트 서비스
@@ -32,6 +33,7 @@ export class SurveyContextService {
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
+    private readonly surveyService: SurveyService,
   ) {}
 
   /**
@@ -113,5 +115,19 @@ export class SurveyContextService {
   ): Promise<SurveyStatisticsResult> {
     const query = new GetSurveyStatisticsQuery(announcementId);
     return await this.queryBus.execute(query);
+  }
+
+  /**
+   * 특정 직원들의 설문 응답을 삭제한다
+   * (공지사항 권한 축소 시 사용)
+   */
+  async 직원들의_설문_응답을_삭제한다(
+    surveyId: string,
+    employeeNumbers: string[],
+  ): Promise<{ deletedCount: number }> {
+    return await this.surveyService.직원들의_설문_응답을_삭제한다(
+      surveyId,
+      employeeNumbers,
+    );
   }
 }

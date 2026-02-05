@@ -697,6 +697,14 @@ export class AnnouncementBusinessService {
   ): Promise<Announcement> {
     this.logger.log(`공지사항 수정 시작 - ID: ${id}`);
 
+    // 0. 기존 공지사항 조회 (권한 변경 감지를 위해)
+    const existingAnnouncement =
+      await this.announcementContextService.공지사항을_조회한다(id);
+
+    if (!existingAnnouncement) {
+      throw new Error(`공지사항을 찾을 수 없습니다. ID: ${id}`);
+    }
+
     // 1. 공지사항 수정 (survey 필드 제외)
     const { survey, ...announcementData } = data;
     const result = await this.announcementContextService.공지사항을_수정한다(
@@ -705,6 +713,13 @@ export class AnnouncementBusinessService {
     );
 
     this.logger.log(`공지사항 수정 완료 - ID: ${id}`);
+
+    // 1.5. 권한 축소 감지 및 설문 응답 삭제
+    await this.권한_축소_시_설문_응답을_삭제한다(
+      id,
+      existingAnnouncement,
+      announcementData,
+    );
 
     // 2. 설문조사 처리
     // survey가 명시적으로 전달된 경우에만 처리
@@ -747,6 +762,81 @@ export class AnnouncementBusinessService {
     }
 
     return result;
+  }
+
+  /**
+   * 권한 축소 시 제거된 사용자/그룹/직책의 설문 응답을 삭제한다
+   * @private
+   */
+  private async 권한_축소_시_설문_응답을_삭제한다(
+    announcementId: string,
+    existingAnnouncement: Announcement,
+    newData: Partial<UpdateAnnouncementDto>,
+  ): Promise<void> {
+    // 설문조사가 없으면 스킵
+    const survey =
+      await this.surveyContextService.공지사항의_설문조사를_조회한다(
+        announcementId,
+      );
+
+    if (!survey) {
+      return;
+    }
+
+    // isPublic이 true로 변경되면 모든 제한 무의미 (스킵)
+    if (newData.isPublic === true) {
+      return;
+    }
+
+    // 제거된 직원 ID 찾기
+    const removedEmployeeIds = this.제거된_권한을_찾는다(
+      existingAnnouncement.permissionEmployeeIds || [],
+      newData.permissionEmployeeIds,
+    );
+
+    if (removedEmployeeIds.length > 0) {
+      this.logger.log(
+        `권한 축소 감지 - ${removedEmployeeIds.length}명의 직원 권한 제거됨`,
+      );
+
+      // 해당 직원들의 설문 응답 삭제
+      const result =
+        await this.surveyContextService.직원들의_설문_응답을_삭제한다(
+          survey.id,
+          removedEmployeeIds,
+        );
+
+      this.logger.log(
+        `제거된 직원들의 설문 응답 삭제 완료 - ${result.deletedCount}개 레코드`,
+      );
+    }
+
+    // TODO: 부서/직급/직책 권한 축소 시에도 처리 필요
+    // - permissionDepartmentIds, permissionRankIds, permissionPositionIds 변경 감지
+    // - SSO API를 통해 해당 그룹에 속한 직원 목록 조회
+    // - 해당 직원들의 응답 삭제
+  }
+
+  /**
+   * 제거된 권한 ID 목록을 찾는다
+   * @private
+   */
+  private 제거된_권한을_찾는다(
+    existingIds: string[],
+    newIds: string[] | null | undefined,
+  ): string[] {
+    // newIds가 undefined면 권한 변경 없음
+    if (newIds === undefined) {
+      return [];
+    }
+
+    // newIds가 null이면 모든 권한 제거
+    if (newIds === null) {
+      return existingIds;
+    }
+
+    // 기존에 있었는데 새로운 목록에 없는 ID들
+    return existingIds.filter((id) => !newIds.includes(id));
   }
 
   /**

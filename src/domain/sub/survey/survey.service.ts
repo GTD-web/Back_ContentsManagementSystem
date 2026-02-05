@@ -1055,4 +1055,92 @@ export class SurveyService {
       await queryRunner.release();
     }
   }
+
+  /**
+   * 특정 직원들의 설문 응답을 소프트 삭제한다
+   * (공지사항 권한 축소 시 사용)
+   */
+  async 직원들의_설문_응답을_삭제한다(
+    surveyId: string,
+    employeeNumbers: string[],
+  ): Promise<{ deletedCount: number }> {
+    if (!employeeNumbers || employeeNumbers.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    this.logger.log(
+      `설문 응답 삭제 시작 - 설문 ID: ${surveyId}, 대상 직원: ${employeeNumbers.length}명`,
+    );
+
+    const queryRunner =
+      this.surveyRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      let totalDeleted = 0;
+
+      // 1. SurveyCompletion soft delete
+      const completions = await queryRunner.manager.softDelete(
+        SurveyCompletion,
+        {
+          surveyId,
+          employeeNumber: In(employeeNumbers),
+        },
+      );
+      totalDeleted += completions.affected || 0;
+
+      // 2. 각 응답 테이블별 soft delete
+      const deleteResults = await Promise.all([
+        queryRunner.manager.softDelete(SurveyResponseText, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseChoice, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseScale, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseGrid, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseFile, {
+          employeeNumber: In(employeeNumbers),
+        }),
+        queryRunner.manager.softDelete(SurveyResponseDatetime, {
+          employeeNumber: In(employeeNumbers),
+        }),
+      ]);
+
+      // Checkbox은 Hard Delete만 지원하므로 실제 삭제
+      const checkboxResult = await queryRunner.manager.delete(
+        SurveyResponseCheckbox,
+        {
+          employeeNumber: In(employeeNumbers),
+        },
+      );
+
+      deleteResults.forEach((result) => {
+        totalDeleted += result.affected || 0;
+      });
+      totalDeleted += checkboxResult.affected || 0;
+
+      await queryRunner.commitTransaction();
+
+      this.logger.log(
+        `설문 응답 삭제 완료 - 설문 ID: ${surveyId}, 삭제된 레코드: ${totalDeleted}개`,
+      );
+
+      return { deletedCount: totalDeleted };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `설문 응답 삭제 실패: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
