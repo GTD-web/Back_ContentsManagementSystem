@@ -708,7 +708,7 @@ export class AnnouncementBusinessService {
       await this.announcementContextService.공지사항을_조회한다(id);
 
     if (!existingAnnouncement) {
-      throw new Error(`공지사항을 찾을 수 없습니다. ID: ${id}`);
+      throw new NotFoundException(`공지사항을 찾을 수 없습니다. ID: ${id}`);
     }
 
     // 1. 공지사항 수정 (survey 필드 제외)
@@ -765,7 +765,7 @@ export class AnnouncementBusinessService {
         this.logger.warn(
           `설문조사 수정 시도 차단 - 설문조사는 snapshot이므로 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요. (설문 ID: ${existingSurvey.id})`,
         );
-        throw new Error(
+        throw new BadRequestException(
           '설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요.',
         );
       } else {
@@ -804,7 +804,7 @@ export class AnnouncementBusinessService {
       );
 
     if (!existingSurvey) {
-      throw new Error(
+      throw new NotFoundException(
         `설문조사를 찾을 수 없습니다. 공지사항 ID: ${announcementId}`,
       );
     }
@@ -838,7 +838,7 @@ export class AnnouncementBusinessService {
       );
 
     if (!existingSurvey) {
-      throw new Error(
+      throw new NotFoundException(
         `설문조사를 찾을 수 없습니다. 공지사항 ID: ${announcementId}`,
       );
     }
@@ -1087,6 +1087,7 @@ export class AnnouncementBusinessService {
     // 그 외에는 유효하지 않은 것으로 간주
     return false;
   }
+
 
   /**
    * 공지사항_공개를_수정한다
