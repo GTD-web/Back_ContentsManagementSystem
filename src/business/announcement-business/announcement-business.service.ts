@@ -707,7 +707,9 @@ export class AnnouncementBusinessService {
     this.logger.log(`공지사항 수정 완료 - ID: ${id}`);
 
     // 2. 설문조사 처리
-    if (survey !== undefined) {
+    // survey가 명시적으로 전달된 경우에만 처리
+    // undefined, 빈 문자열, 빈 객체는 무시
+    if (survey !== undefined && survey !== '' && !this.isEmptyObject(survey)) {
       // 기존 설문조사 확인
       const existingSurvey =
         await this.surveyContextService.공지사항의_설문조사를_조회한다(id);
@@ -738,9 +740,24 @@ export class AnnouncementBusinessService {
         });
         this.logger.log(`설문조사 생성 완료 - 공지사항 ID: ${id}`);
       }
+    } else if (survey !== undefined) {
+      this.logger.log(
+        `설문조사 필드가 빈 값으로 전달되어 무시됨 - 공지사항 ID: ${id}`,
+      );
     }
 
     return result;
+  }
+
+  /**
+   * 객체가 비어있는지 확인한다
+   * @private
+   */
+  private isEmptyObject(obj: any): boolean {
+    if (typeof obj !== 'object' || obj === null) {
+      return false;
+    }
+    return Object.keys(obj).length === 0;
   }
 
   /**

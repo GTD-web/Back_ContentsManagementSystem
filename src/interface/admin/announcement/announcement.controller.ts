@@ -1035,11 +1035,22 @@ export class AnnouncementController {
     ];
 
     for (const field of jsonFields) {
-      if (parsed[field] && typeof parsed[field] === 'string') {
-        try {
-          parsed[field] = JSON.parse(parsed[field]);
-        } catch (error) {
-          // 파싱 실패 시 원본 유지
+      if (parsed[field] !== undefined) {
+        if (typeof parsed[field] === 'string') {
+          const trimmed = parsed[field].trim();
+          
+          // 빈 문자열이거나 "null", "undefined" 문자열인 경우 undefined 처리
+          if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+            delete parsed[field];
+            continue;
+          }
+          
+          try {
+            parsed[field] = JSON.parse(trimmed);
+          } catch (error) {
+            // 파싱 실패 시 undefined로 처리 (잘못된 값 무시)
+            delete parsed[field];
+          }
         }
       }
     }
