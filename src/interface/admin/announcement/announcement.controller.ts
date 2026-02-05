@@ -916,22 +916,44 @@ export class AnnouncementController {
       '- 순서(order)만 변경 가능합니다\n' +
       '- 응답 데이터에는 영향을 주지 않습니다\n\n' +
       '**필수 필드:**\n' +
-      '- `order`: 정렬 순서 (숫자)',
+      '- `order`: 정렬 순서 (숫자)\n\n' +
+      '**예시:**\n' +
+      '```json\n' +
+      '{\n' +
+      '  "order": 0\n' +
+      '}\n' +
+      '```',
   })
   @ApiParam({
     name: 'id',
     description: '공지사항 ID',
     type: String,
+    example: '3ae37b69-5d72-48c8-a818-c57ce05d6113',
   })
   @ApiBody({
+    description: '설문조사 순서 변경 데이터',
+    examples: {
+      example1: {
+        summary: '설문조사를 첫 번째로 이동',
+        value: {
+          order: 0,
+        },
+      },
+      example2: {
+        summary: '설문조사를 다섯 번째로 이동',
+        value: {
+          order: 4,
+        },
+      },
+    },
     schema: {
       type: 'object',
       required: ['order'],
       properties: {
         order: {
           type: 'number',
-          description: '설문조사 정렬 순서',
-          example: 1,
+          description: '설문조사 정렬 순서 (0부터 시작)',
+          example: 0,
         },
       },
     },
@@ -973,26 +995,126 @@ export class AnnouncementController {
       '- 설문조사는 snapshot 개념이므로 질문 내용은 수정할 수 없습니다\n' +
       '- 질문들의 순서(order)만 변경 가능합니다\n' +
       '- 응답 데이터에는 영향을 주지 않습니다\n\n' +
+      '**사용 방법:**\n' +
+      '1. 공지사항 상세 조회 API로 현재 질문 리스트를 가져옵니다\n' +
+      '2. 프론트엔드에서 드래그앤드롭 등으로 순서를 변경합니다\n' +
+      '3. 변경된 순서대로 질문 ID와 새로운 order 값을 전송합니다\n\n' +
       '**필수 필드:**\n' +
       '- `questions`: 질문 ID와 order를 포함한 객체 배열\n' +
-      '  - 각 객체: `{ id: string, order: number }`\n\n' +
-      '**예시:**\n' +
-      '```json\n' +
-      '{\n' +
-      '  "questions": [\n' +
-      '    { "id": "질문1-UUID", "order": 0 },\n' +
-      '    { "id": "질문2-UUID", "order": 1 },\n' +
-      '    { "id": "질문3-UUID", "order": 2 }\n' +
-      '  ]\n' +
-      '}\n' +
-      '```',
+      '  - 각 객체: `{ id: string, order: number }`\n' +
+      '  - `id`: 질문 ID (UUID)\n' +
+      '  - `order`: 새로운 순서 (0부터 시작)',
   })
   @ApiParam({
     name: 'id',
     description: '공지사항 ID',
     type: String,
+    example: '3ae37b69-5d72-48c8-a818-c57ce05d6113',
   })
   @ApiBody({
+    description: '질문 순서 변경 데이터',
+    examples: {
+      '8개 질문 순서 변경': {
+        summary: '8개 질문의 순서를 재정렬',
+        description: '실제 공지사항에서 가져온 질문 ID들을 사용한 예시',
+        value: {
+          questions: [
+            {
+              id: 'a6a3ab28-bde3-49ad-ba89-2a611424019b',
+              order: 0,
+            },
+            {
+              id: 'c5b1d0e7-daca-4145-af18-d9814ff2eded',
+              order: 1,
+            },
+            {
+              id: '17dbf568-8b88-47df-bfae-bc6321dd60ae',
+              order: 2,
+            },
+            {
+              id: '62a33c49-2d2f-415a-ace6-8b4bf04a85d3',
+              order: 3,
+            },
+            {
+              id: 'c8fdf0b0-39b1-436b-9689-c4bb64f8a17e',
+              order: 4,
+            },
+            {
+              id: '10b6f89b-d1fe-4140-8192-a1f4479fdec3',
+              order: 5,
+            },
+            {
+              id: 'cc9badac-0041-48cb-825e-e140482ddc84',
+              order: 6,
+            },
+            {
+              id: 'ad8e6237-6eb2-433f-b67a-be7f6257bd68',
+              order: 7,
+            },
+          ],
+        },
+      },
+      '질문 순서 변경 (7번을 맨 위로)': {
+        summary: '마지막 질문을 첫 번째로 이동',
+        description: '7번 질문(좋아하는 가게)을 0번으로, 나머지는 한 칸씩 뒤로',
+        value: {
+          questions: [
+            {
+              id: 'ad8e6237-6eb2-433f-b67a-be7f6257bd68',
+              order: 0,
+            },
+            {
+              id: 'a6a3ab28-bde3-49ad-ba89-2a611424019b',
+              order: 1,
+            },
+            {
+              id: 'c5b1d0e7-daca-4145-af18-d9814ff2eded',
+              order: 2,
+            },
+            {
+              id: '17dbf568-8b88-47df-bfae-bc6321dd60ae',
+              order: 3,
+            },
+            {
+              id: '62a33c49-2d2f-415a-ace6-8b4bf04a85d3',
+              order: 4,
+            },
+            {
+              id: 'c8fdf0b0-39b1-436b-9689-c4bb64f8a17e',
+              order: 5,
+            },
+            {
+              id: '10b6f89b-d1fe-4140-8192-a1f4479fdec3',
+              order: 6,
+            },
+            {
+              id: 'cc9badac-0041-48cb-825e-e140482ddc84',
+              order: 7,
+            },
+          ],
+        },
+      },
+      '3개 질문만 순서 변경': {
+        summary: '일부 질문만 순서 변경',
+        description: '변경이 필요한 질문들만 포함해도 됩니다',
+        value: {
+          questions: [
+            {
+              id: 'question-id-1',
+              order: 0,
+            },
+            {
+              id: 'question-id-2',
+              order: 1,
+            },
+            {
+              id: 'question-id-3',
+              order: 2,
+            },
+          ],
+        },
+      },
+    },
     schema: {
       type: 'object',
       required: ['questions'],
@@ -1000,6 +1122,7 @@ export class AnnouncementController {
         questions: {
           type: 'array',
           description: '질문 ID와 순서 배열',
+          minItems: 1,
           items: {
             type: 'object',
             required: ['id', 'order'],
@@ -1011,7 +1134,7 @@ export class AnnouncementController {
               },
               order: {
                 type: 'number',
-                description: '질문 순서',
+                description: '질문 순서 (0부터 시작)',
                 example: 0,
               },
             },
