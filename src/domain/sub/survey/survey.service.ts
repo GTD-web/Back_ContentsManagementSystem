@@ -386,29 +386,77 @@ export class SurveyService {
   ): boolean {
     // 제목이 다르면 변경됨
     if (existingQuestion.title !== newQuestionData.title) {
+      this.logger.debug(`질문 제목 변경: "${existingQuestion.title}" → "${newQuestionData.title}"`);
       return true;
     }
 
     // 타입이 다르면 변경됨
     if (existingQuestion.type !== newQuestionData.type) {
+      this.logger.debug(`질문 타입 변경: ${existingQuestion.type} → ${newQuestionData.type}`);
       return true;
     }
 
     // form이 다르면 변경됨 (options, scale 등)
-    const existingForm = existingQuestion.form || {};
-    const newForm = newQuestionData.form || {};
+    // null, undefined, {} 모두 동일하게 취급
+    const existingForm = existingQuestion.form;
+    const newForm = newQuestionData.form;
     
-    if (JSON.stringify(existingForm) !== JSON.stringify(newForm)) {
+    // 둘 다 비어있으면 (null, undefined, {}) 변경 없음
+    const existingIsEmpty = !existingForm || Object.keys(existingForm).length === 0;
+    const newIsEmpty = !newForm || Object.keys(newForm).length === 0;
+    
+    if (existingIsEmpty && newIsEmpty) {
+      // 둘 다 비어있으면 form 변경 없음
+    } else if (existingIsEmpty !== newIsEmpty) {
+      // 하나만 비어있으면 변경됨
+      this.logger.debug(`질문 form 변경: empty 상태 불일치`);
       return true;
+    } else {
+      // 둘 다 값이 있으면 내용 비교
+      // 키를 정렬해서 비교하여 순서 문제 해결
+      const sortedExisting = this.sortObjectKeys(existingForm);
+      const sortedNew = this.sortObjectKeys(newForm);
+      
+      if (JSON.stringify(sortedExisting) !== JSON.stringify(sortedNew)) {
+        this.logger.debug(`질문 form 변경 감지`);
+        this.logger.debug(`이전: ${JSON.stringify(sortedExisting)}`);
+        this.logger.debug(`새로운: ${JSON.stringify(sortedNew)}`);
+        return true;
+      }
     }
 
     // 필수 여부가 다르면 변경됨
     if (existingQuestion.isRequired !== newQuestionData.isRequired) {
+      this.logger.debug(`질문 필수 여부 변경: ${existingQuestion.isRequired} → ${newQuestionData.isRequired}`);
       return true;
     }
 
     // 모든 검사 통과 - 변경 없음
     return false;
+  }
+
+  /**
+   * 객체의 키를 재귀적으로 정렬 (JSON.stringify 비교 시 순서 문제 해결)
+   */
+  private sortObjectKeys(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sortObjectKeys(item));
+    }
+    
+    if (typeof obj === 'object') {
+      return Object.keys(obj)
+        .sort()
+        .reduce((result, key) => {
+          result[key] = this.sortObjectKeys(obj[key]);
+          return result;
+        }, {} as any);
+    }
+    
+    return obj;
   }
 
   /**
