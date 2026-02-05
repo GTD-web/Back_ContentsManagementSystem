@@ -752,13 +752,13 @@ export class AnnouncementBusinessService {
           this.logger.log(`설문조사 삭제 완료 - 공지사항 ID: ${id}`);
         }
       } else if (existingSurvey) {
-        // 기존 설문조사 수정
-        this.logger.log(`설문조사 수정 시작 - 설문 ID: ${existingSurvey.id}`);
-        await this.surveyContextService.설문조사를_수정한다(
-          existingSurvey.id,
-          survey,
+        // 기존 설문조사가 있으면 수정 불가 (snapshot 개념)
+        this.logger.warn(
+          `설문조사 수정 시도 차단 - 설문조사는 snapshot이므로 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요. (설문 ID: ${existingSurvey.id})`,
         );
-        this.logger.log(`설문조사 수정 완료 - 설문 ID: ${existingSurvey.id}`);
+        throw new Error(
+          '설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요.',
+        );
       } else {
         // 새 설문조사 생성
         this.logger.log(`설문조사 생성 시작 - 공지사항 ID: ${id}`);

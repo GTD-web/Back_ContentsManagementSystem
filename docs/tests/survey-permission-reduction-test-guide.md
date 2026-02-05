@@ -1,14 +1,30 @@
-# 설문 응답 자동 삭제 기능 테스트 가이드
+# 설문 응답 자동 삭제 및 복구 기능 테스트 가이드
 
 > 📍 **위치**: `docs/tests/survey-permission-reduction-test-guide.md`  
 > 📅 **작성일**: 2026-02-05  
-> 🎯 **목적**: 공지사항 권한 축소 시 제거된 사용자의 설문 응답 자동 Soft Delete 기능 테스트
+> 🎯 **목적**: 공지사항 권한 축소 시 제거된 사용자의 설문 응답 자동 Soft Delete 및 복구 기능 테스트
 
 ---
 
 ## ✅ 구현 완료 사항
 
-### 1. **Soft Delete 구현 (데이터 소실 방지)**
+### 1. **설문조사 Snapshot 개념 (수정 불가)**
+- ✅ 설문조사는 한 번 생성되면 **수정 불가** (불변 데이터)
+- ✅ 설문조사 수정 시도 시 에러 메시지 반환
+  - `"설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요."`
+- ✅ 공지사항 수정은 가능 (제목, 내용, 권한 등)
+- ✅ 설문조사 삭제는 가능 (`survey: null` 전달)
+- ✅ 새 설문조사 생성은 가능 (기존 설문조사가 없는 경우)
+
+### 1. **설문조사 Snapshot 개념 (수정 불가)**
+- ✅ 설문조사는 한 번 생성되면 **수정 불가** (불변 데이터)
+- ✅ 설문조사 수정 시도 시 에러 메시지 반환
+  - `"설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요."`
+- ✅ 공지사항 수정은 가능 (제목, 내용, 권한 등)
+- ✅ 설문조사 삭제는 가능 (`survey: null` 전달)
+- ✅ 새 설문조사 생성은 가능 (기존 설문조사가 없는 경우)
+
+### 2. **Soft Delete 구현 (데이터 소실 방지)**
 - `AnnouncementRead`: ✅ Soft Delete (읽음 기록)
 - `SurveyCompletion`: ✅ Soft Delete
 - `SurveyResponseText`: ✅ Soft Delete + 복구
@@ -19,25 +35,30 @@
 - `SurveyResponseFile`: ✅ Soft Delete + 복구
 - `SurveyResponseDatetime`: ✅ Soft Delete + 복구
 
-### 2. **권한 축소 감지 및 자동 삭제**
+### 2. **Soft Delete 구현 (데이터 소실 방지)**
+- `AnnouncementRead`: ✅ Soft Delete (읽음 기록)
+- `SurveyCompletion`: ✅ Soft Delete
+- `SurveyResponseText`: ✅ Soft Delete + 복구
+- `SurveyResponseChoice`: ✅ Soft Delete + 복구
+- `SurveyResponseCheckbox`: ✅ Soft Delete + 복구 (마이그레이션 완료)
+- `SurveyResponseScale`: ✅ Soft Delete + 복구
+- `SurveyResponseGrid`: ✅ Soft Delete + 복구
+- `SurveyResponseFile`: ✅ Soft Delete + 복구
+- `SurveyResponseDatetime`: ✅ Soft Delete + 복구
+
+### 3. **권한 축소 감지 및 자동 삭제**
 공지사항 수정 시 자동으로:
 - 이전 권한과 새 권한 비교
 - 제거된 직원 ID 추출
 - 해당 직원들의 **읽음 기록** Soft Delete
 - 해당 직원들의 **설문 응답** Soft Delete
 
-### 3. **질문 개별 변경 감지 및 응답 삭제**
-설문조사 질문 수정 시 자동으로:
-- 각 질문을 개별적으로 비교 (title, type, form, isRequired)
-- 변경된 질문만 감지하여 해당 질문의 응답만 Soft Delete
-- 변경되지 않은 질문의 응답은 유지
-- **장점**: 질문 하나만 수정해도 다른 질문의 응답은 영향 없음
-
-**변경 감지 기준**:
-- 질문 제목 변경
-- 질문 타입 변경 (단문형 → 선택형 등)
-- 질문 form 변경 (선택지, 척도 범위 등)
-- 필수 여부 변경
+### 3. **권한 축소 감지 및 자동 삭제**
+공지사항 수정 시 자동으로:
+- 이전 권한과 새 권한 비교
+- 제거된 직원 ID 추출
+- 해당 직원들의 **읽음 기록** Soft Delete
+- 해당 직원들의 **설문 응답** Soft Delete
 
 ### 4. **재추가 시 자동 복구 (프로덕션 데이터 보호)**
 제거된 사용자를 다시 권한에 추가하면:
@@ -142,94 +163,68 @@ AND "employeeNumber" = 'employee-2';
 
 ---
 
-### 시나리오 4: 질문 개별 수정 시 해당 질문 응답만 삭제
+### 시나리오 4: 설문조사 수정 시도 (Snapshot - 수정 불가)
 
-**1. 초기 설정: 3개 질문이 있는 설문조사**
+**1. 설문조사가 있는 공지사항 수정 시도**
 ```json
+PUT /api/cms/office/announcement/:id
 {
-  "questions": [
-    { "id": "q1", "title": "이름", "type": "text", "order": 1 },
-    { "id": "q2", "title": "만족도", "type": "choice", "order": 2 },
-    { "id": "q3", "title": "의견", "type": "textarea", "order": 3 }
-  ]
-}
-```
-
-**2. 사용자들이 설문 제출**
-- employee-1이 모든 질문에 답변 완료
-
-**3. Q2 질문만 수정 (만족도 → 추천도)**
-```json
-{
-  "questions": [
-    { "id": "q1", "title": "이름", "type": "text", "order": 1 },
-    { "id": "q2", "title": "추천도", "type": "choice", "order": 2 },  // 제목 변경
-    { "id": "q3", "title": "의견", "type": "textarea", "order": 3 }
-  ]
-}
-```
-
-**4. 예상 결과**
-- ✅ Q2의 응답만 `deletedAt` 설정됨
-- ✅ Q1, Q3의 응답은 그대로 유지됨
-- ✅ 로그: "질문 변경 감지 - \"만족도\" → 해당 질문의 응답 삭제 예정"
-- ✅ 로그: "질문 응답 삭제 완료 - 질문 ID: q2, 삭제된 레코드: N개"
-
-**5. DB 확인**
-```sql
--- Q2 응답만 삭제되었는지 확인
-SELECT "questionId", "deletedAt" 
-FROM survey_response_choice
-WHERE "employeeNumber" = 'employee-1'
-ORDER BY "questionId";
-
--- 예상 결과:
--- q1: deletedAt = NULL (유지)
--- q2: deletedAt = 2026-02-05... (삭제됨)
--- q3: deletedAt = NULL (유지)
-```
-
----
-
-### 시나리오 5: 질문 타입 변경
-
-**1. 질문 타입 변경 (선택형 → 척도형)**
-```json
-{
-  "questions": [
-    { "id": "q2", "title": "만족도", "type": "linear_scale", "form": { "min": 1, "max": 5 }, "order": 2 }
-  ]
+  "title": "공지사항 제목 수정",
+  "survey": {
+    "title": "수정된 설문조사 제목",
+    "questions": [...]
+  }
 }
 ```
 
 **2. 예상 결과**
-- ✅ 타입이 변경되었으므로 기존 `choice` 응답 삭제
-- ✅ 새로운 `linear_scale` 응답 받을 준비됨
+- ❌ 에러 반환: `"설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요."`
+- ✅ 공지사항 제목은 수정됨
+- ✅ 설문조사는 변경되지 않음 (snapshot 유지)
+- ✅ 로그: "설문조사 수정 시도 차단 - 설문조사는 snapshot이므로 수정할 수 없습니다."
+
+**3. 올바른 방법 (설문조사 변경이 필요한 경우)**
+```
+1. 공지사항 취소 (또는 삭제)
+2. 새 공지사항 작성 (설문조사 포함)
+3. 재전송
+```
 
 ---
 
-### 시나리오 6: 질문 선택지 변경
+### 시나리오 5: 설문조사 삭제
 
-**1. 선택지 변경**
+**1. 설문조사 삭제 요청**
 ```json
+PUT /api/cms/office/announcement/:id
 {
-  "questions": [
-    { 
-      "id": "q2", 
-      "title": "만족도", 
-      "type": "choice",
-      "form": {
-        "options": ["매우 불만", "불만", "보통", "만족", "매우 만족"]  // 변경됨
-      },
-      "order": 2 
-    }
-  ]
+  "survey": null
 }
 ```
 
 **2. 예상 결과**
-- ✅ `form` 내용이 변경되었으므로 기존 응답 삭제
-- ✅ 사용자는 새로운 선택지로 다시 제출해야 함
+- ✅ 설문조사 삭제됨
+- ✅ 응답 데이터는 soft delete로 보존
+- ✅ 로그: "설문조사 삭제 완료 - 공지사항 ID: xxx"
+
+---
+
+### 시나리오 6: 새 설문조사 추가
+
+**1. 설문조사가 없는 공지사항에 설문조사 추가**
+```json
+PUT /api/cms/office/announcement/:id
+{
+  "survey": {
+    "title": "새 설문조사",
+    "questions": [...]
+  }
+}
+```
+
+**2. 예상 결과**
+- ✅ 새 설문조사 생성됨
+- ✅ 로그: "설문조사 생성 완료 - 공지사항 ID: xxx"
 
 ---
 
@@ -328,27 +323,6 @@ ORDER BY "createdAt";
 -- createdAt은 유지, updatedAt과 submittedAt만 변경됨
 ```
 
-### 5. 질문 개별 수정 후 응답 삭제 확인
-```sql
--- 특정 질문의 응답만 삭제되었는지 확인
-SELECT "questionId", "deletedAt", "createdAt"
-FROM survey_response_choice
-WHERE "employeeNumber" = 'employee-1'
-ORDER BY "questionId";
-
--- 예상 결과:
--- 변경된 질문의 응답만 deletedAt이 설정됨
--- 다른 질문들의 응답은 deletedAt = NULL로 유지
-
--- 특정 질문 ID로 삭제 여부 확인
-SELECT COUNT(*) as total,
-       COUNT(CASE WHEN "deletedAt" IS NULL THEN 1 END) as active,
-       COUNT(CASE WHEN "deletedAt" IS NOT NULL THEN 1 END) as deleted
-FROM survey_response_texts
-WHERE "questionId" = 'q2';
--- 해당 질문의 응답이 모두 soft delete되었는지 확인
-```
-
 ### 2. 삭제 전후 비교
 ```sql
 -- 삭제 전
@@ -379,10 +353,9 @@ SELECT COUNT(*) FROM survey_completions WHERE "deletedAt" IS NULL;
 ✅ "이전 응답 기록이 있는 사번 N개: xxx, yyy"
 ✅ "추가된 직원들의 설문 응답 복구 완료 - N개 레코드"
 
-# 질문 수정 시 (개별 질문 응답 삭제)
-✅ "질문 변경 감지 - \"[이전 제목]\" → 해당 질문의 응답 삭제 예정"
-✅ "질문 응답 삭제 시작 - 질문 ID: xxx"
-✅ "질문 응답 삭제 완료 - 질문 ID: xxx, 삭제된 레코드: N개"
+# 설문조사 수정 시도 (차단)
+⚠️ "설문조사 수정 시도 차단 - 설문조사는 snapshot이므로 수정할 수 없습니다."
+❌ Error: "설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요."
 ```
 
 ---
@@ -430,24 +403,29 @@ WHERE "employeeNumber" = 'employee-2';
 
 ## 🎯 테스트 체크리스트
 
+### 설문조사 Snapshot (수정 불가)
+- [ ] 설문조사가 있는 공지사항에서 설문조사 수정 시도 시 에러 발생
+- [ ] 에러 메시지: "설문조사는 수정할 수 없습니다. 공지사항을 취소하고 다시 작성해주세요."
+- [ ] 공지사항 제목/내용 등은 정상적으로 수정됨
+- [ ] 설문조사 삭제(`survey: null`)는 정상 작동
+- [ ] 설문조사가 없는 공지사항에 새 설문조사 추가는 정상 작동
+
+### 권한 관리
 - [ ] 특정 직원 권한 제거 시 해당 직원 **읽음 기록**만 삭제되는지 확인
 - [ ] 특정 직원 권한 제거 시 해당 직원 **설문 응답**만 삭제되는지 확인
 - [ ] 다른 직원 응답은 영향 없는지 확인
 - [ ] `deletedAt`이 제대로 설정되는지 확인
 - [ ] 설문 통계에서 삭제된 응답이 제외되는지 확인 (`totalCompletions` 감소 확인)
+
+### 자동 복구
 - [ ] **재추가 시 자동 복구 확인** (API 호출 시 즉시)
   - [ ] 읽음 기록 자동 복구 (`deletedAt = NULL`)
   - [ ] 설문 응답 자동 복구 (`deletedAt = NULL`)
   - [ ] 사용자가 다시 읽거나 제출하지 않아도 즉시 반영됨
 - [ ] **응답 레코드 ID 유지 확인** (복구 시 새 레코드 생성 안됨)
 - [ ] **`createdAt` 시간 보존 확인** (최초 생성 시간 유지)
-- [ ] **질문 개별 수정 시 해당 질문 응답만 삭제**
-  - [ ] 질문 제목만 변경 시 해당 질문 응답만 삭제
-  - [ ] 질문 타입 변경 시 해당 질문 응답만 삭제
-  - [ ] 질문 선택지 변경 시 해당 질문 응답만 삭제
-  - [ ] 변경되지 않은 다른 질문들의 응답은 유지됨
-  - [ ] 로그: "질문 변경 감지 - \"[제목]\" → 해당 질문의 응답 삭제 예정"
-  - [ ] 로그: "질문 응답 삭제 완료 - 질문 ID: xxx, 삭제된 레코드: N개"
+
+### 기타
 - [ ] 설문조사가 없는 공지사항에서도 에러 없이 작동하는지 확인
 - [ ] 로그가 제대로 출력되는지 확인
 - [ ] `isPublic: true` 변경 시 응답 삭제/복구 안 되는지 확인
@@ -456,20 +434,22 @@ WHERE "employeeNumber" = 'employee-2';
 
 **구현 완료!** 🎉
 
+설문조사는 **Snapshot 개념**으로 구현되어 한 번 생성되면 수정할 수 없습니다.  
+수정이 필요한 경우 공지사항을 취소하고 다시 작성해야 합니다.
+
 권한 축소 시 제거된 사용자의 설문 응답이 자동으로 Soft Delete 처리되며,  
 재추가 시 **즉시 자동으로** 기존 응답 레코드를 복구하여 프로덕션 데이터를 안전하게 보호합니다.
 
-**질문 수정 시에는 변경된 질문의 응답만 선택적으로 Soft Delete되어, 다른 질문들의 응답은 보존됩니다.**
-
 ### 🔐 프로덕션 안전성
+- ✅ **설문조사 Snapshot**: 응답 데이터 무결성 보장
 - ✅ 레코드 ID 유지 (외래 키 무결성 보장)
 - ✅ 생성 시간 보존 (데이터 이력 추적 가능)
 - ✅ Soft Delete (실수 복구 가능)
 - ✅ **자동 복구** (사용자 액션 불필요)
-- ✅ **질문별 세분화된 응답 관리** (불필요한 데이터 삭제 방지)
 
 ### ⚡ 사용자 경험
+- ✅ 설문조사는 불변 → 응답 데이터 안정성
+- ✅ 수정 필요 시 명확한 에러 메시지 제공
 - ✅ 권한 재추가 시 **즉시 이전 상태로 복원**
 - ✅ 다시 읽거나 제출할 필요 없음
 - ✅ 설문 응답 덮어쓰기 가능 (원하면 재제출 가능)
-- ✅ 질문 수정 시 다른 질문의 응답은 영향 없음
