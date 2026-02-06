@@ -86,6 +86,7 @@ export class AnnouncementBusinessService {
     categoryId?: string;
     excludeExpired?: boolean;
     search?: string;
+    isSurveySubmitted?: boolean;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
@@ -372,6 +373,7 @@ export class AnnouncementBusinessService {
     categoryId?: string;
     excludeExpired?: boolean;
     search?: string;
+    isSurveySubmitted?: boolean;
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
