@@ -108,7 +108,7 @@ export class UserAnnouncementController {
   @ApiQuery({
     name: 'isSurveySubmitted',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
     type: Boolean,
   })
   async 공지사항_전체_목록을_조회한다(
@@ -191,7 +191,7 @@ export class UserAnnouncementController {
   @ApiQuery({
     name: 'isSurveySubmitted',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
     type: Boolean,
   })
   async 공지사항_목록을_조회한다(
@@ -282,7 +282,7 @@ export class UserAnnouncementController {
   @ApiQuery({
     name: 'isSurveySubmitted',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
     type: Boolean,
   })
   async 고정_공지사항_목록을_조회한다(

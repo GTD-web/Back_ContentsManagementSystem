@@ -230,11 +230,11 @@ export class AnnouncementBusinessService {
       });
     }
 
-    // 설문 제출 상태 필터 적용 (설문이 있는 공지사항에만 적용)
+    // 설문 제출 상태 필터 적용 (설문이 있는 공지사항만 결과에 포함)
     if (isSurveySubmitted !== undefined) {
       filteredAnnouncements = filteredAnnouncements.filter((announcement) => {
         if (!announcement.survey) {
-          return true; // 설문이 없는 공지사항은 필터링하지 않음
+          return false; // 설문이 없는 공지사항은 제외
         }
         const hasSubmitted = surveyCompletionMap.get(announcement.survey.id) || false;
         return hasSubmitted === isSurveySubmitted;
