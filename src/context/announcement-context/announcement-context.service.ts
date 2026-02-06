@@ -132,7 +132,7 @@ export class AnnouncementContextService {
     categoryId?: string;
     excludeExpired?: boolean;
     search?: string;
-    isSurveySubmitted?: boolean;
+    hasSurvey?: boolean;
   }): Promise<AnnouncementListResult> {
     const query = new GetAnnouncementListQuery(
       params.isPublic,
@@ -145,7 +145,7 @@ export class AnnouncementContextService {
       params.categoryId,
       params.excludeExpired,
       params.search,
-      params.isSurveySubmitted,
+      params.hasSurvey,
     );
     return await this.queryBus.execute(query);
   }

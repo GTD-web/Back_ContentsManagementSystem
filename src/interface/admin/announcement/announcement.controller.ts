@@ -156,9 +156,9 @@ export class AnnouncementController {
     type: Boolean,
   })
   @ApiQuery({
-    name: 'isSurveySubmitted',
+    name: 'hasSurvey',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
+    description: '설문조사 존재 여부 필터 (true: 설문조사가 있는 공지사항만, false: 설문조사가 없는 공지사항만)',
     type: Boolean,
   })
   async 공지사항_목록을_조회한다(
@@ -170,12 +170,12 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
-    @Query('isSurveySubmitted') isSurveySubmitted?: string,
+    @Query('hasSurvey') hasSurvey?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
     const excludeExpiredFilter = excludeExpired === 'true';
-    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
+    const hasSurveyFilter = hasSurvey === 'true' ? true : hasSurvey === 'false' ? false : undefined;
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
@@ -190,7 +190,7 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
-        isSurveySubmitted: isSurveySubmittedFilter,
+        hasSurvey: hasSurveyFilter,
       });
 
     return {
@@ -269,9 +269,9 @@ export class AnnouncementController {
     type: Boolean,
   })
   @ApiQuery({
-    name: 'isSurveySubmitted',
+    name: 'hasSurvey',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
+    description: '설문조사 존재 여부 필터 (true: 설문조사가 있는 공지사항만, false: 설문조사가 없는 공지사항만)',
     type: Boolean,
   })
   async 고정_공지사항_목록을_조회한다(
@@ -283,12 +283,12 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
-    @Query('isSurveySubmitted') isSurveySubmitted?: string,
+    @Query('hasSurvey') hasSurvey?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
     const excludeExpiredFilter = excludeExpired === 'true';
-    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
+    const hasSurveyFilter = hasSurvey === 'true' ? true : hasSurvey === 'false' ? false : undefined;
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
 
@@ -302,7 +302,7 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
-        isSurveySubmitted: isSurveySubmittedFilter,
+        hasSurvey: hasSurveyFilter,
       });
 
     return {
@@ -374,9 +374,9 @@ export class AnnouncementController {
     example: '홍길동',
   })
   @ApiQuery({
-    name: 'isSurveySubmitted',
+    name: 'hasSurvey',
     required: false,
-    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료) - 설문이 있는 공지사항만 결과에 포함됩니다',
+    description: '설문조사 존재 여부 필터 (true: 설문조사가 있는 공지사항만, false: 설문조사가 없는 공지사항만)',
     type: Boolean,
   })
   async 공지사항_전체_목록을_조회한다(
@@ -387,12 +387,12 @@ export class AnnouncementController {
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
     @Query('search') search?: string,
-    @Query('isSurveySubmitted') isSurveySubmitted?: string,
+    @Query('hasSurvey') hasSurvey?: string,
   ): Promise<AnnouncementListItemDto[]> {
     const isPublicFilter =
       isPublic === 'true' ? true : isPublic === 'false' ? false : undefined;
     const excludeExpiredFilter = excludeExpired === 'true';
-    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
+    const hasSurveyFilter = hasSurvey === 'true' ? true : hasSurvey === 'false' ? false : undefined;
 
     const result =
       await this.announcementBusinessService.공지사항_목록을_조회한다({
@@ -406,7 +406,7 @@ export class AnnouncementController {
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
         search: search,
-        isSurveySubmitted: isSurveySubmittedFilter,
+        hasSurvey: hasSurveyFilter,
       });
 
     return result.items;

@@ -21,7 +21,7 @@ export class GetAnnouncementListQuery {
     public readonly categoryId?: string,
     public readonly excludeExpired?: boolean,
     public readonly search?: string,
-    public readonly isSurveySubmitted?: boolean,
+    public readonly hasSurvey?: boolean,
   ) {}
 }
 
@@ -52,11 +52,11 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
       categoryId,
       excludeExpired,
       search,
-      isSurveySubmitted,
+      hasSurvey,
     } = query;
 
     this.logger.debug(
-      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}, 마감제외: ${excludeExpired}, 검색: ${search}, 설문제출: ${isSurveySubmitted}`,
+      `공지사항 목록 조회 - 공개: ${isPublic}, 고정: ${isFixed}, 카테고리: ${categoryId}, 정렬: ${orderBy}, 페이지: ${page}, 제한: ${limit}, 마감제외: ${excludeExpired}, 검색: ${search}, 설문존재: ${hasSurvey}`,
     );
 
     const queryBuilder =
@@ -192,9 +192,9 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
       }
     }
 
-    // 설문조사 필터 (isSurveySubmitted가 true 또는 false인 경우)
-    if (isSurveySubmitted !== undefined) {
-      if (isSurveySubmitted) {
+    // 설문조사 존재 여부 필터
+    if (hasSurvey !== undefined) {
+      if (hasSurvey) {
         // 설문조사가 있는 공지사항만 필터링
         if (hasWhere) {
           queryBuilder.andWhere('survey.id IS NOT NULL');
@@ -203,12 +203,11 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
           hasWhere = true;
         }
       } else {
-        // 설문조사가 없는 공지사항만 필터링 (또는 설문조사가 있지만 미완료)
-        // 참고: 현재는 설문조사 유무만 필터링하고, 답변 완료 여부는 비즈니스 레이어에서 처리
+        // 설문조사가 없는 공지사항만 필터링
         if (hasWhere) {
-          queryBuilder.andWhere('survey.id IS NOT NULL');
+          queryBuilder.andWhere('survey.id IS NULL');
         } else {
-          queryBuilder.where('survey.id IS NOT NULL');
+          queryBuilder.where('survey.id IS NULL');
           hasWhere = true;
         }
       }
