@@ -15,7 +15,7 @@ export enum BackupType {
  * 백업 보관 기간 (밀리초)
  * 
  * GFS 백업 전략에 따른 보관 기간:
- * - 4시간 백업: 7일 보관 (최근 변경사항 빠른 복구)
+ * - 4시간 백업: 5일 보관 (최근 변경사항 빠른 복구, 약 30개 백업 유지)
  * - 일간 백업: 30일 보관 (지난 한 달 내 특정 시점 복구)
  * - 주간 백업: 90일 보관 (분기별 복구 포인트)
  * - 월간 백업: 365일 보관 (1년 내 특정 월 복구)
@@ -23,7 +23,7 @@ export enum BackupType {
  * - 연간 백업: 1825일 보관 (5년 간 연간 복구)
  */
 export const BACKUP_RETENTION: Record<BackupType, number> = {
-  [BackupType.FOUR_HOURLY]: 7 * 24 * 60 * 60 * 1000, // 7일
+  [BackupType.FOUR_HOURLY]: 5 * 24 * 60 * 60 * 1000, // 5일
   [BackupType.DAILY]: 30 * 24 * 60 * 60 * 1000, // 30일
   [BackupType.WEEKLY]: 90 * 24 * 60 * 60 * 1000, // 90일 (약 3개월)
   [BackupType.MONTHLY]: 365 * 24 * 60 * 60 * 1000, // 365일 (1년)
