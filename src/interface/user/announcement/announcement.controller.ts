@@ -99,12 +99,28 @@ export class UserAnnouncementController {
     type: String,
     example: '홍길동',
   })
+  @ApiQuery({
+    name: 'isRead',
+    required: false,
+    description: '읽음 상태 필터 (true: 읽음, false: 안읽음)',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'isSurveySubmitted',
+    required: false,
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    type: Boolean,
+  })
   async 공지사항_전체_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
+    @Query('isRead') isRead?: string,
+    @Query('isSurveySubmitted') isSurveySubmitted?: string,
   ): Promise<AnnouncementListItemDto[]> {
     const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
+    const isReadFilter = isRead === 'true' ? true : isRead === 'false' ? false : undefined;
+    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
 
     // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
@@ -122,6 +138,8 @@ export class UserAnnouncementController {
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
           search: search,
+          isRead: isReadFilter,
+          isSurveySubmitted: isSurveySubmittedFilter,
         },
       );
 
@@ -164,15 +182,31 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
+  @ApiQuery({
+    name: 'isRead',
+    required: false,
+    description: '읽음 상태 필터 (true: 읽음, false: 안읽음)',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'isSurveySubmitted',
+    required: false,
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    type: Boolean,
+  })
   async 공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('isRead') isRead?: string,
+    @Query('isSurveySubmitted') isSurveySubmitted?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
     const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
+    const isReadFilter = isRead === 'true' ? true : isRead === 'false' ? false : undefined;
+    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
 
     // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
@@ -189,6 +223,8 @@ export class UserAnnouncementController {
           orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
+          isRead: isReadFilter,
+          isSurveySubmitted: isSurveySubmittedFilter,
         },
       );
 
@@ -237,15 +273,31 @@ export class UserAnnouncementController {
     description: '카테고리 ID 필터',
     type: String,
   })
+  @ApiQuery({
+    name: 'isRead',
+    required: false,
+    description: '읽음 상태 필터 (true: 읽음, false: 안읽음)',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'isSurveySubmitted',
+    required: false,
+    description: '설문 제출 상태 필터 (true: 답변완료, false: 미완료, 설문이 없는 공지사항은 제외되지 않음)',
+    type: Boolean,
+  })
   async 고정_공지사항_목록을_조회한다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('isRead') isRead?: string,
+    @Query('isSurveySubmitted') isSurveySubmitted?: string,
   ): Promise<AnnouncementListResponseDto> {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 10;
     const excludeExpiredFilter = true; // 사용자용에서는 항상 마감된 공지사항 제외
+    const isReadFilter = isRead === 'true' ? true : isRead === 'false' ? false : undefined;
+    const isSurveySubmittedFilter = isSurveySubmitted === 'true' ? true : isSurveySubmitted === 'false' ? false : undefined;
 
     // 사용자 권한에 따른 필터링 로직 적용
     // - 전사공개(isPublic: true) 공지사항
@@ -262,6 +314,8 @@ export class UserAnnouncementController {
           orderBy: 'createdAt',
           categoryId: categoryId,
           excludeExpired: excludeExpiredFilter,
+          isRead: isReadFilter,
+          isSurveySubmitted: isSurveySubmittedFilter,
         },
       );
 

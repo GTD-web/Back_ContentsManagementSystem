@@ -140,13 +140,15 @@ export class AnnouncementBusinessService {
     categoryId?: string;
     excludeExpired?: boolean;
     search?: string;
+    isRead?: boolean; // 읽음 상태 필터
+    isSurveySubmitted?: boolean; // 설문 제출 상태 필터
   }): Promise<{
     items: AnnouncementListItemDto[];
     total: number;
     page: number;
     limit: number;
   }> {
-    const { userId, employeeNumber, ...queryParams } = params;
+    const { userId, employeeNumber, isRead, isSurveySubmitted, ...queryParams } = params;
     const page = params.page || 1;
     const limit = params.limit || 10;
 
@@ -217,16 +219,38 @@ export class AnnouncementBusinessService {
       );
     }
 
-    // 7. 페이징 처리
-    const total = accessibleAnnouncements.length;
+    // 7. 읽음/설문 제출 상태 필터링
+    let filteredAnnouncements = accessibleAnnouncements;
+    
+    // 읽음 상태 필터 적용
+    if (isRead !== undefined) {
+      filteredAnnouncements = filteredAnnouncements.filter((announcement) => {
+        const hasRead = readAnnouncementIds.has(announcement.id);
+        return hasRead === isRead;
+      });
+    }
+
+    // 설문 제출 상태 필터 적용 (설문이 있는 공지사항에만 적용)
+    if (isSurveySubmitted !== undefined) {
+      filteredAnnouncements = filteredAnnouncements.filter((announcement) => {
+        if (!announcement.survey) {
+          return true; // 설문이 없는 공지사항은 필터링하지 않음
+        }
+        const hasSubmitted = surveyCompletionMap.get(announcement.survey.id) || false;
+        return hasSubmitted === isSurveySubmitted;
+      });
+    }
+
+    // 8. 페이징 처리
+    const total = filteredAnnouncements.length;
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
-    const paginatedAnnouncements = accessibleAnnouncements.slice(
+    const paginatedAnnouncements = filteredAnnouncements.slice(
       startIndex,
       endIndex,
     );
 
-    // 8. DTO로 변환 (읽음 여부 및 설문 제출 여부 포함)
+    // 9. DTO로 변환 (읽음 여부 및 설문 제출 여부 포함)
     const items: AnnouncementListItemDto[] = paginatedAnnouncements.map(
       (announcement) => ({
         id: announcement.id,
