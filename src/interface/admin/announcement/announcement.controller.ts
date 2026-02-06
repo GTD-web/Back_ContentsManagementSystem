@@ -156,6 +156,13 @@ export class AnnouncementController {
     type: Boolean,
   })
   @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목, 내용, 작성자 이름, 카테고리 이름 검색)',
+    type: String,
+    example: '홍길동',
+  })
+  @ApiQuery({
     name: 'hasSurvey',
     required: false,
     description: '설문조사 존재 여부 필터 (true: 설문조사가 있는 공지사항만, false: 설문조사가 없는 공지사항만)',
@@ -170,6 +177,7 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
+    @Query('search') search?: string,
     @Query('hasSurvey') hasSurvey?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
@@ -190,6 +198,7 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
+        search: search,
         hasSurvey: hasSurveyFilter,
       });
 
@@ -269,6 +278,13 @@ export class AnnouncementController {
     type: Boolean,
   })
   @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '검색어 (제목, 내용, 작성자 이름, 카테고리 이름 검색)',
+    type: String,
+    example: '홍길동',
+  })
+  @ApiQuery({
     name: 'hasSurvey',
     required: false,
     description: '설문조사 존재 여부 필터 (true: 설문조사가 있는 공지사항만, false: 설문조사가 없는 공지사항만)',
@@ -283,6 +299,7 @@ export class AnnouncementController {
     @Query('endDate') endDate?: string,
     @Query('categoryId') categoryId?: string,
     @Query('excludeExpired') excludeExpired?: string,
+    @Query('search') search?: string,
     @Query('hasSurvey') hasSurvey?: string,
   ): Promise<AnnouncementListResponseDto> {
     const isPublicFilter =
@@ -302,6 +319,7 @@ export class AnnouncementController {
         endDate: endDate ? new Date(endDate) : undefined,
         categoryId: categoryId || undefined,
         excludeExpired: excludeExpiredFilter,
+        search: search,
         hasSurvey: hasSurveyFilter,
       });
 
