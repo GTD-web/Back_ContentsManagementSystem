@@ -195,6 +195,7 @@ export class GetAnnouncementListHandler implements IQueryHandler<GetAnnouncement
 
     if (orderBy === 'order') {
       queryBuilder.addOrderBy('announcement.order', 'ASC');
+      queryBuilder.addOrderBy('announcement.createdAt', 'DESC'); // order가 같으면 최신순
     } else {
       queryBuilder.addOrderBy('announcement.createdAt', 'DESC');
     }
