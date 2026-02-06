@@ -10,6 +10,7 @@ import {
   Patch,
   UploadedFiles,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -874,6 +875,11 @@ export class AnnouncementController {
   ): Promise<AnnouncementResponseDto> {
     // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
     const parsedDto = this.parseFormDataDto(dto);
+
+    // 카테고리 필수 체크
+    if (!parsedDto.categoryId) {
+      throw new BadRequestException('카테고리를 선택해주세요.');
+    }
 
     // 파일 업로드 처리 (공지사항명/업로드파일들/ 경로로 저장)
     let attachments: Array<{
