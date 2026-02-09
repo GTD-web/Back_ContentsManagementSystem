@@ -177,4 +177,11 @@ export class WikiContextService {
     return await this.queryBus.execute(query);
   }
 
+  /**
+   * 루트 폴더를 조회하거나 생성한다
+   */
+  async 루트_폴더를_조회하거나_생성한다(): Promise<WikiFileSystem> {
+    return await this.wikiFileSystemService.루트_폴더를_조회하거나_생성한다();
+  }
+
 }

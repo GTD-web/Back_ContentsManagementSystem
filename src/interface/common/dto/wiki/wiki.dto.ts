@@ -20,7 +20,7 @@ import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-syste
  * ⚠️ 권한 정책: 폴더 생성 시 기본적으로 전사공개로 생성됩니다.
  * 권한 설정은 폴더 수정(PATCH /admin/wiki/folders/:id/public)을 통해 변경할 수 있습니다.
  * 
- * ⚠️ 루트 폴더: parentId는 필수입니다. 루트 폴더는 시스템에 의해 자동으로 생성되며 직접 생성할 수 없습니다.
+ * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
  */
 export class CreateFolderDto {
   @ApiProperty({ description: '폴더명', example: '회의록' })
@@ -29,13 +29,13 @@ export class CreateFolderDto {
   @MinLength(1, { message: 'name은 최소 1자 이상이어야 합니다.' })
   name: string;
 
-  @ApiProperty({
-    description: '부모 폴더 ID (필수)',
+  @ApiPropertyOptional({
+    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
     example: 'uuid-of-parent-folder',
   })
-  @IsNotEmpty({ message: 'parentId는 필수입니다.' })
+  @IsOptional()
   @IsUUID(undefined, { message: 'parentId는 유효한 UUID여야 합니다.' })
-  parentId: string;
+  parentId?: string | null;
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0, default: 0 })
   @IsOptional()
@@ -47,7 +47,7 @@ export class CreateFolderDto {
 /**
  * 파일 생성 DTO
  * 
- * ⚠️ parentId는 필수입니다. 파일은 반드시 폴더 안에 생성되어야 합니다.
+ * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
  */
 export class CreateFileDto {
   @ApiProperty({ description: '파일명', example: '2024년 전사 회의록' })
@@ -56,13 +56,13 @@ export class CreateFileDto {
   @MinLength(1, { message: 'name은 최소 1자 이상이어야 합니다.' })
   name: string;
 
-  @ApiProperty({
-    description: '부모 폴더 ID (필수)',
+  @ApiPropertyOptional({
+    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
     example: 'uuid-of-parent-folder',
   })
-  @IsNotEmpty({ message: 'parentId는 필수입니다.' })
+  @IsOptional()
   @IsUUID(undefined, { message: 'parentId는 유효한 UUID여야 합니다.' })
-  parentId: string;
+  parentId?: string | null;
 
   @ApiPropertyOptional({
     description: '문서 제목',
@@ -129,7 +129,7 @@ export class CreateFileDto {
 /**
  * 빈 파일 생성 DTO
  * 
- * ⚠️ parentId는 필수입니다. 파일은 반드시 폴더 안에 생성되어야 합니다.
+ * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
  */
 export class CreateEmptyFileDto {
   @ApiProperty({ description: '파일명', example: '새 문서' })
@@ -138,13 +138,13 @@ export class CreateEmptyFileDto {
   @MinLength(1, { message: 'name은 최소 1자 이상이어야 합니다.' })
   name: string;
 
-  @ApiProperty({
-    description: '부모 폴더 ID (필수)',
+  @ApiPropertyOptional({
+    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
     example: 'uuid-of-parent-folder',
   })
-  @IsNotEmpty({ message: 'parentId는 필수입니다.' })
+  @IsOptional()
   @IsUUID(undefined, { message: 'parentId는 유효한 UUID여야 합니다.' })
-  parentId: string;
+  parentId?: string | null;
 
   @ApiPropertyOptional({
     description: '공개 여부 (기본값: true - 상위 폴더 권한 cascading, false - 완전 비공개)',

@@ -266,16 +266,12 @@ export class WikiController {
       '새로운 폴더를 생성합니다.\n\n' +
       '⚠️ **권한 정책**: 폴더는 기본적으로 전사공개로 생성됩니다.\n' +
       '권한 설정은 폴더 공개 수정(PATCH /admin/wiki/folders/:id/public)을 통해 변경할 수 있습니다.\n\n' +
-      '⚠️ **루트 폴더**: parentId는 필수입니다. 루트 폴더는 시스템에 의해 자동으로 생성되며 직접 생성할 수 없습니다.',
+      '⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiResponse({
     status: 201,
     description: '폴더 생성 성공',
     type: WikiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'parentId가 없거나 잘못된 요청',
   })
   async 폴더를_생성한다(
     @Body() dto: CreateFolderDto,
@@ -284,7 +280,7 @@ export class WikiController {
     try {
       const folder = await this.wikiBusinessService.폴더를_생성한다({
         name: dto.name,
-        parentId: dto.parentId,
+        parentId: dto.parentId || null,
         isPublic: true, // 기본적으로 전사공개
         permissionRankIds: null,
         permissionPositionIds: null,
@@ -663,16 +659,12 @@ export class WikiController {
       '⚠️ **권한 정책**:\n' +
       '- `isPublic: true` (기본값) → 상위 폴더 권한 cascading\n' +
       '- `isPublic: false` → 완전 비공개 (아무도 접근 불가)\n\n' +
-      '⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
+      '⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiResponse({
     status: 201,
     description: '빈 파일 생성 성공',
     type: WikiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'parentId가 없거나 잘못된 요청',
   })
   async 빈_파일을_생성한다(
     @Body() dto: CreateEmptyFileDto,
@@ -691,7 +683,7 @@ export class WikiController {
     try {
       const file = await this.wikiBusinessService.빈_파일을_생성한다(
         dto.name,
-        dto.parentId,
+        dto.parentId || null,
         user.id,
         dto.isPublic,
       );
@@ -729,11 +721,11 @@ export class WikiController {
       '⚠️ **권한 정책**:\n' +
       '- `isPublic: true` (기본값) → 상위 폴더 권한 cascading\n' +
       '- `isPublic: false` → 완전 비공개 (아무도 접근 불가)\n\n' +
-      '⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
+      '⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiBody({
     description:
-      '⚠️ **중요**: name과 parentId는 필수입니다.\n\n' +
+      '⚠️ **중요**: name은 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 첨부파일과 함께 생성\n' +
       '- `files`를 전송하지 않으면: 파일 없이 생성',
@@ -747,7 +739,7 @@ export class WikiController {
         },
         parentId: {
           type: 'string',
-          description: '부모 폴더 ID (필수)',
+          description: '부모 폴더 ID (선택, 없으면 루트 폴더 하위)',
           example: 'uuid',
         },
         title: {
@@ -772,7 +764,7 @@ export class WikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
-      required: ['name', 'parentId'],
+      required: ['name'],
     },
   })
   @ApiResponse({
@@ -782,7 +774,7 @@ export class WikiController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청 (name 또는 parentId 없음)',
+    description: '잘못된 요청 (name 없음)',
   })
   async 파일을_생성한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -792,7 +784,7 @@ export class WikiController {
     try {
       const file = await this.wikiBusinessService.파일을_생성한다(
         dto.name,
-        dto.parentId,
+        dto.parentId || null,
         dto.title || null,
         dto.content || null,
         user.id,

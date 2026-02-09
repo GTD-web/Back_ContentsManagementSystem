@@ -466,16 +466,12 @@ export class UserWikiController {
   @Post('files/empty')
   @ApiOperation({
     summary: '빈 파일 생성 (사용자용)',
-    description: '빈 파일을 생성합니다. 기본적으로 전사공개로 생성됩니다.\n\n⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
+    description: '빈 파일을 생성합니다. 기본적으로 전사공개로 생성됩니다.\n\n⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiResponse({
     status: 201,
     description: '빈 파일 생성 성공',
     type: WikiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'parentId가 없거나 잘못된 요청',
   })
   async 빈_파일을_생성한다(
     @Body() dto: CreateEmptyFileDto,
@@ -492,7 +488,7 @@ export class UserWikiController {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.빈_파일을_생성한다(
       dto.name,
-      dto.parentId,
+      dto.parentId || null,
       user.id,
       dto.isPublic,
     );
@@ -513,10 +509,10 @@ export class UserWikiController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '파일 생성 (사용자용)',
-    description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
+    description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiBody({
-    description: 'name과 parentId는 필수입니다.',
+    description: 'name은 필수입니다.',
     schema: {
       type: 'object',
       properties: {
@@ -527,7 +523,7 @@ export class UserWikiController {
         },
         parentId: {
           type: 'string',
-          description: '부모 폴더 ID (필수)',
+          description: '부모 폴더 ID (선택, 없으면 루트 폴더 하위)',
         },
         title: {
           type: 'string',
@@ -547,17 +543,13 @@ export class UserWikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
-      required: ['name', 'parentId'],
+      required: ['name'],
     },
   })
   @ApiResponse({
     status: 201,
     description: '파일 생성 성공',
     type: WikiResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'name 또는 parentId가 없거나 잘못된 요청',
   })
   async 파일을_생성한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -567,7 +559,7 @@ export class UserWikiController {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_생성한다(
       dto.name,
-      dto.parentId,
+      dto.parentId || null,
       dto.title || null,
       dto.content || null,
       user.id,

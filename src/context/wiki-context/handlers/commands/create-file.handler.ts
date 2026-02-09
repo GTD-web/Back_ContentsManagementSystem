@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Logger, BadRequestException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { WikiFileSystemService } from '@domain/sub/wiki-file-system/wiki-file-system.service';
 import { CreateFileDto, CreateWikiResult } from '../../interfaces/wiki-context.interface';
 
@@ -22,14 +22,18 @@ export class CreateFileHandler
 
     this.logger.log(`파일 생성 커맨드 실행 - 이름: ${data.name}`);
 
-    // parentId가 null인 경우 (루트 레벨 파일 생성 시도) 검증
-    if (!data.parentId || data.parentId === null) {
-      throw new BadRequestException(
-        'parentId는 필수입니다. 파일은 반드시 폴더 안에 생성되어야 합니다.'
-      );
+    // parentId가 null이거나 없으면 루트 폴더 ID로 자동 설정
+    let parentId = data.parentId;
+    if (!parentId) {
+      const rootFolder = await this.wikiFileSystemService.루트_폴더를_조회하거나_생성한다();
+      parentId = rootFolder.id;
+      this.logger.log(`parentId가 없어 루트 폴더로 설정됨 - 루트 ID: ${parentId}`);
     }
 
-    const file = await this.wikiFileSystemService.파일을_생성한다(data);
+    const file = await this.wikiFileSystemService.파일을_생성한다({
+      ...data,
+      parentId,
+    });
 
     return {
       id: file.id,
