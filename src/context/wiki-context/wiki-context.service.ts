@@ -153,6 +153,13 @@ export class WikiContextService {
   }
 
   /**
+   * 위키 경로를 직접 조회한다 (parentId를 따라가는 방식)
+   */
+  async 위키_경로를_직접_조회한다(wikiId: string): Promise<WikiFileSystem[]> {
+    return await this.wikiFileSystemService.상위_경로를_직접_조회한다(wikiId);
+  }
+
+  /**
    * 위키를 검색한다
    */
   async 위키를_검색한다(

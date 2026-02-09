@@ -179,6 +179,36 @@ export class WikiFileSystemService {
   }
 
   /**
+   * 상위 경로를 조회한다 (Breadcrumb용) - parentId를 따라가는 방식
+   */
+  async 상위_경로를_직접_조회한다(
+    wikiId: string,
+  ): Promise<WikiFileSystem[]> {
+    const path: WikiFileSystem[] = [];
+    let currentId: string | null = wikiId;
+
+    // 최대 100번 반복 (무한 루프 방지)
+    let iterations = 0;
+    const maxIterations = 100;
+
+    while (currentId && iterations < maxIterations) {
+      const wiki = await this.wikiRepository.findOne({
+        where: { id: currentId, deletedAt: IsNull() },
+      });
+
+      if (!wiki) {
+        break;
+      }
+
+      path.unshift(wiki); // 앞에 추가 (루트가 첫 번째가 되도록)
+      currentId = wiki.parentId;
+      iterations++;
+    }
+
+    return path;
+  }
+
+  /**
    * 상위 경로를 조회한다 (Breadcrumb용)
    */
   async 상위_경로를_조회한다(

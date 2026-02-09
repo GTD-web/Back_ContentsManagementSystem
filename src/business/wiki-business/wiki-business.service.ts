@@ -264,7 +264,8 @@ export class WikiBusinessService {
   async 위키_경로를_조회한다(wikiId: string): Promise<WikiFileSystem[]> {
     this.logger.log(`위키 경로 조회 시작 - Wiki ID: ${wikiId}`);
 
-    const breadcrumb = await this.wikiContextService.위키_경로를_조회한다(wikiId);
+    // parentId를 직접 따라가는 방식으로 변경
+    const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(wikiId);
 
     this.logger.log(`위키 경로 조회 완료 - 총 ${breadcrumb.length}개`);
 
@@ -278,12 +279,11 @@ export class WikiBusinessService {
     wikiId: string,
   ): Promise<{ path: string[]; pathIds: string[] }> {
     try {
-      const breadcrumb = await this.wikiContextService.위키_경로를_조회한다(wikiId);
+      // parentId를 직접 따라가는 방식으로 변경
+      const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(wikiId);
       
       // breadcrumb은 자신을 포함하므로, 자신을 제외하고 부모들만 추출
-      const parents = breadcrumb
-        .filter(item => item.id !== wikiId)
-        .sort((a, b) => a.depth - b.depth); // depth 오름차순 정렬 (루트부터)
+      const parents = breadcrumb.filter(item => item.id !== wikiId);
       
       const path = parents.map(item => item.name);
       const pathIds = parents.map(item => item.id);

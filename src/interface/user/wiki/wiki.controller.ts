@@ -164,11 +164,9 @@ export class UserWikiController {
       folder.id,
     );
     
-    // 경로 정보 조회
+    // 경로 정보 조회 (이미 루트부터 정렬되어 있음)
     const breadcrumb = await this.wikiBusinessService.위키_경로를_조회한다(folder.id);
-    const parents = breadcrumb
-      .filter(item => item.id !== folder.id)
-      .sort((a, b) => a.depth - b.depth);
+    const parents = breadcrumb.filter(item => item.id !== folder.id);
     
     const pathNames = parents.map(item => item.name);
     const pathIds = parents.map(item => item.id);
