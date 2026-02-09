@@ -926,7 +926,7 @@ export class AnnouncementController {
       throw new BadRequestException('카테고리를 선택해주세요.');
     }
 
-    // 파일 업로드 처리 (공지사항명/업로드파일들/ 경로로 저장)
+    // 파일 업로드 처리 (/announcements/공지사항명/업로드파일들/ 경로로 저장)
     let attachments: Array<{
       fileName: string;
       fileUrl: string;
@@ -936,7 +936,7 @@ export class AnnouncementController {
     if (files && files.length > 0) {
       // 공지사항 제목을 경로에 포함
       const announcementTitle = parsedDto.title || '제목없음';
-      const pathSegments = [announcementTitle, '업로드파일들'];
+      const pathSegments = ['announcements', announcementTitle, '업로드파일들'];
       attachments = await this.fileUploadService.uploadFilesWithPath(files, pathSegments);
     }
 
@@ -1277,7 +1277,7 @@ export class AnnouncementController {
     // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
     const parsedDto = this.parseFormDataDto(dto);
 
-    // 파일 업로드 처리 (공지사항명/업로드파일들/ 경로로 저장)
+    // 파일 업로드 처리 (/announcements/공지사항명/업로드파일들/ 경로로 저장)
     let attachments:
       | Array<{
           fileName: string;
@@ -1290,7 +1290,7 @@ export class AnnouncementController {
       // 공지사항 제목 조회 (수정 전의 제목 또는 새로운 제목)
       const existingAnnouncement = await this.announcementBusinessService.공지사항을_조회한다(id);
       const announcementTitle = parsedDto.title || existingAnnouncement.title || '제목없음';
-      const pathSegments = [announcementTitle, '업로드파일들'];
+      const pathSegments = ['announcements', announcementTitle, '업로드파일들'];
       attachments = await this.fileUploadService.uploadFilesWithPath(files, pathSegments);
     }
 
