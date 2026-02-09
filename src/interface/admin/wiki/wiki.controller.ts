@@ -547,6 +547,59 @@ export class WikiController {
   }
 
   /**
+   * 위키 파일 첨부파일을 개별 삭제한다
+   */
+  @Delete('files/:id/attachments')
+  @ApiOperation({
+    summary: '위키 파일 첨부파일 개별 삭제',
+    description:
+      '위키 파일의 특정 첨부파일을 삭제합니다.\n\n' +
+      '**쿼리 파라미터:**\n' +
+      '- `fileUrl`: 삭제할 파일의 URL (필수)\n\n' +
+      '⚠️ **주의사항:**\n' +
+      '- 파일 URL은 정확히 일치해야 합니다\n' +
+      '- 실제 S3 파일은 삭제되지 않고, DB에서만 소프트 삭제됩니다',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '위키 파일 ID (UUID)',
+    type: String,
+    required: true,
+  })
+  @ApiQuery({
+    name: 'fileUrl',
+    description: '삭제할 파일의 URL',
+    type: String,
+    required: true,
+    example: 'https://lumir-admin.s3.ap-northeast-2.amazonaws.com/wiki/file.pdf',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '첨부파일 삭제 성공',
+    type: WikiResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '위키 파일 또는 첨부파일을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '파일 타입만 첨부파일을 삭제할 수 있습니다',
+  })
+  async 위키_파일_첨부파일을_삭제한다(
+    @Param('id') id: string,
+    @Query('fileUrl') fileUrl: string,
+  ): Promise<WikiResponseDto> {
+    const wiki =
+      await this.wikiBusinessService.위키_첨부파일을_삭제한다(
+        id,
+        fileUrl,
+      );
+
+    return WikiResponseDto.from(wiki);
+  }
+
+  /**
    * 파일 경로를 수정한다
    */
   @Patch('files/:id/path')
@@ -913,9 +966,9 @@ export class WikiController {
     description:
       '⚠️ **중요**: name은 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
-      '- `files`를 전송하면: 기존 첨부파일 전부 삭제 → 새 파일들로 교체\n' +
-      '- `files`를 전송하지 않으면: 기존 첨부파일 전부 삭제 (파일 없음)\n' +
-      '- 기존 파일을 유지하려면 반드시 해당 파일을 다시 전송해야 합니다',
+      '- `files`를 전송하면: 기존 첨부파일 유지 + 새 파일들 추가\n' +
+      '- `files`를 전송하지 않으면: 기존 첨부파일 유지 (변경 없음)\n' +
+      '- 개별 파일 삭제는 별도 엔드포인트(`DELETE /files/:id/attachments`) 사용',
     schema: {
       type: 'object',
       properties: {
@@ -938,7 +991,7 @@ export class WikiController {
           type: 'array',
           items: { type: 'string', format: 'binary' },
           description:
-            '첨부파일 목록 (선택) - 전송한 파일들로 완전히 교체됩니다',
+            '첨부파일 목록 (선택) - 기존 파일은 유지되고 새 파일들이 추가됩니다',
         },
       },
       required: ['name'],

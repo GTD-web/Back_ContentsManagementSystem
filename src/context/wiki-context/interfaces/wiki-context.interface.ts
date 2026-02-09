@@ -32,6 +32,7 @@ export interface CreateFileDto extends BaseCreateFileDto {
     fileUrl: string;
     fileSize: number;
     mimeType: string;
+    deletedAt?: Date | null;
   }> | null;
   permissionRankIds?: string[] | null;
   permissionPositionIds?: string[] | null;
@@ -65,6 +66,7 @@ export interface UpdateWikiFileDto {
     fileUrl: string;
     fileSize: number;
     mimeType: string;
+    deletedAt?: Date | null;
   }> | null;
   updatedBy?: string;
 }

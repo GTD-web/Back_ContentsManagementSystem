@@ -117,6 +117,16 @@ export class WikiContextService {
   }
 
   /**
+   * 위키 첨부파일을 삭제한다
+   */
+  async 위키_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<WikiFileSystem> {
+    return await this.wikiFileSystemService.위키_첨부파일을_삭제한다(id, fileUrl);
+  }
+
+  /**
    * 위키 상세를 조회한다
    */
   async 위키_상세를_조회한다(id: string): Promise<WikiFileSystem> {

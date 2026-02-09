@@ -70,6 +70,7 @@ export class WikiFileSystemService {
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> | null;
     isPublic?: boolean;
     order?: number;
@@ -268,6 +269,7 @@ export class WikiFileSystemService {
         fileUrl: string;
         fileSize: number;
         mimeType: string;
+        deletedAt?: Date | null;
       }> | null;
       isPublic?: boolean;
       permissionRankIds?: string[] | null;
@@ -297,6 +299,42 @@ export class WikiFileSystemService {
     if (data.updatedBy) wiki.updatedBy = data.updatedBy;
 
     return await this.wikiRepository.save(wiki);
+  }
+
+  /**
+   * 위키 첨부파일을 개별 삭제한다 (소프트 삭제)
+   */
+  async 위키_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<WikiFileSystem> {
+    this.logger.log(`위키 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`);
+
+    const wiki = await this.ID로_조회한다(id);
+
+    // 파일 타입인지 확인
+    if (wiki.type !== WikiFileSystemType.FILE) {
+      throw new BadRequestException('파일 타입만 첨부파일을 삭제할 수 있습니다.');
+    }
+
+    const attachments = wiki.attachments || [];
+    
+    // 해당 파일 찾기
+    const fileIndex = attachments.findIndex((att: any) => att.fileUrl === fileUrl);
+    
+    if (fileIndex === -1) {
+      throw new NotFoundException(`첨부파일을 찾을 수 없습니다. URL: ${fileUrl}`);
+    }
+
+    // 소프트 삭제 처리
+    attachments[fileIndex].deletedAt = new Date();
+    wiki.attachments = attachments;
+
+    const updated = await this.wikiRepository.save(wiki);
+
+    this.logger.log(`위키 첨부파일 삭제 완료 - ID: ${id}`);
+    
+    return updated;
   }
 
   /**

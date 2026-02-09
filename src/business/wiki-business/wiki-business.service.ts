@@ -426,6 +426,7 @@ export class WikiBusinessService {
           fileUrl: string;
           fileSize: number;
           mimeType: string;
+          deletedAt?: Date | null;
         }>
       | undefined = undefined;
 
@@ -519,23 +520,18 @@ export class WikiBusinessService {
     // 1. 기존 파일 조회
     const existingFile = await this.wikiContextService.위키_상세를_조회한다(id);
 
-    // 2. 기존 첨부파일 전부 삭제
+    // 2. 기존 첨부파일 유지 (삭제되지 않은 파일만)
     const currentAttachments = existingFile.attachments || [];
-    if (currentAttachments.length > 0) {
-      const filesToDelete = currentAttachments.map((att) => att.fileUrl);
-      this.logger.log(
-        `S3에서 기존 ${filesToDelete.length}개의 파일 삭제 시작`,
-      );
-      await this.storageService.deleteFiles(filesToDelete);
-      this.logger.log(`S3 파일 삭제 완료`);
-    }
+    const activeAttachments = currentAttachments.filter((att: any) => !att.deletedAt);
+    this.logger.log(`기존 활성 첨부파일 수: ${activeAttachments.length}개`);
 
     // 3. 새 파일 업로드 처리
-    let finalAttachments: Array<{
+    let newAttachments: Array<{
       fileName: string;
       fileUrl: string;
       fileSize: number;
       mimeType: string;
+      deletedAt?: Date | null;
     }> = [];
 
     if (files && files.length > 0) {
@@ -562,22 +558,26 @@ export class WikiBusinessService {
         files,
         folderPath,
       );
-      finalAttachments = uploadedFiles.map((file) => ({
+      newAttachments = uploadedFiles.map((file) => ({
         fileName: file.fileName,
         fileUrl: file.url,
         fileSize: file.fileSize,
         mimeType: file.mimeType,
       }));
-      this.logger.log(`파일 업로드 완료: ${finalAttachments.length}개`);
+      this.logger.log(`파일 업로드 완료: ${newAttachments.length}개`);
     }
 
-    // 4. 파일 정보 업데이트
+    // 4. 기존 첨부파일 + 새 첨부파일 합치기
+    const finalAttachments = [...activeAttachments, ...newAttachments];
+    this.logger.log(`최종 첨부파일 수: ${finalAttachments.length}개`);
+
+    // 5. 파일 정보 업데이트
     await this.wikiContextService.위키_파일을_수정한다(id, {
       attachments: finalAttachments,
       updatedBy,
     });
 
-    // 5. 내용 수정
+    // 6. 내용 수정
     const result = await this.wikiContextService.위키를_수정한다(id, {
       name,
       title,
@@ -586,6 +586,28 @@ export class WikiBusinessService {
     });
 
     this.logger.log(`파일 수정 완료 - ID: ${id}`);
+
+    return result;
+  }
+
+  /**
+   * 위키 첨부파일을 삭제한다
+   */
+  async 위키_첨부파일을_삭제한다(
+    id: string,
+    fileUrl: string,
+  ): Promise<WikiFileSystem> {
+    this.logger.log(
+      `위키 첨부파일 삭제 시작 - ID: ${id}, 파일: ${fileUrl}`,
+    );
+
+    const result =
+      await this.wikiContextService.위키_첨부파일을_삭제한다(
+        id,
+        fileUrl,
+      );
+
+    this.logger.log(`위키 첨부파일 삭제 완료 - ID: ${id}`);
 
     return result;
   }

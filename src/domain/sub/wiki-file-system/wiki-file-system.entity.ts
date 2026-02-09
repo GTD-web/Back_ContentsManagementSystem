@@ -112,6 +112,7 @@ export class WikiFileSystem extends BaseEntity<WikiFileSystem> {
     fileUrl: string;
     fileSize: number;
     mimeType: string;
+    deletedAt?: Date | null;
   }> | null;
 
   @Column({
