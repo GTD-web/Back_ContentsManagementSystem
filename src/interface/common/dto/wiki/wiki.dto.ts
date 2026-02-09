@@ -10,7 +10,7 @@ import {
   IsNotEmpty,
   MinLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-system-type.types';
 
@@ -86,6 +86,11 @@ export class CreateFileDto {
     default: true,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean({ message: 'isPublic은 boolean 값이어야 합니다.' })
   isPublic?: boolean;
 
@@ -152,6 +157,11 @@ export class CreateEmptyFileDto {
     default: true,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean({ message: 'isPublic은 boolean 값이어야 합니다.' })
   isPublic?: boolean;
 }
@@ -170,6 +180,11 @@ export class UpdateFolderDto {
     example: true,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   isPublic?: boolean;
 
@@ -249,6 +264,11 @@ export class UpdateFileDto {
  */
 export class UpdateWikiPublicDto {
   @ApiProperty({ description: '공개 여부', example: true })
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   isPublic: boolean;
 
@@ -290,6 +310,11 @@ export class UpdateFilePublicDto {
   @ApiProperty({ 
     description: '공개 여부 (true: 상위 폴더 권한 cascading, false: 완전 비공개)', 
     example: true 
+  })
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
   })
   @IsBoolean()
   isPublic: boolean;
