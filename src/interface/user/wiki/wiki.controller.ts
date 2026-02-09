@@ -55,7 +55,7 @@ export class UserWikiController {
     summary: '폴더 구조 조회 (사용자용)',
     description:
       '사용자가 접근 가능한 폴더 구조를 트리 형태로 조회합니다. ' +
-      '전사공개 또는 사용자의 부서/직급/직책에 해당하는 폴더와 파일만 조회됩니다.',
+      '전사공개 또는 사용자의 부서/직급/직책에 해당하는 폴더와 파일만 조회되며, 경로 정보(path, pathIds)도 함께 제공됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -66,15 +66,15 @@ export class UserWikiController {
     name: 'ancestorId',
     required: false,
     type: String,
-    description: '조상 폴더 ID (없으면 루트부터)',
+    description: '조상 폴더 ID (없으면 최상위부터)',
     example: 'uuid-of-ancestor-folder',
   })
   @ApiQuery({
     name: 'excludeRoot',
     required: false,
     type: Boolean,
-    description: '루트 폴더 제외 여부 (true: 루트 폴더 제외, false: 포함)',
-    example: true,
+    description: '(더 이상 사용되지 않음 - 하위 호환성을 위해 유지)',
+    example: false,
   })
   async 폴더_구조를_가져온다(
     @CurrentUser() user: AuthenticatedUser,
@@ -138,19 +138,24 @@ export class UserWikiController {
   @ApiOperation({
     summary: '경로로 폴더 조회 (사용자용)',
     description:
-      '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환합니다.\n\n' +
+      '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환하며, 경로 정보(path, pathIds)도 함께 제공됩니다.\n\n' +
       '**경로 형식**:\n' +
-      '- `/` → 루트 폴더 반환 (시스템 자동 생성)\n' +
-      '- `/폴더1/폴더2` 또는 `폴더1/폴더2` → 루트 하위의 폴더 경로',
+      '- `/폴더1` → 최상위의 "폴더1" 폴더\n' +
+      '- `/폴더1/폴더2` → "폴더1" 하위의 "폴더2" 폴더\n\n' +
+      '⚠️ **주의**: `/` 경로는 사용할 수 없습니다.',
   })
   @ApiResponse({
     status: 200,
     description: '폴더 조회 성공',
     type: WikiResponseDto,
   })
+  @ApiResponse({
+    status: 400,
+    description: '루트 경로(/)는 사용할 수 없음',
+  })
   @ApiQuery({
     name: 'path',
-    description: '폴더 경로 (예: / 또는 /폴더1/폴더2)',
+    description: '폴더 경로 (예: /폴더1/폴더2)',
     example: '/회의록/2024년',
     required: true,
   })

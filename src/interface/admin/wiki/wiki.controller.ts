@@ -73,7 +73,7 @@ export class WikiController {
   @ApiOperation({
     summary: '폴더 구조 조회',
     description:
-      '전체 폴더 구조를 트리 형태로 조회합니다. 각 폴더는 하위 폴더와 파일을 포함합니다.',
+      '전체 폴더 구조를 트리 형태로 조회합니다. 각 폴더는 하위 폴더와 파일을 포함하며, 경로 정보(path, pathIds)도 함께 제공됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -84,15 +84,15 @@ export class WikiController {
     name: 'ancestorId',
     required: false,
     type: String,
-    description: '조상 폴더 ID (없으면 루트부터)',
+    description: '조상 폴더 ID (없으면 최상위부터)',
     example: 'uuid-of-ancestor-folder',
   })
   @ApiQuery({
     name: 'excludeRoot',
     required: false,
     type: Boolean,
-    description: '루트 폴더 제외 여부 (true: 루트 폴더 제외, false: 포함)',
-    example: true,
+    description: '(더 이상 사용되지 않음 - 하위 호환성을 위해 유지)',
+    example: false,
   })
   async 폴더_구조를_가져온다(
     @Query('ancestorId') ancestorId?: string,
@@ -175,21 +175,26 @@ export class WikiController {
   @ApiOperation({
     summary: '경로로 폴더 조회',
     description:
-      '폴더 경로로 폴더를 조회합니다. 폴더 상세 정보와 하위 폴더/파일 목록을 반환합니다.\n\n' +
+      '폴더 경로로 폴더를 조회합니다. 폴더 상세 정보와 하위 폴더/파일 목록을 반환하며, 경로 정보(path, pathIds)도 함께 제공됩니다.\n\n' +
       '**경로 형식**:\n' +
-      '- `/` → 루트 폴더 반환 (시스템 자동 생성)\n' +
-      '- `/폴더1/폴더2` 또는 `폴더1/폴더2` → 루트 하위의 폴더 경로\n' +
-      '- 각 폴더 이름은 `/`로 구분\n' +
-      '- 예: `/회의록/2024년` 또는 `회의록/2024년`',
+      '- `/폴더1` → 최상위의 "폴더1" 폴더\n' +
+      '- `/폴더1/폴더2` → "폴더1" 하위의 "폴더2" 폴더\n' +
+      '- `폴더1/폴더2` (슬래시 없이도 가능)\n' +
+      '- 각 폴더 이름은 `/`로 구분\n\n' +
+      '⚠️ **주의**: `/` 경로는 사용할 수 없습니다. 최상위 폴더들을 조회하려면 폴더 구조 조회 API를 사용하세요.',
   })
   @ApiResponse({
     status: 200,
-    description: '폴더 조회 성공 (하위 항목 포함)',
+    description: '폴더 조회 성공 (하위 항목 및 경로 정보 포함)',
     type: WikiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '루트 경로(/)는 사용할 수 없음',
   })
   @ApiQuery({
     name: 'path',
-    description: '폴더 경로 (예: / 또는 /폴더1/폴더2)',
+    description: '폴더 경로 (예: /폴더1/폴더2)',
     example: '/회의록/2024년',
     required: true,
   })
@@ -332,16 +337,12 @@ export class WikiController {
   @Delete('folders/:id')
   @ApiOperation({
     summary: '폴더 삭제',
-    description: '폴더 및 하위 모든 항목을 삭제합니다.\n\n⚠️ **루트 폴더는 삭제할 수 없습니다.**',
+    description: '폴더 및 하위 모든 항목을 삭제합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '폴더 삭제 성공',
     schema: { type: 'object', properties: { success: { type: 'boolean' } } },
-  })
-  @ApiResponse({
-    status: 400,
-    description: '루트 폴더 삭제 시도',
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
   async 폴더를_삭제한다(
@@ -357,7 +358,7 @@ export class WikiController {
   @Delete('folders/:id/only')
   @ApiOperation({
     summary: '폴더만 삭제',
-    description: '폴더만 삭제합니다. 하위 항목이 있으면 실패합니다.\n\n⚠️ **루트 폴더는 삭제할 수 없습니다.**',
+    description: '폴더만 삭제합니다. 하위 항목이 있으면 실패합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -366,7 +367,7 @@ export class WikiController {
   })
   @ApiResponse({
     status: 400,
-    description: '루트 폴더 삭제 시도 또는 하위 항목이 있는 경우',
+    description: '하위 항목이 있는 경우',
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
   async 폴더만_삭제한다(

@@ -22,17 +22,10 @@ export class CreateFileHandler
 
     this.logger.log(`파일 생성 커맨드 실행 - 이름: ${data.name}`);
 
-    // parentId가 null이거나 없으면 루트 폴더 ID로 자동 설정
-    let parentId = data.parentId;
-    if (!parentId) {
-      const rootFolder = await this.wikiFileSystemService.루트_폴더를_조회하거나_생성한다();
-      parentId = rootFolder.id;
-      this.logger.log(`parentId가 없어 루트 폴더로 설정됨 - 루트 ID: ${parentId}`);
-    }
-
+    // parentId가 없으면 null로 설정 (최상위에 파일 생성)
     const file = await this.wikiFileSystemService.파일을_생성한다({
       ...data,
-      parentId,
+      parentId: data.parentId || null,
     });
 
     return {

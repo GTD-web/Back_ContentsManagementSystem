@@ -20,7 +20,7 @@ import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-syste
  * ⚠️ 권한 정책: 폴더 생성 시 기본적으로 전사공개로 생성됩니다.
  * 권한 설정은 폴더 수정(PATCH /admin/wiki/folders/:id/public)을 통해 변경할 수 있습니다.
  * 
- * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
+ * ⚠️ parentId: 없으면 최상위 폴더로 생성됩니다 (parentId: null).
  */
 export class CreateFolderDto {
   @ApiProperty({ description: '폴더명', example: '회의록' })
@@ -30,7 +30,7 @@ export class CreateFolderDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
+    description: '부모 폴더 ID (없으면 최상위 폴더로 생성)',
     example: 'uuid-of-parent-folder',
   })
   @IsOptional()
@@ -47,7 +47,7 @@ export class CreateFolderDto {
 /**
  * 파일 생성 DTO
  * 
- * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
+ * ⚠️ parentId: 없으면 최상위에 파일이 생성됩니다 (parentId: null).
  */
 export class CreateFileDto {
   @ApiProperty({ description: '파일명', example: '2024년 전사 회의록' })
@@ -57,7 +57,7 @@ export class CreateFileDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
+    description: '부모 폴더 ID (없으면 최상위에 파일 생성)',
     example: 'uuid-of-parent-folder',
   })
   @IsOptional()
@@ -129,7 +129,7 @@ export class CreateFileDto {
 /**
  * 빈 파일 생성 DTO
  * 
- * ⚠️ parentId: 없으면 자동으로 루트 폴더 하위에 생성됩니다.
+ * ⚠️ parentId: 없으면 최상위에 파일이 생성됩니다 (parentId: null).
  */
 export class CreateEmptyFileDto {
   @ApiProperty({ description: '파일명', example: '새 문서' })
@@ -139,7 +139,7 @@ export class CreateEmptyFileDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: '부모 폴더 ID (없으면 루트 폴더 하위에 생성)',
+    description: '부모 폴더 ID (없으면 최상위에 파일 생성)',
     example: 'uuid-of-parent-folder',
   })
   @IsOptional()

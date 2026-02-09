@@ -31,7 +31,6 @@ import { CategoryService } from '@domain/common/category/category.service';
 import { AnnouncementService } from '@domain/core/announcement/announcement.service';
 import { NewsService } from '@domain/core/news/news.service';
 import { SurveyService } from '@domain/sub/survey/survey.service';
-import { WikiFileSystemService } from '@domain/sub/wiki-file-system/wiki-file-system.service';
 
 // Context Services
 import { CompanyContextService } from '@context/company-context/company-context.service';
@@ -105,7 +104,6 @@ export class SeedDataContextService {
     private readonly announcementService: AnnouncementService,
     private readonly newsService: NewsService,
     private readonly surveyService: SurveyService,
-    private readonly wikiFileSystemService: WikiFileSystemService,
     private readonly companyContextService: CompanyContextService,
     private readonly brochureContextService: BrochureContextService,
     private readonly electronicDisclosureContextService: ElectronicDisclosureContextService,
@@ -1640,15 +1638,11 @@ export class SeedDataContextService {
 
     let created = 0;
 
-    // 0. 루트 폴더 조회/생성
-    const rootFolder = await this.wikiFileSystemService.루트_폴더를_조회하거나_생성한다();
-    this.logger.debug(`루트 폴더 확인 완료 - ID: ${rootFolder.id}`);
-
-    // 1. 루트 하위 폴더들 생성
+    // 1. 최상위 폴더들 생성 (parentId: null)
     // "개발 가이드" - 전체 공개 (모든 직원 접근 가능)
     const devFolder = await this.wikiContextService.폴더를_생성한다({
       name: '개발 가이드',
-      parentId: rootFolder.id,
+      parentId: null,
       isPublic: true,
       createdBy: 'seed',
     });
@@ -1657,7 +1651,7 @@ export class SeedDataContextService {
     // "인사 규정" - 특정 부서만 접근 (인사팀, 경영지원팀 등)
     const hrFolder = await this.wikiContextService.폴더를_생성한다({
       name: '인사 규정',
-      parentId: rootFolder.id,
+      parentId: null,
       isPublic: departments.length > 0 ? false : true,
       permissionDepartmentIds:
         departments.length > 0
@@ -1672,7 +1666,7 @@ export class SeedDataContextService {
     // "프로젝트" - 특정 직급/직책만 접근 (과장급 이상)
     const projectFolder = await this.wikiContextService.폴더를_생성한다({
       name: '프로젝트',
-      parentId: rootFolder.id,
+      parentId: null,
       isPublic: rankCodes.length > 0 || positionCodes.length > 0 ? false : true,
       permissionRankIds:
         rankCodes.length > 0

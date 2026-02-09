@@ -106,17 +106,10 @@ export class WikiBusinessService {
   }): Promise<WikiFileSystem> {
     this.logger.log(`폴더 생성 시작 - 이름: ${data.name}`);
 
-    // parentId가 null이거나 없으면 루트 폴더 ID로 자동 설정
-    let parentId = data.parentId;
-    if (!parentId) {
-      const rootFolder = await this.wikiContextService.루트_폴더를_조회하거나_생성한다();
-      parentId = rootFolder.id;
-      this.logger.log(`parentId가 없어 루트 폴더로 설정됨 - 루트 ID: ${parentId}`);
-    }
-
+    // parentId가 없으면 null로 설정 (최상위 폴더)
     const result = await this.wikiContextService.폴더를_생성한다({
       ...data,
-      parentId,
+      parentId: data.parentId || null,
     });
 
     const folder = await this.wikiContextService.위키_상세를_조회한다(result.id);
@@ -221,7 +214,7 @@ export class WikiBusinessService {
     ancestorId?: string,
     excludeRoot: boolean = false,
   ): Promise<WikiFileSystem[]> {
-    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '루트 (모든 항목)'}, 루트 제외: ${excludeRoot}`);
+    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '최상위 (모든 항목)'}, 루트 제외: ${excludeRoot}`);
 
     let result: WikiFileSystem[];
 
@@ -232,15 +225,12 @@ export class WikiBusinessService {
       );
       result = structure.map((s) => s.wiki);
     } else {
-      // 루트부터 전체 구조 조회 - 모든 wiki 항목 가져오기
+      // 최상위부터 전체 구조 조회 - 모든 wiki 항목 가져오기
       result = await this.wikiContextService.모든_위키를_조회한다();
     }
 
-    // 루트 폴더 제외 옵션이 true이면 parentId가 null인 폴더 제외
-    if (excludeRoot && !ancestorId) {
-      result = result.filter(item => item.parentId !== null);
-      this.logger.log(`루트 폴더 제외 - 남은 항목: ${result.length}개`);
-    }
+    // excludeRoot는 이제 사용하지 않음 (parentId: null인 폴더가 최상위 폴더이므로 제외할 필요 없음)
+    // 파라미터는 하위 호환성을 위해 남겨둠
 
     // 각 항목에 경로 정보 추가
     const itemsWithPath = await Promise.all(
@@ -427,14 +417,6 @@ export class WikiBusinessService {
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
-    // parentId가 null이면 루트 폴더 ID로 자동 설정
-    let finalParentId = parentId;
-    if (!finalParentId) {
-      const rootFolder = await this.wikiContextService.루트_폴더를_조회하거나_생성한다();
-      finalParentId = rootFolder.id;
-      this.logger.log(`parentId가 없어 루트 폴더로 설정됨 - 루트 ID: ${finalParentId}`);
-    }
-
     // 파일 업로드 처리
     let attachments:
       | Array<{
@@ -462,7 +444,7 @@ export class WikiBusinessService {
 
     const result = await this.wikiContextService.파일을_생성한다({
       name,
-      parentId: finalParentId,
+      parentId: parentId || null,
       title,
       content,
       attachments,
@@ -488,17 +470,9 @@ export class WikiBusinessService {
   ): Promise<WikiFileSystem> {
     this.logger.log(`빈 파일 생성 시작 - 이름: ${name}`);
 
-    // parentId가 null이면 루트 폴더 ID로 자동 설정
-    let finalParentId = parentId;
-    if (!finalParentId) {
-      const rootFolder = await this.wikiContextService.루트_폴더를_조회하거나_생성한다();
-      finalParentId = rootFolder.id;
-      this.logger.log(`parentId가 없어 루트 폴더로 설정됨 - 루트 ID: ${finalParentId}`);
-    }
-
     const result = await this.wikiContextService.파일을_생성한다({
       name,
-      parentId: finalParentId,
+      parentId: parentId || null,
       isPublic,
       createdBy,
     });
