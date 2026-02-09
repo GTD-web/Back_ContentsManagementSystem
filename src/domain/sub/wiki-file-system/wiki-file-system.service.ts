@@ -329,6 +329,11 @@ export class WikiFileSystemService {
   async 위키를_삭제한다(id: string): Promise<boolean> {
     const wiki = await this.ID로_조회한다(id);
 
+    // 루트 폴더 삭제 방지
+    if (wiki.parentId === null && wiki.type === WikiFileSystemType.FOLDER) {
+      throw new BadRequestException('루트 폴더는 삭제할 수 없습니다.');
+    }
+
     // CASCADE로 자식도 자동 삭제됨
     await this.wikiRepository.softRemove(wiki);
 
@@ -343,6 +348,11 @@ export class WikiFileSystemService {
 
     if (wiki.type !== WikiFileSystemType.FOLDER) {
       throw new BadRequestException('폴더가 아닙니다.');
+    }
+
+    // 루트 폴더 삭제 방지
+    if (wiki.parentId === null) {
+      throw new BadRequestException('루트 폴더는 삭제할 수 없습니다.');
     }
 
     const children = await this.부모_ID로_자식_목록을_조회한다(id);
@@ -466,9 +476,49 @@ export class WikiFileSystemService {
   }
 
   /**
+   * 루트 폴더를 조회하거나 생성한다
+   * 
+   * @returns 루트 폴더 엔티티
+   */
+  async 루트_폴더를_조회하거나_생성한다(): Promise<WikiFileSystem> {
+    this.logger.log('루트 폴더 조회 시작');
+
+    // parentId가 null인 폴더 조회 (루트 폴더)
+    let rootFolder = await this.wikiRepository.findOne({
+      where: {
+        parentId: IsNull(),
+        type: WikiFileSystemType.FOLDER,
+        deletedAt: IsNull(),
+      },
+    });
+
+    // 루트 폴더가 없으면 자동 생성
+    if (!rootFolder) {
+      this.logger.log('루트 폴더가 존재하지 않아 자동 생성합니다.');
+      
+      rootFolder = this.wikiRepository.create({
+        name: '루트',
+        type: WikiFileSystemType.FOLDER,
+        parentId: null,
+        depth: 0,
+        isPublic: true,
+        permissionRankIds: null,
+        permissionPositionIds: null,
+        permissionDepartmentIds: null,
+        order: 0,
+      });
+
+      rootFolder = await this.wikiRepository.save(rootFolder);
+      this.logger.log(`루트 폴더 생성 완료 - ID: ${rootFolder.id}`);
+    }
+
+    return rootFolder;
+  }
+
+  /**
    * 경로로 폴더를 조회한다
    * 
-   * @param path - 폴더 경로 문자열 (예: "/루트폴더/하위폴더" 또는 "루트폴더/하위폴더")
+   * @param path - 폴더 경로 문자열 (예: "/" 또는 "/루트폴더/하위폴더" 또는 "루트폴더/하위폴더")
    * @returns 찾은 폴더 엔티티
    * @throws NotFoundException - 경로상의 폴더가 없을 경우
    */
@@ -483,33 +533,37 @@ export class WikiFileSystemService {
     // 경로 파싱: 앞뒤 슬래시 제거 및 빈 문자열 제거
     const trimmedPath = path.trim().replace(/^\/+|\/+$/g, '');
     
-    // 빈 경로인 경우 에러
-    if (!trimmedPath) {
-      throw new BadRequestException('폴더 경로가 비어있습니다.');
+    // 빈 경로인 경우 (/) - 루트 폴더 반환
+    if (!trimmedPath || trimmedPath === '') {
+      this.logger.log('루트 경로 요청됨 - 루트 폴더 반환');
+      return await this.루트_폴더를_조회하거나_생성한다();
     }
 
     const folderNames = trimmedPath.split('/').filter(name => name.length > 0);
     
     if (folderNames.length === 0) {
-      throw new BadRequestException('유효한 폴더 경로가 아닙니다.');
+      this.logger.log('빈 경로 - 루트 폴더 반환');
+      return await this.루트_폴더를_조회하거나_생성한다();
     }
 
     this.logger.log(`파싱된 경로: [${folderNames.join(' > ')}]`);
 
-    // 루트부터 순차적으로 폴더 찾기
-    let currentParentId: string | null = null;
-    let currentFolder: WikiFileSystem | null = null;
+    // 루트 폴더부터 시작
+    const rootFolder = await this.루트_폴더를_조회하거나_생성한다();
+    let currentParentId: string = rootFolder.id;
+    let currentFolder: WikiFileSystem = rootFolder;
 
+    // 루트 다음 경로부터 순차적으로 폴더 찾기
     for (let i = 0; i < folderNames.length; i++) {
       const folderName = folderNames[i];
-      this.logger.log(`폴더 검색 중: "${folderName}" (부모 ID: ${currentParentId || '루트'})`);
+      this.logger.log(`폴더 검색 중: "${folderName}" (부모 ID: ${currentParentId})`);
 
       // 현재 레벨에서 해당 이름의 폴더 찾기
       const folder = await this.wikiRepository.findOne({
         where: {
           name: folderName,
           type: WikiFileSystemType.FOLDER,
-          parentId: currentParentId === null ? IsNull() : currentParentId,
+          parentId: currentParentId,
           deletedAt: IsNull(),
         },
       });
@@ -524,10 +578,6 @@ export class WikiFileSystemService {
       currentFolder = folder;
       currentParentId = folder.id;
       this.logger.log(`폴더 찾음: ${folder.name} (ID: ${folder.id})`);
-    }
-
-    if (!currentFolder) {
-      throw new NotFoundException(`경로 '${path}'에 해당하는 폴더를 찾을 수 없습니다.`);
     }
 
     this.logger.log(`경로로 폴더 조회 완료 - ID: ${currentFolder.id}, 이름: ${currentFolder.name}`);

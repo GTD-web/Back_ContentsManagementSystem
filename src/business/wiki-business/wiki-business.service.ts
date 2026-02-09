@@ -96,7 +96,7 @@ export class WikiBusinessService {
    */
   async 폴더를_생성한다(data: {
     name: string;
-    parentId?: string | null;
+    parentId: string;
     isPublic?: boolean;
     permissionRankIds?: string[] | null;
     permissionPositionIds?: string[] | null;
@@ -352,7 +352,7 @@ export class WikiBusinessService {
    */
   async 파일을_생성한다(
     name: string,
-    parentId: string | null,
+    parentId: string,
     title: string | null,
     content: string | null,
     createdBy?: string,
@@ -408,7 +408,7 @@ export class WikiBusinessService {
    */
   async 빈_파일을_생성한다(
     name: string,
-    parentId: string | null,
+    parentId: string,
     createdBy?: string,
     isPublic?: boolean,
   ): Promise<WikiFileSystem> {

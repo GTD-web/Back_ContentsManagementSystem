@@ -122,7 +122,10 @@ export class UserWikiController {
   @ApiOperation({
     summary: '경로로 폴더 조회 (사용자용)',
     description:
-      '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환합니다.',
+      '폴더 경로로 폴더를 조회합니다. 접근 권한이 없으면 404를 반환합니다.\n\n' +
+      '**경로 형식**:\n' +
+      '- `/` → 루트 폴더 반환 (시스템 자동 생성)\n' +
+      '- `/폴더1/폴더2` 또는 `폴더1/폴더2` → 루트 하위의 폴더 경로',
   })
   @ApiResponse({
     status: 200,
@@ -131,7 +134,7 @@ export class UserWikiController {
   })
   @ApiQuery({
     name: 'path',
-    description: '폴더 경로 (예: /루트폴더/하위폴더)',
+    description: '폴더 경로 (예: / 또는 /폴더1/폴더2)',
     example: '/회의록/2024년',
     required: true,
   })
@@ -463,12 +466,16 @@ export class UserWikiController {
   @Post('files/empty')
   @ApiOperation({
     summary: '빈 파일 생성 (사용자용)',
-    description: '빈 파일을 생성합니다. 기본적으로 전사공개로 생성됩니다.',
+    description: '빈 파일을 생성합니다. 기본적으로 전사공개로 생성됩니다.\n\n⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
   })
   @ApiResponse({
     status: 201,
     description: '빈 파일 생성 성공',
     type: WikiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'parentId가 없거나 잘못된 요청',
   })
   async 빈_파일을_생성한다(
     @Body() dto: CreateEmptyFileDto,
@@ -485,7 +492,7 @@ export class UserWikiController {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.빈_파일을_생성한다(
       dto.name,
-      dto.parentId || null,
+      dto.parentId,
       user.id,
       dto.isPublic,
     );
@@ -506,10 +513,10 @@ export class UserWikiController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '파일 생성 (사용자용)',
-    description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.',
+    description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n⚠️ **parentId는 필수**: 파일은 반드시 폴더 안에 생성되어야 합니다.',
   })
   @ApiBody({
-    description: 'name은 필수입니다.',
+    description: 'name과 parentId는 필수입니다.',
     schema: {
       type: 'object',
       properties: {
@@ -520,7 +527,7 @@ export class UserWikiController {
         },
         parentId: {
           type: 'string',
-          description: '부모 폴더 ID (선택)',
+          description: '부모 폴더 ID (필수)',
         },
         title: {
           type: 'string',
@@ -540,13 +547,17 @@ export class UserWikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
-      required: ['name'],
+      required: ['name', 'parentId'],
     },
   })
   @ApiResponse({
     status: 201,
     description: '파일 생성 성공',
     type: WikiResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'name 또는 parentId가 없거나 잘못된 요청',
   })
   async 파일을_생성한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -556,7 +567,7 @@ export class UserWikiController {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_생성한다(
       dto.name,
-      dto.parentId || null,
+      dto.parentId,
       dto.title || null,
       dto.content || null,
       user.id,
