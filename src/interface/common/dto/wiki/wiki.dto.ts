@@ -50,11 +50,11 @@ export class CreateFolderDto {
  * ⚠️ parentId: 없으면 최상위에 파일이 생성됩니다 (parentId: null).
  */
 export class CreateFileDto {
-  @ApiPropertyOptional({ description: '파일명 (선택)', example: '2024년 전사 회의록' })
-  @IsOptional()
+  @ApiProperty({ description: '파일명', example: '2024년 전사 회의록' })
   @IsString({ message: 'name은 문자열이어야 합니다.' })
+  @IsNotEmpty({ message: 'name은 비어있을 수 없습니다.' })
   @MinLength(1, { message: 'name은 최소 1자 이상이어야 합니다.' })
-  name?: string | null;
+  name: string;
 
   @ApiPropertyOptional({
     description: '부모 폴더 ID (없으면 최상위에 파일 생성)',
@@ -137,11 +137,11 @@ export class CreateFileDto {
  * ⚠️ parentId: 없으면 최상위에 파일이 생성됩니다 (parentId: null).
  */
 export class CreateEmptyFileDto {
-  @ApiPropertyOptional({ description: '파일명 (선택)', example: '새 문서' })
-  @IsOptional()
+  @ApiProperty({ description: '파일명', example: '새 문서' })
   @IsString({ message: 'name은 문자열이어야 합니다.' })
+  @IsNotEmpty({ message: 'name은 비어있을 수 없습니다.' })
   @MinLength(1, { message: 'name은 최소 1자 이상이어야 합니다.' })
-  name?: string | null;
+  name: string;
 
   @ApiPropertyOptional({
     description: '부모 폴더 ID (없으면 최상위에 파일 생성)',
@@ -238,10 +238,9 @@ export class UpdateFolderNameDto {
  * 파일 수정 DTO
  */
 export class UpdateFileDto {
-  @ApiPropertyOptional({ description: '파일명 (선택)', example: '2024년 전사 회의록' })
-  @IsOptional()
+  @ApiProperty({ description: '파일명', example: '2024년 전사 회의록' })
   @IsString()
-  name?: string | null;
+  name: string;
 
   @ApiPropertyOptional({
     description: '문서 제목',
@@ -342,7 +341,7 @@ export class WikiPathDto {
   id: string;
 
   @ApiProperty({ description: '이름', example: '회의록' })
-  name: string | null;
+  name: string;
 
   @ApiProperty({ description: '깊이', example: 0 })
   depth: number;
@@ -356,7 +355,7 @@ export class WikiSearchResultDto {
   id: string;
 
   @ApiProperty({ description: '파일명', example: '2024년 회의록.pdf' })
-  name: string | null;
+  name: string;
 
   @ApiProperty({ description: '타입', enum: ['folder', 'file'], example: 'file' })
   type: string;
@@ -413,7 +412,7 @@ export class WikiResponseDto {
   id: string;
 
   @ApiProperty({ description: '이름', example: '회의록' })
-  name: string | null;
+  name: string;
 
   @ApiProperty({
     description: '타입',
@@ -517,7 +516,7 @@ export class WikiResponseDto {
     example: ['루트', '회의록'],
     type: [String],
   })
-  path?: (string | null)[];
+  path?: string[];
 
   @ApiPropertyOptional({
     description: '부모 폴더 ID들의 배열 (루트부터 현재 폴더의 부모까지)',
@@ -529,7 +528,7 @@ export class WikiResponseDto {
   static from(
     wiki: WikiFileSystem, 
     children?: WikiFileSystem[],
-    path?: (string | null)[],
+    path?: string[],
     pathIds?: string[],
     createdByName?: string | null,
     updatedByName?: string | null,

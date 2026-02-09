@@ -571,7 +571,7 @@ export class UserWikiController {
     @Body() dto: CreateEmptyFileDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    if (dto.name !== undefined && typeof dto.name !== 'string') {
+    if (typeof dto.name !== 'string') {
       throw new BadRequestException('name 필드는 문자열이어야 합니다.');
     }
 
@@ -581,7 +581,7 @@ export class UserWikiController {
 
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.빈_파일을_생성한다(
-      dto.name || null,
+      dto.name,
       dto.parentId || null,
       user.id,
       dto.isPublic,
@@ -606,13 +606,13 @@ export class UserWikiController {
     description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiBody({
-    description: '파일 생성 정보',
+    description: 'name은 필수입니다.',
     schema: {
       type: 'object',
       properties: {
         name: {
           type: 'string',
-          description: '파일명 (선택)',
+          description: '파일명',
           example: '2024년 회의록',
         },
         parentId: {
@@ -637,6 +637,7 @@ export class UserWikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
+      required: ['name'],
     },
   })
   @ApiResponse({
@@ -651,7 +652,7 @@ export class UserWikiController {
   ): Promise<WikiResponseDto> {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_생성한다(
-      dto.name || null,
+      dto.name,
       dto.parentId || null,
       dto.title || null,
       dto.content || null,
@@ -679,13 +680,13 @@ export class UserWikiController {
     description: '파일 정보를 수정합니다. 첨부파일 업로드 가능.',
   })
   @ApiBody({
-    description: '파일 수정 정보',
+    description: 'name은 필수입니다.',
     schema: {
       type: 'object',
       properties: {
         name: {
           type: 'string',
-          description: '파일명 (선택)',
+          description: '파일명',
         },
         title: {
           type: 'string',
@@ -701,6 +702,7 @@ export class UserWikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
+      required: ['name'],
     },
   })
   @ApiResponse({
@@ -717,10 +719,14 @@ export class UserWikiController {
   ): Promise<WikiResponseDto> {
     const { name, title, content } = body;
 
+    if (!name) {
+      throw new BadRequestException('name 필드는 필수입니다.');
+    }
+
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
-      name || null,
+      name,
       title || null,
       content || null,
       user.id,

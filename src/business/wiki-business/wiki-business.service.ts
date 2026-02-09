@@ -269,7 +269,7 @@ export class WikiBusinessService {
    */
   private async 위키_경로_정보를_가져온다(
     wikiId: string,
-  ): Promise<{ path: (string | null)[]; pathIds: string[] }> {
+  ): Promise<{ path: string[]; pathIds: string[] }> {
     try {
       // parentId를 직접 따라가는 방식으로 변경
       const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(wikiId);
@@ -409,7 +409,7 @@ export class WikiBusinessService {
    * 파일을 생성한다 (업로드 포함)
    */
   async 파일을_생성한다(
-    name: string | null,
+    name: string,
     parentId: string | null,
     title: string | null,
     content: string | null,
@@ -417,7 +417,7 @@ export class WikiBusinessService {
     files?: Express.Multer.File[],
     isPublic?: boolean,
   ): Promise<WikiFileSystem> {
-    this.logger.log(`파일 생성 시작 - 이름: ${name || '(이름 없음)'}`);
+    this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
     // 파일 업로드 처리
     let attachments:
@@ -483,12 +483,12 @@ export class WikiBusinessService {
    * 빈 파일을 생성한다
    */
   async 빈_파일을_생성한다(
-    name: string | null,
+    name: string,
     parentId: string | null,
     createdBy?: string,
     isPublic?: boolean,
   ): Promise<WikiFileSystem> {
-    this.logger.log(`빈 파일 생성 시작 - 이름: ${name || '(이름 없음)'}`);
+    this.logger.log(`빈 파일 생성 시작 - 이름: ${name}`);
 
     const result = await this.wikiContextService.파일을_생성한다({
       name,
@@ -509,7 +509,7 @@ export class WikiBusinessService {
    */
   async 파일을_수정한다(
     id: string,
-    name: string | null,
+    name: string,
     title: string | null,
     content: string | null,
     updatedBy?: string,

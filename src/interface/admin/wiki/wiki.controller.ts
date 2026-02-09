@@ -810,8 +810,8 @@ export class WikiController {
     @Body() dto: CreateEmptyFileDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // name이 제공된 경우에만 문자열 검증
-    if (dto.name !== undefined && typeof dto.name !== 'string') {
+    // name이 문자열이 아닌 경우 검증
+    if (typeof dto.name !== 'string') {
       throw new BadRequestException('name 필드는 문자열이어야 합니다.');
     }
 
@@ -822,7 +822,7 @@ export class WikiController {
 
     try {
       const file = await this.wikiBusinessService.빈_파일을_생성한다(
-        dto.name || null,
+        dto.name,
         dto.parentId || null,
         user.id,
         dto.isPublic,
@@ -865,6 +865,7 @@ export class WikiController {
   })
   @ApiBody({
     description:
+      '⚠️ **중요**: name은 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 첨부파일과 함께 생성\n' +
       '- `files`를 전송하지 않으면: 파일 없이 생성',
@@ -873,7 +874,7 @@ export class WikiController {
       properties: {
         name: {
           type: 'string',
-          description: '파일명 (선택)',
+          description: '파일명',
           example: '2024년 회의록',
         },
         parentId: {
@@ -903,6 +904,7 @@ export class WikiController {
           description: '첨부파일 목록 (선택)',
         },
       },
+      required: ['name'],
     },
   })
   @ApiResponse({
@@ -912,7 +914,7 @@ export class WikiController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청',
+    description: '잘못된 요청 (name 없음)',
   })
   async 파일을_생성한다(
     @CurrentUser() user: AuthenticatedUser,
@@ -921,7 +923,7 @@ export class WikiController {
   ): Promise<WikiResponseDto> {
     try {
       const file = await this.wikiBusinessService.파일을_생성한다(
-        dto.name || null,
+        dto.name,
         dto.parentId || null,
         dto.title || null,
         dto.content || null,
@@ -962,6 +964,7 @@ export class WikiController {
   })
   @ApiBody({
     description:
+      '⚠️ **중요**: name은 필수입니다.\n\n' +
       '**파일 관리 방식**:\n' +
       '- `files`를 전송하면: 기존 첨부파일 유지 + 새 파일들 추가\n' +
       '- `files`를 전송하지 않으면: 기존 첨부파일 유지 (변경 없음)\n' +
@@ -971,7 +974,7 @@ export class WikiController {
       properties: {
         name: {
           type: 'string',
-          description: '파일명 (선택)',
+          description: '파일명',
           example: '2024년 회의록',
         },
         title: {
@@ -991,6 +994,7 @@ export class WikiController {
             '첨부파일 목록 (선택) - 기존 파일은 유지되고 새 파일들이 추가됩니다',
         },
       },
+      required: ['name'],
     },
   })
   @ApiResponse({
@@ -1000,7 +1004,7 @@ export class WikiController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청',
+    description: '잘못된 요청 (name 없음)',
   })
   @ApiResponse({
     status: 404,
@@ -1015,9 +1019,13 @@ export class WikiController {
   ): Promise<WikiResponseDto> {
     const { name, title, content } = body;
 
+    if (!name) {
+      throw new BadRequestException('name 필드는 필수입니다.');
+    }
+
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
-      name || null,
+      name,
       title || null,
       content || null,
       user.id,

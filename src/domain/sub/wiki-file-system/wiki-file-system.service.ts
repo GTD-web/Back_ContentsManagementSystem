@@ -58,7 +58,7 @@ export class WikiFileSystemService {
    * 파일을 생성한다
    */
   async 파일을_생성한다(data: {
-    name?: string | null;
+    name: string;
     parentId?: string | null;
     title?: string | null;
     content?: string | null;
@@ -76,10 +76,10 @@ export class WikiFileSystemService {
     order?: number;
     createdBy?: string;
   }): Promise<WikiFileSystem> {
-    this.logger.log(`파일 생성 시작 - 이름: ${data.name || '(이름 없음)'}`);
+    this.logger.log(`파일 생성 시작 - 이름: ${data.name}`);
 
     const file = this.wikiRepository.create({
-      name: data.name || null,
+      name: data.name,
       type: WikiFileSystemType.FILE,
       parentId: data.parentId || null,
       title: data.title || null,
@@ -258,7 +258,7 @@ export class WikiFileSystemService {
   async 위키를_수정한다(
     id: string,
     data: {
-      name?: string | null;
+      name?: string;
       title?: string | null;
       content?: string | null;
       fileUrl?: string | null;
