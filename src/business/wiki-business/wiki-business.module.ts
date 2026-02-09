@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WikiContextModule } from '@context/wiki-context';
+import { CompanyContextModule } from '@context/company-context/company-context.module';
 import { StorageModule } from '@libs/storage/storage.module';
 import { WikiBusinessService } from './wiki-business.service';
 import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-log.entity';
@@ -8,6 +9,7 @@ import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-
 @Module({
   imports: [
     WikiContextModule,
+    CompanyContextModule,
     StorageModule,
     TypeOrmModule.forFeature([WikiPermissionLog]),
   ],

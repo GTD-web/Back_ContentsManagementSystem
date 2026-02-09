@@ -27,6 +27,9 @@ import { CurrentUser } from '@interface/common/decorators/current-user.decorator
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { Public } from '@interface/common/decorators/public.decorator';
 import { WikiBusinessService } from '@business/wiki-business/wiki-business.service';
+import { CompanyContextService } from '@context/company-context/company-context.service';
+import { Logger } from '@nestjs/common';
+import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import {
   CreateFolderDto,
   CreateFileDto,
@@ -45,7 +48,12 @@ import {
 @Public()
 @Controller('user/wiki')
 export class UserWikiController {
-  constructor(private readonly wikiBusinessService: WikiBusinessService) {}
+  private readonly logger = new Logger(UserWikiController.name);
+
+  constructor(
+    private readonly wikiBusinessService: WikiBusinessService,
+    private readonly companyContextService: CompanyContextService,
+  ) {}
 
   /**
    * 폴더 구조를 가져온다 (트리 구조, 사용자용)
@@ -98,8 +106,12 @@ export class UserWikiController {
   /**
    * 평탄한 목록을 트리 구조로 변환하는 헬퍼 메서드
    */
-  private async buildTree(items: any[]): Promise<WikiResponseDto[]> {
-    const itemsByParent = new Map<string | null, any[]>();
+  private async buildTree(items: WikiFileSystem[]): Promise<WikiResponseDto[]> {
+    // 모든 아이템에서 createdBy, updatedBy 수집
+    const allUserIds = items.flatMap(item => [item.createdBy, item.updatedBy]);
+    const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
+
+    const itemsByParent = new Map<string | null, WikiFileSystem[]>();
     for (const item of items) {
       const parentId = item.parentId || null;
       if (!itemsByParent.has(parentId)) {
@@ -115,7 +127,11 @@ export class UserWikiController {
         const path = (child as any).path || [];
         const pathIds = (child as any).pathIds || [];
         
-        const childDto = WikiResponseDto.from(child, undefined, path, pathIds);
+        // 사용자 이름 조회
+        const createdByName = child.createdBy ? userNameMap.get(child.createdBy) || null : null;
+        const updatedByName = child.updatedBy ? userNameMap.get(child.updatedBy) || null : null;
+        
+        const childDto = WikiResponseDto.from(child, undefined, path, pathIds, createdByName, updatedByName);
         if (child.type === 'folder') {
           const subChildren = buildChildren(child.id);
           if (subChildren.length > 0) {
@@ -129,6 +145,34 @@ export class UserWikiController {
     const rootParentId =
       items.length > 0 && items[0].parentId ? items[0].parentId : null;
     return buildChildren(rootParentId);
+  }
+
+  /**
+   * 사용자 이름 조회 헬퍼 메서드
+   */
+  private async 사용자_이름_맵을_조회한다(userIds: (string | null)[]): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+    
+    // null 제거 및 중복 제거
+    const validUserIds = [...new Set(userIds.filter((id): id is string => id !== null && id !== undefined))];
+    
+    if (validUserIds.length === 0) {
+      return nameMap;
+    }
+
+    try {
+      const employees = await this.companyContextService.직원_목록을_조회한다(validUserIds);
+      
+      employees.forEach(employee => {
+        if (employee.employeeNumber && employee.name) {
+          nameMap.set(employee.employeeNumber, employee.name);
+        }
+      });
+    } catch (error) {
+      this.logger.warn(`사용자 이름 조회 실패 (무시하고 계속)`, error);
+    }
+
+    return nameMap;
   }
 
   /**
@@ -176,7 +220,14 @@ export class UserWikiController {
     const pathNames = parents.map(item => item.name);
     const pathIds = parents.map(item => item.id);
     
-    return WikiResponseDto.from(folder, children, pathNames, pathIds);
+    // 사용자 이름 조회
+    const allUserIds = [folder.createdBy, folder.updatedBy, ...children.flatMap(c => [c.createdBy, c.updatedBy])];
+    const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
+    
+    const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
+    const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
+    
+    return WikiResponseDto.from(folder, children, pathNames, pathIds, createdByName, updatedByName);
   }
 
   /**
@@ -201,7 +252,15 @@ export class UserWikiController {
     const folder = await this.wikiBusinessService.폴더를_조회한다(id);
     const children =
       await this.wikiBusinessService.폴더_하위_항목을_조회한다(id);
-    return WikiResponseDto.from(folder, children);
+    
+    // 사용자 이름 조회
+    const allUserIds = [folder.createdBy, folder.updatedBy, ...children.flatMap(c => [c.createdBy, c.updatedBy])];
+    const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
+    
+    const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
+    const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
+    
+    return WikiResponseDto.from(folder, children, undefined, undefined, createdByName, updatedByName);
   }
 
   /**
@@ -486,7 +545,13 @@ export class UserWikiController {
   ): Promise<WikiResponseDto> {
     // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_조회한다(id);
-    return WikiResponseDto.from(file);
+    
+    // 사용자 이름 조회
+    const userNameMap = await this.사용자_이름_맵을_조회한다([file.createdBy, file.updatedBy]);
+    const createdByName = file.createdBy ? userNameMap.get(file.createdBy) || null : null;
+    const updatedByName = file.updatedBy ? userNameMap.get(file.updatedBy) || null : null;
+    
+    return WikiResponseDto.from(file, undefined, undefined, undefined, createdByName, updatedByName);
   }
 
   /**

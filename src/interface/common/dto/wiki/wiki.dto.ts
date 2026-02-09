@@ -471,8 +471,14 @@ export class WikiResponseDto {
   @ApiPropertyOptional({ description: '생성자 ID' })
   createdBy: string | null;
 
+  @ApiPropertyOptional({ description: '생성자 이름' })
+  createdByName?: string | null;
+
   @ApiPropertyOptional({ description: '수정자 ID' })
   updatedBy: string | null;
+
+  @ApiPropertyOptional({ description: '수정자 이름' })
+  updatedByName?: string | null;
 
   @ApiPropertyOptional({
     description: '하위 폴더 및 파일 목록 (폴더인 경우에만)',
@@ -499,6 +505,8 @@ export class WikiResponseDto {
     children?: WikiFileSystem[],
     path?: string[],
     pathIds?: string[],
+    createdByName?: string | null,
+    updatedByName?: string | null,
   ): WikiResponseDto {
     const dto = new WikiResponseDto();
     dto.id = wiki.id;
@@ -521,6 +529,8 @@ export class WikiResponseDto {
     dto.updatedAt = wiki.updatedAt;
     dto.createdBy = wiki.createdBy;
     dto.updatedBy = wiki.updatedBy;
+    dto.createdByName = createdByName;
+    dto.updatedByName = updatedByName;
     
     // 경로 정보 추가
     if (path) {

@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject, NotFoundException, BadRequestException } fr
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, QueryFailedError, DataSource } from 'typeorm';
 import { WikiContextService } from '@context/wiki-context/wiki-context.service';
+import { CompanyContextService } from '@context/company-context/company-context.service';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-log.entity';
 import { WikiPermissionAction } from '@domain/sub/wiki-file-system/wiki-permission-action.types';
@@ -22,6 +23,7 @@ export class WikiBusinessService {
 
   constructor(
     private readonly wikiContextService: WikiContextService,
+    private readonly companyContextService: CompanyContextService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
     @InjectRepository(WikiPermissionLog)
@@ -656,5 +658,40 @@ export class WikiBusinessService {
         replacedDepartments,
       };
     });
+  }
+
+  /**
+   * 사용자 이름 조회 (createdBy, updatedBy용)
+   * 
+   * @private
+   * @param userIds - 조회할 사용자 ID 배열
+   * @returns 사용자 ID를 키로, 이름을 값으로 하는 Map
+   */
+  private async 사용자_이름_맵을_조회한다(userIds: (string | null)[]): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+    
+    // null 제거 및 중복 제거
+    const validUserIds = [...new Set(userIds.filter((id): id is string => id !== null && id !== undefined))];
+    
+    if (validUserIds.length === 0) {
+      return nameMap;
+    }
+
+    try {
+      const employees = await this.companyContextService.직원_목록을_조회한다(validUserIds);
+      
+      employees.forEach(employee => {
+        if (employee.employeeNumber && employee.name) {
+          nameMap.set(employee.employeeNumber, employee.name);
+        }
+      });
+      
+      this.logger.debug(`사용자 이름 조회 완료 - 요청: ${validUserIds.length}명, 조회: ${nameMap.size}명`);
+    } catch (error) {
+      this.logger.warn(`사용자 이름 조회 실패 (무시하고 계속)`, error);
+      // 사용자 이름 조회 실패는 치명적이지 않으므로 빈 Map 반환
+    }
+
+    return nameMap;
   }
 }
