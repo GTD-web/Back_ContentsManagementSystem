@@ -43,7 +43,7 @@ export interface CreateFileDto extends BaseCreateFileDto {
  * 위키 수정 DTO (Context Layer용 - updatedBy 포함)
  */
 export interface UpdateWikiDto {
-  name?: string;
+  name?: string | null;
   title?: string | null;
   content?: string | null;
   isPublic?: boolean;
@@ -99,6 +99,6 @@ export interface FolderStructureResult {
  */
 export interface CreateWikiResult {
   id: string;
-  name: string;
+  name: string | null;
   type: string;
 }

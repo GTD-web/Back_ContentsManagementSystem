@@ -31,9 +31,10 @@ export class WikiFileSystem extends BaseEntity<WikiFileSystem> {
   @Column({
     type: 'varchar',
     length: 500,
-    comment: '이름 (폴더명 또는 파일명)',
+    nullable: true,
+    comment: '이름 (폴더명 또는 파일명, 파일의 경우 선택사항)',
   })
-  name: string;
+  name: string | null;
 
   @Column({
     type: 'enum',
