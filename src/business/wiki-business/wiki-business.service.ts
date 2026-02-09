@@ -431,9 +431,26 @@ export class WikiBusinessService {
 
     if (files && files.length > 0) {
       this.logger.log(`${files.length}개의 파일 업로드 시작`);
+      
+      // 폴더 경로 구성
+      let folderPath = 'wiki';
+      if (parentId) {
+        try {
+          const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(parentId);
+          if (breadcrumb && breadcrumb.length > 0) {
+            // 루트부터 현재 폴더까지의 경로를 '/'로 연결
+            const pathSegments = breadcrumb.map(item => item.name);
+            folderPath = `wiki/${pathSegments.join('/')}`;
+            this.logger.log(`S3 업로드 경로: ${folderPath}`);
+          }
+        } catch (error) {
+          this.logger.warn(`폴더 경로 조회 실패, 기본 경로 사용 - parentId: ${parentId}`, error);
+        }
+      }
+      
       const uploadedFiles = await this.storageService.uploadFiles(
         files,
-        'wiki',
+        folderPath,
       );
       attachments = uploadedFiles.map((file) => ({
         fileName: file.fileName,
@@ -523,9 +540,27 @@ export class WikiBusinessService {
 
     if (files && files.length > 0) {
       this.logger.log(`${files.length}개의 파일 업로드 시작`);
+      
+      // 폴더 경로 구성
+      let folderPath = 'wiki';
+      const parentId = existingFile.parentId;
+      if (parentId) {
+        try {
+          const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(parentId);
+          if (breadcrumb && breadcrumb.length > 0) {
+            // 루트부터 현재 폴더까지의 경로를 '/'로 연결
+            const pathSegments = breadcrumb.map(item => item.name);
+            folderPath = `wiki/${pathSegments.join('/')}`;
+            this.logger.log(`S3 업로드 경로: ${folderPath}`);
+          }
+        } catch (error) {
+          this.logger.warn(`폴더 경로 조회 실패, 기본 경로 사용 - parentId: ${parentId}`, error);
+        }
+      }
+      
       const uploadedFiles = await this.storageService.uploadFiles(
         files,
-        'wiki',
+        folderPath,
       );
       finalAttachments = uploadedFiles.map((file) => ({
         fileName: file.fileName,
