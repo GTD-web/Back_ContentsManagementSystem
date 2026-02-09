@@ -480,7 +480,26 @@ export class WikiResponseDto {
   })
   children?: WikiResponseDto[];
 
-  static from(wiki: WikiFileSystem, children?: WikiFileSystem[]): WikiResponseDto {
+  @ApiPropertyOptional({
+    description: '부모 폴더 이름들의 배열 (루트부터 현재 폴더의 부모까지)',
+    example: ['루트', '회의록'],
+    type: [String],
+  })
+  path?: string[];
+
+  @ApiPropertyOptional({
+    description: '부모 폴더 ID들의 배열 (루트부터 현재 폴더의 부모까지)',
+    example: ['dc7e6bed-bfb1-446c-a964-55ecdec88dc4', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
+    type: [String],
+  })
+  pathIds?: string[];
+
+  static from(
+    wiki: WikiFileSystem, 
+    children?: WikiFileSystem[],
+    path?: string[],
+    pathIds?: string[],
+  ): WikiResponseDto {
     const dto = new WikiResponseDto();
     dto.id = wiki.id;
     dto.name = wiki.name;
@@ -502,6 +521,14 @@ export class WikiResponseDto {
     dto.updatedAt = wiki.updatedAt;
     dto.createdBy = wiki.createdBy;
     dto.updatedBy = wiki.updatedBy;
+    
+    // 경로 정보 추가
+    if (path) {
+      dto.path = path;
+    }
+    if (pathIds) {
+      dto.pathIds = pathIds;
+    }
     
     // 하위 항목이 있으면 추가
     if (children && children.length > 0) {

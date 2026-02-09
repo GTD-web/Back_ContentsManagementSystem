@@ -147,7 +147,11 @@ export class WikiController {
     const buildChildren = (parentId: string | null): WikiResponseDto[] => {
       const children = itemsByParent.get(parentId) || [];
       return children.map((child) => {
-        const childDto = WikiResponseDto.from(child);
+        // 경로 정보 추출 (비즈니스 서비스에서 추가한 임시 속성)
+        const path = (child as any).path || [];
+        const pathIds = (child as any).pathIds || [];
+        
+        const childDto = WikiResponseDto.from(child, undefined, path, pathIds);
         // 폴더인 경우 하위 항목 재귀적으로 추가
         if (child.type === 'folder') {
           const subChildren = buildChildren(child.id);
@@ -192,7 +196,17 @@ export class WikiController {
   async 경로로_폴더를_조회한다(@Query('path') path: string): Promise<WikiResponseDto> {
     const folder = await this.wikiBusinessService.경로로_폴더를_조회한다(path);
     const children = await this.wikiBusinessService.폴더_하위_항목을_조회한다(folder.id);
-    return WikiResponseDto.from(folder, children);
+    
+    // 경로 정보 조회
+    const breadcrumb = await this.wikiBusinessService.위키_경로를_조회한다(folder.id);
+    const parents = breadcrumb
+      .filter(item => item.id !== folder.id)
+      .sort((a, b) => a.depth - b.depth);
+    
+    const pathNames = parents.map(item => item.name);
+    const pathIds = parents.map(item => item.id);
+    
+    return WikiResponseDto.from(folder, children, pathNames, pathIds);
   }
 
   /**

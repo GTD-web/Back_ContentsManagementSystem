@@ -242,9 +242,57 @@ export class WikiBusinessService {
       this.logger.log(`루트 폴더 제외 - 남은 항목: ${result.length}개`);
     }
 
-    this.logger.log(`폴더 구조 조회 완료 - 총 ${result.length}개`);
+    // 각 항목에 경로 정보 추가
+    const itemsWithPath = await Promise.all(
+      result.map(async (item) => {
+        const pathInfo = await this.위키_경로_정보를_가져온다(item.id);
+        // WikiFileSystem 객체에 path와 pathIds를 임시로 추가
+        (item as any).path = pathInfo.path;
+        (item as any).pathIds = pathInfo.pathIds;
+        return item;
+      })
+    );
 
-    return result;
+    this.logger.log(`폴더 구조 조회 완료 - 총 ${itemsWithPath.length}개`);
+
+    return itemsWithPath;
+  }
+
+  /**
+   * 위키 항목의 경로를 조회한다 (Breadcrumb)
+   */
+  async 위키_경로를_조회한다(wikiId: string): Promise<WikiFileSystem[]> {
+    this.logger.log(`위키 경로 조회 시작 - Wiki ID: ${wikiId}`);
+
+    const breadcrumb = await this.wikiContextService.위키_경로를_조회한다(wikiId);
+
+    this.logger.log(`위키 경로 조회 완료 - 총 ${breadcrumb.length}개`);
+
+    return breadcrumb;
+  }
+
+  /**
+   * 위키 항목의 경로 정보를 가져온다 (부모 폴더들의 이름과 ID)
+   */
+  private async 위키_경로_정보를_가져온다(
+    wikiId: string,
+  ): Promise<{ path: string[]; pathIds: string[] }> {
+    try {
+      const breadcrumb = await this.wikiContextService.위키_경로를_조회한다(wikiId);
+      
+      // breadcrumb은 자신을 포함하므로, 자신을 제외하고 부모들만 추출
+      const parents = breadcrumb
+        .filter(item => item.id !== wikiId)
+        .sort((a, b) => a.depth - b.depth); // depth 오름차순 정렬 (루트부터)
+      
+      const path = parents.map(item => item.name);
+      const pathIds = parents.map(item => item.id);
+      
+      return { path, pathIds };
+    } catch (error) {
+      this.logger.warn(`경로 정보 조회 실패 - Wiki ID: ${wikiId}, 에러: ${error.message}`);
+      return { path: [], pathIds: [] };
+    }
   }
 
   /**
