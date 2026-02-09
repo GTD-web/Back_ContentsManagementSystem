@@ -514,6 +514,7 @@ export class WikiBusinessService {
     content: string | null,
     updatedBy?: string,
     files?: Express.Multer.File[],
+    isPublic?: boolean,
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 수정 시작 - ID: ${id}`);
 
@@ -582,6 +583,7 @@ export class WikiBusinessService {
       name,
       title,
       content,
+      isPublic,
       updatedBy,
     });
 

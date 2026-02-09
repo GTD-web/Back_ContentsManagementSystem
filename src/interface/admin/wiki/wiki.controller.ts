@@ -987,6 +987,12 @@ export class WikiController {
           description: '문서 본문 (선택)',
           example: '## 회의 안건\n\n1. 신제품 출시',
         },
+        isPublic: {
+          type: 'boolean',
+          description:
+            '공개 여부 (선택, true: 상위 폴더 권한 cascading, false: 완전 비공개)',
+          example: true,
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -1017,7 +1023,7 @@ export class WikiController {
     @Body() body: any,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
-    const { name, title, content } = body;
+    const { name, title, content, isPublic } = body;
 
     if (!name) {
       throw new BadRequestException('name 필드는 필수입니다.');
@@ -1030,6 +1036,7 @@ export class WikiController {
       content || null,
       user.id,
       files,
+      isPublic,
     );
     return WikiResponseDto.from(file);
   }
