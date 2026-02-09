@@ -65,15 +65,27 @@ export class UserWikiController {
   @ApiQuery({
     name: 'ancestorId',
     required: false,
+    type: String,
     description: '조상 폴더 ID (없으면 루트부터)',
+    example: 'uuid-of-ancestor-folder',
+  })
+  @ApiQuery({
+    name: 'excludeRoot',
+    required: false,
+    type: Boolean,
+    description: '루트 폴더 제외 여부 (true: 루트 폴더 제외, false: 포함)',
+    example: true,
   })
   async 폴더_구조를_가져온다(
     @CurrentUser() user: AuthenticatedUser,
     @Query('ancestorId') ancestorId?: string,
+    @Query('excludeRoot') excludeRootParam?: string,
   ): Promise<WikiListResponseDto> {
+    const excludeRoot = excludeRootParam === 'true';
+
     // TODO: 사용자 권한 필터링 로직 구현 필요
     const items =
-      await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+      await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId, excludeRoot);
 
     const tree = await this.buildTree(items);
 

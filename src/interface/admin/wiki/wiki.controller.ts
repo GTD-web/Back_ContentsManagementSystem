@@ -83,13 +83,25 @@ export class WikiController {
   @ApiQuery({
     name: 'ancestorId',
     required: false,
+    type: String,
     description: '조상 폴더 ID (없으면 루트부터)',
+    example: 'uuid-of-ancestor-folder',
+  })
+  @ApiQuery({
+    name: 'excludeRoot',
+    required: false,
+    type: Boolean,
+    description: '루트 폴더 제외 여부 (true: 루트 폴더 제외, false: 포함)',
+    example: true,
   })
   async 폴더_구조를_가져온다(
     @Query('ancestorId') ancestorId?: string,
+    @Query('excludeRoot') excludeRootParam?: string,
   ): Promise<WikiListResponseDto> {
+    const excludeRoot = excludeRootParam === 'true';
+
     const items =
-      await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId);
+      await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId, excludeRoot);
 
     // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
     const hasEmptyPermissionDepartmentIds = items.some(

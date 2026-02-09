@@ -219,8 +219,9 @@ export class WikiBusinessService {
    */
   async 폴더_구조를_가져온다(
     ancestorId?: string,
+    excludeRoot: boolean = false,
   ): Promise<WikiFileSystem[]> {
-    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '루트 (모든 항목)'}`);
+    this.logger.log(`폴더 구조 조회 시작 - 조상 ID: ${ancestorId || '루트 (모든 항목)'}, 루트 제외: ${excludeRoot}`);
 
     let result: WikiFileSystem[];
 
@@ -233,6 +234,12 @@ export class WikiBusinessService {
     } else {
       // 루트부터 전체 구조 조회 - 모든 wiki 항목 가져오기
       result = await this.wikiContextService.모든_위키를_조회한다();
+    }
+
+    // 루트 폴더 제외 옵션이 true이면 parentId가 null인 폴더 제외
+    if (excludeRoot && !ancestorId) {
+      result = result.filter(item => item.parentId !== null);
+      this.logger.log(`루트 폴더 제외 - 남은 항목: ${result.length}개`);
     }
 
     this.logger.log(`폴더 구조 조회 완료 - 총 ${result.length}개`);
