@@ -275,7 +275,7 @@ export class UserWikiController {
   @Post('folders')
   @ApiOperation({
     summary: '폴더 생성 (사용자용)',
-    description: '새로운 폴더를 생성합니다. 기본적으로 전사공개로 생성됩니다.',
+    description: '새로운 폴더를 생성합니다. 기본적으로 전사공개로 생성되며, 권한 설정을 통해 접근을 제한할 수 있습니다.',
   })
   @ApiResponse({
     status: 201,
@@ -290,14 +290,20 @@ export class UserWikiController {
     const folder = await this.wikiBusinessService.폴더를_생성한다({
       name: dto.name,
       parentId: dto.parentId,
-      isPublic: true,
-      permissionRankIds: null,
-      permissionPositionIds: null,
-      permissionDepartmentIds: null,
+      isPublic: dto.isPublic ?? true,
+      permissionRankIds: dto.permissionRankIds || null,
+      permissionPositionIds: dto.permissionPositionIds || null,
+      permissionDepartmentIds: dto.permissionDepartmentIds || null,
       order: dto.order,
       createdBy: user.id,
     });
-    return WikiResponseDto.from(folder);
+    
+    // 사용자 이름 조회
+    const userNameMap = await this.사용자_이름_맵을_조회한다([folder.createdBy, folder.updatedBy]);
+    const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
+    const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
+    
+    return WikiResponseDto.from(folder, undefined, undefined, undefined, createdByName, updatedByName);
   }
 
   /**

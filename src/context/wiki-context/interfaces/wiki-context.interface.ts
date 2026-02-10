@@ -13,10 +13,6 @@ import {
  * 폴더 생성 DTO (Context Layer용 - createdBy 포함)
  */
 export interface CreateFolderDto extends BaseCreateFolderDto {
-  isPublic?: boolean;
-  permissionRankIds?: string[] | null;
-  permissionPositionIds?: string[] | null;
-  permissionDepartmentIds?: string[] | null;
   createdBy?: string;
 }
 

@@ -18,7 +18,7 @@ import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-syste
  * 폴더 생성 DTO
  * 
  * ⚠️ 권한 정책: 폴더 생성 시 기본적으로 전사공개로 생성됩니다.
- * 권한 설정은 폴더 수정(PATCH /admin/wiki/folders/:id/public)을 통해 변경할 수 있습니다.
+ * 권한 설정(permissionRankIds, permissionPositionIds, permissionDepartmentIds)을 통해 접근 제한을 설정할 수 있습니다.
  * 
  * ⚠️ parentId: 없으면 최상위 폴더로 생성됩니다 (parentId: null).
  */
@@ -36,6 +36,50 @@ export class CreateFolderDto {
   @IsOptional()
   @IsUUID(undefined, { message: 'parentId는 유효한 UUID여야 합니다.' })
   parentId?: string | null;
+
+  @ApiPropertyOptional({
+    description: '공개 여부 (기본값: true)',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean({ message: 'isPublic은 boolean 값이어야 합니다.' })
+  isPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: '직급 ID 목록 (UUID)',
+    example: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionRankIds?: string[] | null;
+
+  @ApiPropertyOptional({
+    description: '직책 ID 목록 (UUID)',
+    example: ['c3d4e5f6-a7b8-9012-cdef-123456789012'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionPositionIds?: string[] | null;
+
+  @ApiPropertyOptional({
+    description: '부서 ID 목록 (UUID)',
+    example: ['e2b3b884-833c-4fdb-ba00-ede1a45b8160', 'c11023a2-fb66-4e3f-bfcf-0666fb19f6bf'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionDepartmentIds?: string[] | null;
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0, default: 0 })
   @IsOptional()
@@ -196,7 +240,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankIds?: string[];
+  permissionRankIds?: string[] | null;
 
   @ApiPropertyOptional({
     description: '직책 ID 목록 (UUID)',
@@ -206,7 +250,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionIds?: string[];
+  permissionPositionIds?: string[] | null;
 
   @ApiPropertyOptional({
     description: '부서 ID 목록 (UUID)',
@@ -216,7 +260,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionDepartmentIds?: string[];
+  permissionDepartmentIds?: string[] | null;
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0 })
   @IsOptional()
