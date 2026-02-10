@@ -17,10 +17,13 @@ import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-syste
 /**
  * 폴더 생성 DTO
  * 
- * ⚠️ 권한 정책: 폴더 생성 시 기본적으로 전사공개로 생성됩니다.
- * 권한 설정(permissionRankIds, permissionPositionIds, permissionDepartmentIds)을 통해 접근 제한을 설정할 수 있습니다.
+ * ⚠️ **권한 정책**: 
+ * - 기본적으로 전사공개(`isPublic: true`)로 생성됩니다.
+ * - `isPublic: false`로 설정하고 권한 필드들을 지정하여 특정 그룹만 접근 가능하도록 제한할 수 있습니다.
+ * - 권한 필드: `permissionRankIds`(직급), `permissionPositionIds`(직책), `permissionDepartmentIds`(부서)
+ * - 권한 필드를 설정하면 해당 그룹에 속한 사용자만 폴더에 접근할 수 있습니다.
  * 
- * ⚠️ parentId: 없으면 최상위 폴더로 생성됩니다 (parentId: null).
+ * ⚠️ **parentId**: 없으면 최상위 폴더로 생성됩니다 (parentId: null).
  */
 export class CreateFolderDto {
   @ApiProperty({ description: '폴더명', example: '회의록' })
@@ -38,7 +41,7 @@ export class CreateFolderDto {
   parentId?: string | null;
 
   @ApiPropertyOptional({
-    description: '공개 여부 (기본값: true)',
+    description: '공개 여부 (기본값: true - 전사공개, false - 권한 기반 제한)',
     example: true,
     default: true,
   })
@@ -52,7 +55,7 @@ export class CreateFolderDto {
   isPublic?: boolean;
 
   @ApiPropertyOptional({
-    description: '직급 ID 목록 (UUID)',
+    description: '접근 가능한 직급 ID 목록 (UUID) - isPublic: false일 때 사용',
     example: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
     type: [String],
   })
@@ -62,7 +65,7 @@ export class CreateFolderDto {
   permissionRankIds?: string[] | null;
 
   @ApiPropertyOptional({
-    description: '직책 ID 목록 (UUID)',
+    description: '접근 가능한 직책 ID 목록 (UUID) - isPublic: false일 때 사용',
     example: ['c3d4e5f6-a7b8-9012-cdef-123456789012'],
     type: [String],
   })
@@ -72,7 +75,7 @@ export class CreateFolderDto {
   permissionPositionIds?: string[] | null;
 
   @ApiPropertyOptional({
-    description: '부서 ID 목록 (UUID)',
+    description: '접근 가능한 부서 ID 목록 (UUID) - isPublic: false일 때 사용',
     example: ['e2b3b884-833c-4fdb-ba00-ede1a45b8160', 'c11023a2-fb66-4e3f-bfcf-0666fb19f6bf'],
     type: [String],
   })
