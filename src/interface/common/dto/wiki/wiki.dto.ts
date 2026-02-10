@@ -142,24 +142,24 @@ export class CreateFileDto {
   isPublic?: boolean;
 
   @ApiPropertyOptional({
-    description: '직급 코드 목록',
-    example: ['manager', 'general_manager'],
+    description: '직급 ID 목록 (UUID)',
+    example: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
     type: [String],
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankCodes?: string[];
+  permissionRankIds?: string[];
 
   @ApiPropertyOptional({
-    description: '직책 코드 목록',
-    example: ['team_leader'],
+    description: '직책 ID 목록 (UUID)',
+    example: ['c3d4e5f6-a7b8-9012-cdef-123456789012'],
     type: [String],
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionCodes?: string[];
+  permissionPositionIds?: string[];
 
   @ApiPropertyOptional({
     description: '부서 ID 목록 (UUID)',

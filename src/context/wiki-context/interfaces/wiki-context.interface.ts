@@ -30,8 +30,8 @@ export interface CreateFileDto extends BaseCreateFileDto {
     mimeType: string;
     deletedAt?: Date | null;
   }> | null;
-  permissionRankCodes?: string[];
-  permissionPositionCodes?: string[];
+  permissionRankIds?: string[];
+  permissionPositionIds?: string[];
   permissionDepartmentIds?: string[];
   createdBy?: string;
 }
@@ -44,8 +44,8 @@ export interface UpdateWikiDto {
   title?: string | null;
   content?: string | null;
   isPublic?: boolean;
-  permissionRankCodes?: string[];
-  permissionPositionCodes?: string[];
+  permissionRankIds?: string[];
+  permissionPositionIds?: string[];
   permissionDepartmentIds?: string[];
   order?: number;
   updatedBy?: string;

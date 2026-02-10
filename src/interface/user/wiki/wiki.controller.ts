@@ -643,15 +643,15 @@ export class UserWikiController {
           type: 'boolean',
           description: '공개 여부 (선택, 기본값: true)',
         },
-        permissionRankCodes: {
+        permissionRankIds: {
           type: 'array',
           items: { type: 'string' },
-          description: '접근 가능한 직급 코드 목록 (선택)',
+          description: '접근 가능한 직급 ID 목록 (선택)',
         },
-        permissionPositionCodes: {
+        permissionPositionIds: {
           type: 'array',
           items: { type: 'string' },
-          description: '접근 가능한 직책 코드 목록 (선택)',
+          description: '접근 가능한 직책 ID 목록 (선택)',
         },
         permissionDepartmentIds: {
           type: 'array',
@@ -686,8 +686,8 @@ export class UserWikiController {
       user.id,
       files,
       dto.isPublic,
-      dto.permissionRankCodes,
-      dto.permissionPositionCodes,
+      dto.permissionRankIds,
+      dto.permissionPositionIds,
       dto.permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
@@ -731,15 +731,15 @@ export class UserWikiController {
           description: '공개 여부 (선택, true: 상위 폴더 권한 cascading, false: 완전 비공개)',
           example: true,
         },
-        permissionRankCodes: {
+        permissionRankIds: {
           type: 'array',
           items: { type: 'string' },
-          description: '접근 가능한 직급 코드 목록 (선택)',
+          description: '접근 가능한 직급 ID 목록 (선택)',
         },
-        permissionPositionCodes: {
+        permissionPositionIds: {
           type: 'array',
           items: { type: 'string' },
-          description: '접근 가능한 직책 코드 목록 (선택)',
+          description: '접근 가능한 직책 ID 목록 (선택)',
         },
         permissionDepartmentIds: {
           type: 'array',
@@ -772,8 +772,8 @@ export class UserWikiController {
       title, 
       content, 
       isPublic,
-      permissionRankCodes,
-      permissionPositionCodes,
+      permissionRankIds,
+      permissionPositionIds,
       permissionDepartmentIds,
     } = body;
 
@@ -790,8 +790,8 @@ export class UserWikiController {
       user.id,
       files,
       isPublic,
-      permissionRankCodes,
-      permissionPositionCodes,
+      permissionRankIds,
+      permissionPositionIds,
       permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
