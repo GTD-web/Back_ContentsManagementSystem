@@ -269,9 +269,13 @@ export class UserWikiController {
     
     const result = WikiResponseDto.from(folder, children, undefined, undefined, createdByName, updatedByName);
     
-    // recipients 정보 추가
+    // 권한 기반 대상 직원 정보 추가
     if (folder.recipients) {
-      (result as any).recipients = folder.recipients;
+      result.recipients = folder.recipients;
+    }
+    result.isPermissionInherited = folder.isPermissionInherited ?? false;
+    if (folder.inheritedFrom) {
+      result.inheritedFrom = folder.inheritedFrom;
     }
     
     return result;
@@ -574,9 +578,13 @@ export class UserWikiController {
     
     const result = WikiResponseDto.from(file, undefined, undefined, undefined, createdByName, updatedByName);
     
-    // recipients 정보 추가
+    // 권한 기반 대상 직원 정보 추가
     if (file.recipients) {
-      (result as any).recipients = file.recipients;
+      result.recipients = file.recipients;
+    }
+    result.isPermissionInherited = file.isPermissionInherited ?? false;
+    if (file.inheritedFrom) {
+      result.inheritedFrom = file.inheritedFrom;
     }
     
     return result;

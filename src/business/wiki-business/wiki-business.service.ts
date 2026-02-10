@@ -49,12 +49,19 @@ export class WikiBusinessService {
 
     // 대상 직원 정보 포함 옵션이 true면 추가
     if (includeTargetEmployees) {
+      const { effectiveWiki, isPermissionInherited, inheritedFrom } =
+        await this.위키_실효_권한을_계산한다(wiki);
+
       const targetEmployeesList =
-        await this.위키_대상_직원_상세_정보를_조회한다(wiki);
+        await this.위키_대상_직원_상세_정보를_조회한다(effectiveWiki);
       result.recipients = {
         total: targetEmployeesList.length,
         employees: targetEmployeesList,
       };
+      result.isPermissionInherited = isPermissionInherited;
+      if (inheritedFrom) {
+        result.inheritedFrom = inheritedFrom;
+      }
     }
 
     return result;
@@ -421,12 +428,19 @@ export class WikiBusinessService {
 
     // 대상 직원 정보 포함 옵션이 true면 추가
     if (includeTargetEmployees) {
+      const { effectiveWiki, isPermissionInherited, inheritedFrom } =
+        await this.위키_실효_권한을_계산한다(wiki);
+
       const targetEmployeesList =
-        await this.위키_대상_직원_상세_정보를_조회한다(wiki);
+        await this.위키_대상_직원_상세_정보를_조회한다(effectiveWiki);
       result.recipients = {
         total: targetEmployeesList.length,
         employees: targetEmployeesList,
       };
+      result.isPermissionInherited = isPermissionInherited;
+      if (inheritedFrom) {
+        result.inheritedFrom = inheritedFrom;
+      }
     }
 
     return result;
@@ -756,6 +770,117 @@ export class WikiBusinessService {
         replacedDepartments,
       };
     });
+  }
+
+  /**
+   * Wiki 항목의 실효 권한을 계산한다
+   * 
+   * 현재 항목의 권한과 상위 폴더 체인의 권한을 비교하여,
+   * 상위 폴더 중 권한 설정이 다른 가장 가까운 조상을 찾아 실효 권한을 결정합니다.
+   * 
+   * @param wiki - 현재 Wiki 항목
+   * @returns effectiveWiki: 실효 권한이 적용된 Wiki 항목 (상위 폴더 또는 자기 자신)
+   *          isPermissionInherited: 상위 폴더 권한을 상속받았는지 여부
+   *          inheritedFrom: 상속받은 상위 폴더 정보 (id, name)
+   */
+  private async 위키_실효_권한을_계산한다(wiki: WikiFileSystem): Promise<{
+    effectiveWiki: WikiFileSystem;
+    isPermissionInherited: boolean;
+    inheritedFrom: { id: string; name: string; permissionRankIds: string[] | null; permissionPositionIds: string[] | null; permissionDepartmentIds: string[] | null; isPublic: boolean } | null;
+  }> {
+    // parentId가 없으면 (루트 레벨) 자기 자신의 권한 사용
+    if (!wiki.parentId) {
+      return {
+        effectiveWiki: wiki,
+        isPermissionInherited: false,
+        inheritedFrom: null,
+      };
+    }
+
+    // 상위 경로 조회 (자신 포함, 루트부터 자신까지 정렬)
+    const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(wiki.id);
+
+    // breadcrumb에서 자신 제외 (상위 폴더만 추출)
+    const ancestors = breadcrumb.filter(item => item.id !== wiki.id);
+
+    if (ancestors.length === 0) {
+      return {
+        effectiveWiki: wiki,
+        isPermissionInherited: false,
+        inheritedFrom: null,
+      };
+    }
+
+    // 가장 가까운 상위 폴더부터 확인 (ancestors는 루트→자신 순이므로 reverse)
+    const reversedAncestors = [...ancestors].reverse();
+
+    for (const ancestor of reversedAncestors) {
+      const ancestorHasPermissions = this.위키_권한이_설정되어_있는지(ancestor);
+      const currentHasPermissions = this.위키_권한이_설정되어_있는지(wiki);
+
+      // 상위 폴더에 권한이 설정되어 있고, 현재 항목과 다른 경우
+      if (ancestorHasPermissions && !this.위키_권한이_동일한지(wiki, ancestor)) {
+        this.logger.log(
+          `위키 실효 권한 상속 감지 - 현재: ${wiki.id}(${wiki.name}), 상위: ${ancestor.id}(${ancestor.name})`,
+        );
+
+        return {
+          effectiveWiki: ancestor,
+          isPermissionInherited: true,
+          inheritedFrom: {
+            id: ancestor.id,
+            name: ancestor.name,
+            permissionRankIds: ancestor.permissionRankIds,
+            permissionPositionIds: ancestor.permissionPositionIds,
+            permissionDepartmentIds: ancestor.permissionDepartmentIds,
+            isPublic: ancestor.isPublic,
+          },
+        };
+      }
+    }
+
+    // 상위 폴더와 권한이 동일하면 자기 자신의 권한 사용
+    return {
+      effectiveWiki: wiki,
+      isPermissionInherited: false,
+      inheritedFrom: null,
+    };
+  }
+
+  /**
+   * Wiki 항목에 권한이 설정되어 있는지 확인한다
+   * @private
+   */
+  private 위키_권한이_설정되어_있는지(wiki: WikiFileSystem): boolean {
+    // isPublic이 false이거나, 특정 권한 ID가 설정되어 있으면 권한이 설정된 것
+    if (!wiki.isPublic) return true;
+    if (wiki.permissionRankIds && wiki.permissionRankIds.length > 0) return true;
+    if (wiki.permissionPositionIds && wiki.permissionPositionIds.length > 0) return true;
+    if (wiki.permissionDepartmentIds && wiki.permissionDepartmentIds.length > 0) return true;
+    return false;
+  }
+
+  /**
+   * 두 Wiki 항목의 권한이 동일한지 비교한다
+   * @private
+   */
+  private 위키_권한이_동일한지(a: WikiFileSystem, b: WikiFileSystem): boolean {
+    if (a.isPublic !== b.isPublic) return false;
+
+    const arraysEqual = (arr1: string[] | null | undefined, arr2: string[] | null | undefined): boolean => {
+      const a1 = arr1 || [];
+      const a2 = arr2 || [];
+      if (a1.length !== a2.length) return false;
+      const sorted1 = [...a1].sort();
+      const sorted2 = [...a2].sort();
+      return sorted1.every((val, idx) => val === sorted2[idx]);
+    };
+
+    if (!arraysEqual(a.permissionRankIds, b.permissionRankIds)) return false;
+    if (!arraysEqual(a.permissionPositionIds, b.permissionPositionIds)) return false;
+    if (!arraysEqual(a.permissionDepartmentIds, b.permissionDepartmentIds)) return false;
+
+    return true;
   }
 
   /**

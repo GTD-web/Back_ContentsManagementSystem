@@ -572,6 +572,64 @@ export class WikiResponseDto {
   })
   pathIds?: string[];
 
+  @ApiPropertyOptional({
+    description: '상위 폴더 공개범위 상속 여부. true이면 현재 항목의 공개범위가 아닌 상위 폴더의 공개범위가 적용됨',
+    example: false,
+  })
+  isPermissionInherited?: boolean;
+
+  @ApiPropertyOptional({
+    description: '공개범위를 상속받은 상위 폴더 정보 (isPermissionInherited가 true인 경우에만 제공)',
+    example: {
+      id: 'uuid',
+      name: '상위 폴더명',
+      isPublic: false,
+      permissionRankIds: ['uuid'],
+      permissionPositionIds: [],
+      permissionDepartmentIds: ['uuid'],
+    },
+  })
+  inheritedFrom?: {
+    id: string;
+    name: string;
+    isPublic: boolean;
+    permissionRankIds: string[] | null;
+    permissionPositionIds: string[] | null;
+    permissionDepartmentIds: string[] | null;
+  };
+
+  @ApiPropertyOptional({
+    description: '대상 직원 정보 (권한 기반으로 계산)',
+    example: {
+      total: 25,
+      employees: [
+        {
+          employeeNumber: '2021001',
+          employeeName: '홍길동',
+          departmentId: 'uuid',
+          departmentName: '개발팀',
+          rankId: 'uuid',
+          rankName: '대리',
+          positionId: 'uuid',
+          positionName: '팀장',
+        },
+      ],
+    },
+  })
+  recipients?: {
+    total: number;
+    employees: Array<{
+      employeeNumber: string;
+      employeeName: string;
+      departmentId: string | null;
+      departmentName: string;
+      rankId?: string | null;
+      rankName?: string | null;
+      positionId?: string | null;
+      positionName?: string | null;
+    }>;
+  };
+
   static from(
     wiki: WikiFileSystem, 
     children?: WikiFileSystem[],
