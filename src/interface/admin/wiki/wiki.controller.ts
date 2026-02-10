@@ -36,7 +36,6 @@ import {
   CreateEmptyFileDto,
   UpdateFolderDto,
   UpdateFolderNameDto,
-  UpdateWikiPublicDto,
   UpdateFilePublicDto,
   UpdateWikiPathDto,
   WikiResponseDto,
@@ -324,7 +323,7 @@ export class WikiController {
   @Patch('folders/:id/public')
   @ApiOperation({
     summary: '폴더 공개 수정',
-    description: '폴더의 공개 여부 및 권한을 수정합니다.',
+    description: '폴더의 공개 여부를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -334,14 +333,11 @@ export class WikiController {
   @ApiParam({ name: 'id', description: '폴더 ID' })
   async 폴더_공개를_수정한다(
     @Param('id') id: string,
-    @Body() dto: UpdateWikiPublicDto,
+    @Body() dto: UpdateFilePublicDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
     const folder = await this.wikiBusinessService.폴더_공개를_수정한다(id, {
       isPublic: dto.isPublic,
-      permissionRankIds: dto.permissionRankIds,
-      permissionPositionIds: dto.permissionPositionIds,
-      permissionDepartmentIds: dto.permissionDepartmentIds,
       updatedBy: user.id,
     });
     return WikiResponseDto.from(folder);
