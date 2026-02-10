@@ -35,14 +35,29 @@ export class WikiBusinessService {
   /**
    * 폴더를 조회한다
    */
-  async 폴더를_조회한다(id: string): Promise<WikiFileSystem> {
+  async 폴더를_조회한다(
+    id: string,
+    includeTargetEmployees: boolean = false,
+  ): Promise<any> {
     this.logger.log(`폴더 조회 시작 - ID: ${id}`);
 
     const wiki = await this.wikiContextService.위키_상세를_조회한다(id);
 
     this.logger.log(`폴더 조회 완료 - ID: ${id}`);
 
-    return wiki;
+    const result: any = { ...wiki };
+
+    // 대상 직원 정보 포함 옵션이 true면 추가
+    if (includeTargetEmployees) {
+      const targetEmployeesList =
+        await this.위키_대상_직원_상세_정보를_조회한다(wiki);
+      result.recipients = {
+        total: targetEmployeesList.length,
+        employees: targetEmployeesList,
+      };
+    }
+
+    return result;
   }
 
   /**
@@ -392,12 +407,27 @@ export class WikiBusinessService {
   /**
    * 파일을 조회한다
    */
-  async 파일을_조회한다(id: string): Promise<WikiFileSystem> {
+  async 파일을_조회한다(
+    id: string,
+    includeTargetEmployees: boolean = false,
+  ): Promise<any> {
     this.logger.log(`파일 조회 시작 - ID: ${id}`);
 
-    const result = await this.wikiContextService.위키_상세를_조회한다(id);
+    const wiki = await this.wikiContextService.위키_상세를_조회한다(id);
 
     this.logger.log(`파일 조회 완료 - ID: ${id}`);
+
+    const result: any = { ...wiki };
+
+    // 대상 직원 정보 포함 옵션이 true면 추가
+    if (includeTargetEmployees) {
+      const targetEmployeesList =
+        await this.위키_대상_직원_상세_정보를_조회한다(wiki);
+      result.recipients = {
+        total: targetEmployeesList.length,
+        employees: targetEmployeesList,
+      };
+    }
 
     return result;
   }
@@ -767,5 +797,287 @@ export class WikiBusinessService {
     }
 
     return nameMap;
+  }
+
+  /**
+   * Wiki 대상 직원 상세 정보를 조회한다
+   * @private
+   */
+  async 위키_대상_직원_상세_정보를_조회한다(
+    wiki: WikiFileSystem,
+  ): Promise<any[]> {
+    this.logger.log(
+      `Wiki 대상 직원 상세 정보 조회 시작 - ID: ${wiki.id}`,
+    );
+
+    // 1. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
+    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+    
+    // 2. 직원 맵 생성 (UUID와 employeeNumber 둘 다 키로 사용)
+    const employeeMapByUuid = new Map<string, any>();
+    const employeeMapByNumber = new Map<string, any>();
+    
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          const employeeInfo = {
+            employeeNumber: emp.employeeNumber,
+            name: emp.name || '알 수 없음',
+            departmentId: dept.id || null,
+            departmentName: dept.departmentName || dept.name || '알 수 없음',
+            rankId: emp.rankId || null,
+            rankName: emp.rankName || null,
+            positionId: emp.positionId || null,
+            positionName: emp.positionName || null,
+          };
+          
+          // UUID로 매핑
+          if (emp.id) {
+            employeeMapByUuid.set(emp.id, employeeInfo);
+          }
+          // employeeNumber로 매핑
+          if (emp.employeeNumber) {
+            employeeMapByNumber.set(emp.employeeNumber, employeeInfo);
+          }
+        });
+      }
+      
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+    
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    this.logger.debug(
+      `조직 정보에서 직원 맵 생성 완료 - UUID 기준: ${employeeMapByUuid.size}명, 사번 기준: ${employeeMapByNumber.size}명`,
+    );
+
+    // 3. 대상 직원 employeeNumber 목록 추출
+    const targetEmployeeNumbers = new Set<string>();
+
+    // 3-1. 부서/직급/직책으로 필터링된 직원들 (employeeNumber)
+    if (
+      wiki.permissionDepartmentIds &&
+      wiki.permissionDepartmentIds.length > 0
+    ) {
+      const employees = this.조직에서_부서별_직원ID를_추출한다(
+        orgInfo,
+        wiki.permissionDepartmentIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (
+      wiki.permissionRankIds &&
+      wiki.permissionRankIds.length > 0
+    ) {
+      const employees = this.조직에서_직급별_직원ID를_추출한다(
+        orgInfo,
+        wiki.permissionRankIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (
+      wiki.permissionPositionIds &&
+      wiki.permissionPositionIds.length > 0
+    ) {
+      const employees = this.조직에서_직책별_직원ID를_추출한다(
+        orgInfo,
+        wiki.permissionPositionIds,
+      );
+      employees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    // 3-2. 전사공개이면서 권한 필터가 없는 경우 모든 직원
+    const hasPermissionFilters =
+      (wiki.permissionRankIds &&
+        wiki.permissionRankIds.length > 0) ||
+      (wiki.permissionPositionIds &&
+        wiki.permissionPositionIds.length > 0) ||
+      (wiki.permissionDepartmentIds &&
+        wiki.permissionDepartmentIds.length > 0);
+
+    if (wiki.isPublic && !hasPermissionFilters) {
+      const allEmployees = this.조직에서_모든_직원ID를_추출한다(orgInfo);
+      allEmployees.forEach((id) => targetEmployeeNumbers.add(id));
+    }
+
+    if (targetEmployeeNumbers.size === 0) {
+      this.logger.log('대상 직원이 없습니다.');
+      return [];
+    }
+
+    // 4. 각 직원의 상세 정보 조합
+    const targetEmployees = Array.from(targetEmployeeNumbers).map((employeeNumber) => {
+      const employeeInfo = employeeMapByNumber.get(employeeNumber);
+
+      return {
+        employeeNumber, // SSO 사번 (employeeNumber)
+        employeeName: employeeInfo?.name || '알 수 없음',
+        departmentId: employeeInfo?.departmentId || null,
+        departmentName: employeeInfo?.departmentName || '알 수 없음',
+        rankId: employeeInfo?.rankId || null,
+        rankName: employeeInfo?.rankName || null,
+        positionId: employeeInfo?.positionId || null,
+        positionName: employeeInfo?.positionName || null,
+      };
+    });
+
+    this.logger.log(
+      `Wiki 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명`,
+    );
+
+    return targetEmployees;
+  }
+
+  /**
+   * 조직에서 모든 직원 ID를 추출한다
+   * @private
+   */
+  private 조직에서_모든_직원ID를_추출한다(orgInfo: any): string[] {
+    const employeeIds: string[] = [];
+
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          if (emp.employeeNumber) {
+            employeeIds.push(emp.employeeNumber);
+          }
+        });
+      }
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    return employeeIds;
+  }
+
+  /**
+   * 조직에서 직급별 직원 ID를 추출한다
+   * @private
+   */
+  private 조직에서_직급별_직원ID를_추출한다(
+    orgInfo: any,
+    rankIds: string[],
+  ): string[] {
+    const employeeIds: string[] = [];
+    const rankIdSet = new Set(rankIds);
+
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          if (emp.employeeNumber && emp.rankId && rankIdSet.has(emp.rankId)) {
+            employeeIds.push(emp.employeeNumber);
+          }
+        });
+      }
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    return employeeIds;
+  }
+
+  /**
+   * 조직에서 직책별 직원 ID를 추출한다
+   * @private
+   */
+  private 조직에서_직책별_직원ID를_추출한다(
+    orgInfo: any,
+    positionIds: string[],
+  ): string[] {
+    const employeeIds: string[] = [];
+    const positionIdSet = new Set(positionIds);
+
+    const extractFromDept = (dept: any) => {
+      if (dept.employees) {
+        dept.employees.forEach((emp: any) => {
+          if (
+            emp.employeeNumber &&
+            emp.positionId &&
+            positionIdSet.has(emp.positionId)
+          ) {
+            employeeIds.push(emp.employeeNumber);
+          }
+        });
+      }
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child));
+      }
+    };
+
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    return employeeIds;
+  }
+
+  /**
+   * 조직에서 부서별 직원 ID를 추출한다
+   * @private
+   */
+  private 조직에서_부서별_직원ID를_추출한다(
+    orgInfo: any,
+    departmentIds: string[],
+  ): string[] {
+    const employeeIds: string[] = [];
+    const departmentIdSet = new Set(departmentIds);
+
+    this.logger.debug(
+      `부서별 직원 추출 시작 - 대상 부서 ID: ${departmentIds.join(', ')}`,
+    );
+
+    const extractFromDept = (dept: any, depth: number = 0) => {
+      const isDepartmentMatch = dept.id && departmentIdSet.has(dept.id);
+
+      if (isDepartmentMatch) {
+        const employeeCount = dept.employees?.length || 0;
+        this.logger.debug(
+          `${'  '.repeat(depth)}부서 매칭: ${dept.departmentName || dept.name} (${dept.id}) - 직원 ${employeeCount}명`,
+        );
+
+        if (dept.employees) {
+          dept.employees.forEach((emp: any) => {
+            if (emp.employeeNumber) {
+              employeeIds.push(emp.employeeNumber);
+            }
+          });
+        }
+      }
+
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => extractFromDept(child, depth + 1));
+      }
+    };
+
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => extractFromDept(dept));
+    }
+
+    this.logger.debug(
+      `부서별 직원 추출 완료 - 총 ${employeeIds.length}명`,
+    );
+
+    return employeeIds;
   }
 }

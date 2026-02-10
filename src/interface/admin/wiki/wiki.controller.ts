@@ -271,16 +271,17 @@ export class WikiController {
   @Get('folders/:id')
   @ApiOperation({
     summary: '폴더 상세 조회',
-    description: '폴더 상세 정보와 하위 폴더/파일 목록을 조회합니다.',
+    description: '폴더 상세 정보와 하위 폴더/파일 목록을 조회합니다. 권한 설정에 맞는 대상 직원 정보도 포함됩니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '폴더 조회 성공 (하위 항목 포함)',
+    description: '폴더 조회 성공 (하위 항목 및 대상 직원 정보 포함)',
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '폴더 ID' })
   async 폴더를_조회한다(@Param('id') id: string): Promise<WikiResponseDto> {
-    const folder = await this.wikiBusinessService.폴더를_조회한다(id);
+    // includeTargetEmployees를 true로 설정하여 대상 직원 정보 포함
+    const folder = await this.wikiBusinessService.폴더를_조회한다(id, true);
     const children = await this.wikiBusinessService.폴더_하위_항목을_조회한다(id);
     
     // 사용자 이름 조회
@@ -290,7 +291,14 @@ export class WikiController {
     const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
     const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
     
-    return WikiResponseDto.from(folder, children, undefined, undefined, createdByName, updatedByName);
+    const result = WikiResponseDto.from(folder, children, undefined, undefined, createdByName, updatedByName);
+    
+    // recipients 정보 추가
+    if (folder.recipients) {
+      (result as any).recipients = folder.recipients;
+    }
+    
+    return result;
   }
 
   /**
@@ -776,24 +784,32 @@ export class WikiController {
   @ApiOperation({
     summary: '파일 상세 조회',
     description:
-      '파일 상세 정보를 조회합니다.\n\n' +
+      '파일 상세 정보를 조회합니다. 권한 설정에 맞는 대상 직원 정보도 포함됩니다.\n\n' +
       '⚠️ **권한 정책**: 상위 폴더들의 권한을 cascading하여 접근 권한이 결정됩니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '파일 조회 성공',
+    description: '파일 조회 성공 (대상 직원 정보 포함)',
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '파일 ID' })
   async 파일을_조회한다(@Param('id') id: string): Promise<WikiResponseDto> {
-    const file = await this.wikiBusinessService.파일을_조회한다(id);
+    // includeTargetEmployees를 true로 설정하여 대상 직원 정보 포함
+    const file = await this.wikiBusinessService.파일을_조회한다(id, true);
     
     // 사용자 이름 조회
     const userNameMap = await this.사용자_이름_맵을_조회한다([file.createdBy, file.updatedBy]);
     const createdByName = file.createdBy ? userNameMap.get(file.createdBy) || null : null;
     const updatedByName = file.updatedBy ? userNameMap.get(file.updatedBy) || null : null;
     
-    return WikiResponseDto.from(file, undefined, undefined, undefined, createdByName, updatedByName);
+    const result = WikiResponseDto.from(file, undefined, undefined, undefined, createdByName, updatedByName);
+    
+    // recipients 정보 추가
+    if (file.recipients) {
+      (result as any).recipients = file.recipients;
+    }
+    
+    return result;
   }
 
   /**
