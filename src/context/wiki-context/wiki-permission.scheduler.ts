@@ -56,8 +56,9 @@ export class WikiPermissionScheduler {
       // 2. 모든 부서 ID 수집 (중복 제거)
       const allDepartmentIds = new Set<string>();
       wikis.forEach(wiki => {
-        if (wiki.permissionDepartmentIds && wiki.permissionDepartmentIds.length > 0) {
-          wiki.permissionDepartmentIds.forEach(id => allDepartmentIds.add(id));
+        const deptIds = Array.isArray(wiki.permissionDepartmentIds) ? wiki.permissionDepartmentIds : [];
+        if (deptIds.length > 0) {
+          deptIds.forEach(id => allDepartmentIds.add(id));
         }
       });
 
@@ -128,7 +129,9 @@ export class WikiPermissionScheduler {
     wiki: WikiFileSystem,
     departmentInfoMap: Map<string, any>,
   ): Promise<boolean> {
-    if (!wiki.permissionDepartmentIds || wiki.permissionDepartmentIds.length === 0) {
+    // 방어적 배열 변환: jsonb 컬럼에서 배열이 아닌 값이 올 수 있음
+    const deptIds = Array.isArray(wiki.permissionDepartmentIds) ? wiki.permissionDepartmentIds : [];
+    if (deptIds.length === 0) {
       // 부서 권한이 없으면 검증할 필요 없음
       return false;
     }
@@ -138,7 +141,7 @@ export class WikiPermissionScheduler {
     const validDepartments: Array<{ id: string; name: string | null }> = [];
     const invalidDepartments: Array<{ id: string; name: string | null }> = [];
 
-    for (const departmentId of wiki.permissionDepartmentIds) {
+    for (const departmentId of deptIds) {
       const info = departmentInfoMap.get(departmentId);
       if (!info) {
         // SSO에서 조회 실패한 경우 (존재하지 않음) - 로그에 기록하지 않음

@@ -1,4 +1,4 @@
-import { Entity, Column, OneToMany, OneToOne, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, OneToMany, OneToOne, ManyToOne, JoinColumn, Index, AfterLoad } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
 import { AnnouncementRead } from './announcement-read.entity';
 import { Survey } from '../../sub/survey/survey.entity';
@@ -136,6 +136,32 @@ export class Announcement extends BaseEntity<Announcement> {
 
   @OneToMany(() => AnnouncementPermissionLog, (log) => log.announcement)
   permissionLogs: AnnouncementPermissionLog[];
+
+  /**
+   * DB에서 로드 후 jsonb 배열 필드를 정규화한다
+   */
+  @AfterLoad()
+  normalizeJsonbArrayFields() {
+    this.permissionEmployeeIds = this.ensureStringArray(this.permissionEmployeeIds);
+    this.permissionRankIds = this.ensureStringArray(this.permissionRankIds);
+    this.permissionPositionIds = this.ensureStringArray(this.permissionPositionIds);
+    this.permissionDepartmentIds = this.ensureStringArray(this.permissionDepartmentIds);
+  }
+
+  private ensureStringArray(value: any): string[] | null {
+    if (value === null || value === undefined) return null;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed;
+        return [String(parsed)];
+      } catch {
+        return [value];
+      }
+    }
+    return null;
+  }
 
   /**
    * 엔티티를 DTO로 변환한다

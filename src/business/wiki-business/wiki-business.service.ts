@@ -1096,8 +1096,10 @@ export class WikiBusinessService {
     orgInfo: any,
     rankIds: string[],
   ): string[] {
+    // 방어적 배열 변환: jsonb 컬럼에서 배열이 아닌 값이 올 수 있음
+    const safeRankIds = Array.isArray(rankIds) ? rankIds : [rankIds].filter(Boolean);
     const employeeIds: string[] = [];
-    const rankIdSet = new Set(rankIds);
+    const rankIdSet = new Set(safeRankIds);
 
     const extractFromDept = (dept: any) => {
       if (dept.employees) {
@@ -1128,8 +1130,10 @@ export class WikiBusinessService {
     orgInfo: any,
     positionIds: string[],
   ): string[] {
+    // 방어적 배열 변환: jsonb 컬럼에서 배열이 아닌 값이 올 수 있음
+    const safePositionIds = Array.isArray(positionIds) ? positionIds : [positionIds].filter(Boolean);
     const employeeIds: string[] = [];
-    const positionIdSet = new Set(positionIds);
+    const positionIdSet = new Set(safePositionIds);
 
     const extractFromDept = (dept: any) => {
       if (dept.employees) {
@@ -1164,11 +1168,13 @@ export class WikiBusinessService {
     orgInfo: any,
     departmentIds: string[],
   ): string[] {
+    // 방어적 배열 변환: jsonb 컬럼에서 배열이 아닌 값이 올 수 있음
+    const safeDepartmentIds = Array.isArray(departmentIds) ? departmentIds : [departmentIds].filter(Boolean);
     const employeeIds: string[] = [];
-    const departmentIdSet = new Set(departmentIds);
+    const departmentIdSet = new Set(safeDepartmentIds);
 
     this.logger.debug(
-      `부서별 직원 추출 시작 - 대상 부서 ID: ${departmentIds.join(', ')}`,
+      `부서별 직원 추출 시작 - 대상 부서 ID: ${safeDepartmentIds.join(', ')}`,
     );
 
     const extractFromDept = (dept: any, depth: number = 0) => {

@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index, AfterLoad } from 'typeorm';
 import { BaseEntity } from '@libs/database/base/base.entity';
 import { WikiFileSystemType } from './wiki-file-system-type.types';
 import { WikiFileSystemClosure } from './wiki-file-system-closure.entity';
@@ -158,6 +158,37 @@ export class WikiFileSystem extends BaseEntity<WikiFileSystem> {
 
   @OneToMany(() => WikiPermissionLog, (log) => log.wikiFileSystem)
   permissionLogs: WikiPermissionLog[];
+
+  /**
+   * DB에서 로드 후 jsonb 배열 필드를 정규화한다
+   * 
+   * jsonb 컬럼에 배열이 아닌 값(문자열 등)이 저장된 경우
+   * 배열로 변환하여 .forEach(), .join() 등의 배열 메서드 호출 시 에러를 방지한다
+   */
+  @AfterLoad()
+  normalizeJsonbArrayFields() {
+    this.permissionRankIds = this.ensureStringArray(this.permissionRankIds);
+    this.permissionPositionIds = this.ensureStringArray(this.permissionPositionIds);
+    this.permissionDepartmentIds = this.ensureStringArray(this.permissionDepartmentIds);
+  }
+
+  /**
+   * 값을 string[] | null 로 정규화한다
+   */
+  private ensureStringArray(value: any): string[] | null {
+    if (value === null || value === undefined) return null;
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed;
+        return [String(parsed)];
+      } catch {
+        return [value];
+      }
+    }
+    return null;
+  }
 
   /**
    * 엔티티를 DTO로 변환한다
