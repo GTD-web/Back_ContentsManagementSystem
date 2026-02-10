@@ -723,7 +723,7 @@ export class WikiBusinessService {
    * 사용자 이름 조회 (createdBy, updatedBy용)
    * 
    * @private
-   * @param userIds - 조회할 사용자 ID 배열
+   * @param userIds - 조회할 사용자 ID 배열 (UUID 또는 employeeNumber)
    * @returns 사용자 ID를 키로, 이름을 값으로 하는 Map
    */
   private async 사용자_이름_맵을_조회한다(userIds: (string | null)[]): Promise<Map<string, string>> {
@@ -740,12 +740,18 @@ export class WikiBusinessService {
       const employees = await this.companyContextService.직원_목록을_조회한다(validUserIds);
       
       employees.forEach(employee => {
-        if (employee.employeeNumber && employee.name) {
-          nameMap.set(employee.employeeNumber, employee.name);
+        if (employee.name) {
+          // employee.id (UUID)와 employee.employeeNumber 둘 다 Map에 추가
+          if (employee.id) {
+            nameMap.set(employee.id, employee.name);
+          }
+          if (employee.employeeNumber) {
+            nameMap.set(employee.employeeNumber, employee.name);
+          }
         }
       });
       
-      this.logger.debug(`사용자 이름 조회 완료 - 요청: ${validUserIds.length}명, 조회: ${nameMap.size}명`);
+      this.logger.debug(`사용자 이름 조회 완료 - 요청: ${validUserIds.length}명, 조회: ${employees.length}명`);
     } catch (error) {
       this.logger.warn(`사용자 이름 조회 실패 (무시하고 계속)`, error);
       // 사용자 이름 조회 실패는 치명적이지 않으므로 빈 Map 반환

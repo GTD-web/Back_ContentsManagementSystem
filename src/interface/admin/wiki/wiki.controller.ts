@@ -198,8 +198,14 @@ export class WikiController {
       const employees = await this.companyContextService.직원_목록을_조회한다(validUserIds);
       
       employees.forEach(employee => {
-        if (employee.employeeNumber && employee.name) {
-          nameMap.set(employee.employeeNumber, employee.name);
+        if (employee.name) {
+          // employee.id (UUID)와 employee.employeeNumber 둘 다 Map에 추가
+          if (employee.id) {
+            nameMap.set(employee.id, employee.name);
+          }
+          if (employee.employeeNumber) {
+            nameMap.set(employee.employeeNumber, employee.name);
+          }
         }
       });
     } catch (error) {
