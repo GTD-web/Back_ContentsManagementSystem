@@ -291,9 +291,9 @@ export class UserWikiController {
       name: dto.name,
       parentId: dto.parentId,
       isPublic: dto.isPublic ?? true,
-      permissionRankIds: dto.permissionRankIds || null,
-      permissionPositionIds: dto.permissionPositionIds || null,
-      permissionDepartmentIds: dto.permissionDepartmentIds || null,
+      permissionRankIds: dto.permissionRankIds,
+      permissionPositionIds: dto.permissionPositionIds,
+      permissionDepartmentIds: dto.permissionDepartmentIds,
       order: dto.order,
       createdBy: user.id,
     });
@@ -643,6 +643,21 @@ export class UserWikiController {
           type: 'boolean',
           description: '공개 여부 (선택, 기본값: true)',
         },
+        permissionRankCodes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 직급 코드 목록 (선택)',
+        },
+        permissionPositionCodes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 직책 코드 목록 (선택)',
+        },
+        permissionDepartmentIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 부서 ID 목록 (선택)',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -671,6 +686,9 @@ export class UserWikiController {
       user.id,
       files,
       dto.isPublic,
+      dto.permissionRankCodes,
+      dto.permissionPositionCodes,
+      dto.permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
   }
@@ -713,6 +731,21 @@ export class UserWikiController {
           description: '공개 여부 (선택, true: 상위 폴더 권한 cascading, false: 완전 비공개)',
           example: true,
         },
+        permissionRankCodes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 직급 코드 목록 (선택)',
+        },
+        permissionPositionCodes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 직책 코드 목록 (선택)',
+        },
+        permissionDepartmentIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: '접근 가능한 부서 ID 목록 (선택)',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -734,7 +767,15 @@ export class UserWikiController {
     @Body() body: any,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
-    const { name, title, content, isPublic } = body;
+    const { 
+      name, 
+      title, 
+      content, 
+      isPublic,
+      permissionRankCodes,
+      permissionPositionCodes,
+      permissionDepartmentIds,
+    } = body;
 
     if (!name) {
       throw new BadRequestException('name 필드는 필수입니다.');
@@ -749,6 +790,9 @@ export class UserWikiController {
       user.id,
       files,
       isPublic,
+      permissionRankCodes,
+      permissionPositionCodes,
+      permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
   }

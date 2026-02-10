@@ -78,9 +78,6 @@ export class WikiBusinessService {
     id: string,
     data: {
       isPublic: boolean;
-      permissionRankIds?: string[] | null;
-      permissionPositionIds?: string[] | null;
-      permissionDepartmentIds?: string[] | null;
       updatedBy?: string;
     },
   ): Promise<WikiFileSystem> {
@@ -100,9 +97,9 @@ export class WikiBusinessService {
     name: string;
     parentId?: string | null;
     isPublic?: boolean;
-    permissionRankIds?: string[] | null;
-    permissionPositionIds?: string[] | null;
-    permissionDepartmentIds?: string[] | null;
+    permissionRankIds?: string[];
+    permissionPositionIds?: string[];
+    permissionDepartmentIds?: string[];
     order?: number;
     createdBy?: string;
   }): Promise<WikiFileSystem> {
@@ -155,9 +152,9 @@ export class WikiBusinessService {
     data: {
       name?: string;
       isPublic?: boolean;
-      permissionRankIds?: string[] | null;
-      permissionPositionIds?: string[] | null;
-      permissionDepartmentIds?: string[] | null;
+      permissionRankIds?: string[];
+      permissionPositionIds?: string[];
+      permissionDepartmentIds?: string[];
       order?: number;
       updatedBy?: string;
     },
@@ -416,6 +413,9 @@ export class WikiBusinessService {
     createdBy?: string,
     files?: Express.Multer.File[],
     isPublic?: boolean,
+    permissionRankCodes?: string[],
+    permissionPositionCodes?: string[],
+    permissionDepartmentIds?: string[],
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
@@ -469,6 +469,9 @@ export class WikiBusinessService {
       content,
       attachments,
       isPublic,
+      permissionRankCodes,
+      permissionPositionCodes,
+      permissionDepartmentIds,
       createdBy,
     });
 
@@ -515,6 +518,9 @@ export class WikiBusinessService {
     updatedBy?: string,
     files?: Express.Multer.File[],
     isPublic?: boolean,
+    permissionRankCodes?: string[],
+    permissionPositionCodes?: string[],
+    permissionDepartmentIds?: string[],
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 수정 시작 - ID: ${id}`);
 
@@ -584,6 +590,9 @@ export class WikiBusinessService {
       title,
       content,
       isPublic,
+      permissionRankCodes,
+      permissionPositionCodes,
+      permissionDepartmentIds,
       updatedBy,
     });
 

@@ -1658,7 +1658,7 @@ export class SeedDataContextService {
           ? departments
               .sort(() => 0.5 - Math.random())
               .slice(0, Math.min(2, departments.length))
-          : null,
+          : undefined,
       createdBy: 'seed',
     });
     created++;
@@ -1673,13 +1673,13 @@ export class SeedDataContextService {
           ? rankCodes
               .sort(() => 0.5 - Math.random())
               .slice(0, Math.min(2, rankCodes.length))
-          : null,
+          : undefined,
       permissionPositionIds:
         positionCodes.length > 0
           ? positionCodes
               .sort(() => 0.5 - Math.random())
               .slice(0, Math.min(2, positionCodes.length))
-          : null,
+          : undefined,
       createdBy: 'seed',
     });
     created++;

@@ -62,7 +62,7 @@ export class CreateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankIds?: string[] | null;
+  permissionRankIds?: string[];
 
   @ApiPropertyOptional({
     description: '접근 가능한 직책 ID 목록 (UUID) - isPublic: false일 때 사용',
@@ -72,7 +72,7 @@ export class CreateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionIds?: string[] | null;
+  permissionPositionIds?: string[];
 
   @ApiPropertyOptional({
     description: '접근 가능한 부서 ID 목록 (UUID) - isPublic: false일 때 사용',
@@ -82,7 +82,7 @@ export class CreateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionDepartmentIds?: string[] | null;
+  permissionDepartmentIds?: string[];
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0, default: 0 })
   @IsOptional()
@@ -243,7 +243,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankIds?: string[] | null;
+  permissionRankIds?: string[];
 
   @ApiPropertyOptional({
     description: '직책 ID 목록 (UUID)',
@@ -253,7 +253,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionIds?: string[] | null;
+  permissionPositionIds?: string[];
 
   @ApiPropertyOptional({
     description: '부서 ID 목록 (UUID)',
@@ -263,7 +263,7 @@ export class UpdateFolderDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionDepartmentIds?: string[] | null;
+  permissionDepartmentIds?: string[];
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0 })
   @IsOptional()
@@ -327,7 +327,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionRankIds?: string[] | null;
+  permissionRankIds?: string[];
 
   @ApiPropertyOptional({
     description: '직책 ID 목록 (UUID)',
@@ -337,7 +337,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionPositionIds?: string[] | null;
+  permissionPositionIds?: string[];
 
   @ApiPropertyOptional({
     description: '부서 ID 목록 (UUID)',
@@ -347,7 +347,7 @@ export class UpdateWikiPublicDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  permissionDepartmentIds?: string[] | null;
+  permissionDepartmentIds?: string[];
 }
 
 /**
