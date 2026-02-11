@@ -199,8 +199,9 @@ export class UserWikiController {
    * 사용자의 권한 정보(직급/직책/부서)를 기반으로 위키 항목을 필터링한다.
    * 
    * 권한 정책 (Cascading):
-   * - 폴더: isPublic이 false이면 permissionRankIds/positionIds/departmentIds 중 하나라도 매칭되어야 접근 가능
-   * - 파일: isPublic이 false이면 무조건 비공개, true이면 상위 폴더의 권한을 상속
+   * - 폴더: permissionRankIds/positionIds/departmentIds 중 하나라도 매칭되면 접근 가능
+   *   - 권한 설정이 비어있으면 전체 공개로 간주하여 접근 가능
+   * - 파일: 상위 폴더의 권한을 상속받음
    * - 상위 폴더가 접근 불가하면 하위 항목도 모두 접근 불가
    */
   private async 권한_기반으로_필터링한다(
@@ -256,16 +257,34 @@ export class UserWikiController {
       return accessCache.get(item.id)!;
     }
 
-    // 파일: isPublic이 false이면 무조건 비공개
-    if (item.type === 'file' && !item.isPublic) {
-      this.logger.debug(`파일 접근 거부 - ${item.name} (isPublic: false)`);
-      accessCache.set(item.id, false);
-      return false;
+    // 상위 폴더 접근 권한 체크 (Cascading) - 먼저 상위 폴더 체크
+    if (item.parentId && itemMap.has(item.parentId)) {
+      const parent = itemMap.get(item.parentId)!;
+      const parentAccess = this.항목_접근_가능_여부(parent, itemMap, accessCache, employee);
+      if (!parentAccess) {
+        this.logger.debug(`상위 폴더 접근 거부로 인한 접근 거부 - ${item.name} (부모: ${parent.name})`);
+        accessCache.set(item.id, false);
+        return false;
+      }
     }
 
-    // 폴더: isPublic이 false이면 직급/직책/부서 매칭 체크
-    if (item.type === 'folder' && !item.isPublic) {
-      this.logger.debug(`폴더 권한 체크 - ${item.name}, isPublic: ${item.isPublic}, permissionDepartmentIds: ${JSON.stringify(item.permissionDepartmentIds)}, 사용자 departmentId: ${employee.departmentId}`);
+    // 폴더: 권한 설정 체크
+    if (item.type === 'folder') {
+      // 권한 설정이 모두 비어있으면 전체 공개로 간주
+      const hasPermissionSettings = 
+        (item.permissionRankIds && item.permissionRankIds.length > 0) ||
+        (item.permissionPositionIds && item.permissionPositionIds.length > 0) ||
+        (item.permissionDepartmentIds && item.permissionDepartmentIds.length > 0);
+
+      if (!hasPermissionSettings) {
+        // 권한 설정이 없으면 전체 공개
+        this.logger.debug(`폴더 접근 허용 (전체 공개) - ${item.name}`);
+        accessCache.set(item.id, true);
+        return true;
+      }
+
+      // 권한 설정이 있으면 직급/직책/부서 매칭 체크
+      this.logger.debug(`폴더 권한 체크 - ${item.name}, permissionDepartmentIds: ${JSON.stringify(item.permissionDepartmentIds)}, 사용자 departmentId: ${employee.departmentId}`);
       
       const hasDirectAccess = !!(
         (item.permissionRankIds &&
@@ -290,18 +309,8 @@ export class UserWikiController {
       }
     }
 
-    // 상위 폴더 접근 권한 체크 (Cascading)
-    if (item.parentId && itemMap.has(item.parentId)) {
-      const parent = itemMap.get(item.parentId)!;
-      const parentAccess = this.항목_접근_가능_여부(parent, itemMap, accessCache, employee);
-      if (!parentAccess) {
-        this.logger.debug(`상위 폴더 접근 거부로 인한 접근 거부 - ${item.name} (부모: ${parent.name})`);
-        accessCache.set(item.id, false);
-        return false;
-      }
-    }
-
-    this.logger.debug(`항목 접근 허용 - ${item.name}`);
+    // 파일: 상위 폴더 권한을 따름 (여기까지 왔으면 상위 폴더가 접근 가능하므로 허용)
+    this.logger.debug(`항목 접근 허용 - ${item.name} (type: ${item.type})`);
     accessCache.set(item.id, true);
     return true;
   }
