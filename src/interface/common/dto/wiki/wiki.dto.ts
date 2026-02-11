@@ -447,21 +447,11 @@ export class WikiSearchResultDto {
   contentPreview?: string;
 
   @ApiProperty({
-    description: '상위 폴더 경로 상세 (루트부터 순서대로, 파일 자신 제외)',
-    type: [WikiPathDto],
-    example: [
-      { id: 'uuid-root', name: '전사 문서', depth: 0 },
-      { id: 'uuid-dept', name: '개발팀', depth: 1 },
-    ],
-  })
-  path: WikiPathDto[];
-
-  @ApiProperty({
-    description: '상위 폴더 이름 배열 (루트부터 순서대로, 파일 자신 제외). 예: ["전사 문서", "개발팀", "회의록"]',
+    description: '상위 폴더 이름 배열 (루트부터 순서대로, 파일 자신 제외)',
     example: ['전사 문서', '개발팀', '회의록'],
     type: [String],
   })
-  pathNames: string[];
+  path: string[];
 
   @ApiProperty({
     description: '상위 폴더 ID 배열 (루트부터 순서대로, 파일 자신 제외)',
@@ -491,12 +481,7 @@ export class WikiSearchResultDto {
       .filter(a => a.depth > 0)
       .sort((a, b) => b.depth - a.depth); // 루트(큰 depth)부터 직접 부모(depth=1)까지
 
-    dto.path = parentFolders.map(a => ({
-      id: a.wiki.id,
-      name: a.wiki.name,
-      depth: a.wiki.depth, // 엔티티의 절대 깊이 사용
-    }));
-    dto.pathNames = parentFolders.map(a => a.wiki.name);
+    dto.path = parentFolders.map(a => a.wiki.name);
     dto.pathIds = parentFolders.map(a => a.wiki.id);
 
     dto.createdAt = wiki.createdAt;

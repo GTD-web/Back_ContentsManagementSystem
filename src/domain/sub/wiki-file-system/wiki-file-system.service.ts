@@ -524,10 +524,16 @@ export class WikiFileSystemService {
 
     this.logger.log(`검색된 파일: ${files.length}개`);
 
-    // 각 파일의 경로 정보 조회
+    // 각 파일의 경로 정보 조회 (parentId를 직접 따라가는 방식 - Closure 테이블 미의존)
     const results = await Promise.all(
       files.map(async (file) => {
-        const path = await this.상위_경로를_조회한다(file.id);
+        const breadcrumb = await this.상위_경로를_직접_조회한다(file.id);
+        // breadcrumb: [루트, ..., 부모, 자기자신] 순서 (루트가 첫 번째)
+        // 기존 Closure 기반 형식과 동일하게 변환: depth = 자기로부터의 거리
+        const path = breadcrumb.map((item, index) => ({
+          wiki: item,
+          depth: breadcrumb.length - 1 - index, // 루트=가장 큰 depth, 자신=0
+        }));
         return { wiki: file, path };
       }),
     );
