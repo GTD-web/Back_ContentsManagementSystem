@@ -534,6 +534,9 @@ export class WikiBusinessService {
     parentId: string | null,
     createdBy?: string,
     isPublic?: boolean,
+    permissionRankIds?: string[],
+    permissionPositionIds?: string[],
+    permissionDepartmentIds?: string[],
   ): Promise<WikiFileSystem> {
     this.logger.log(`빈 파일 생성 시작 - 이름: ${name}`);
 
@@ -541,6 +544,9 @@ export class WikiBusinessService {
       name,
       parentId: parentId || null,
       isPublic,
+      permissionRankIds,
+      permissionPositionIds,
+      permissionDepartmentIds,
       createdBy,
     });
 

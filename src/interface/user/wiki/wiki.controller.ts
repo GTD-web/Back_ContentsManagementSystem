@@ -219,6 +219,7 @@ export class UserWikiController {
             positionId: employee.positionId || employee.position?.id,
             departmentId: employee.departmentId || employee.department?.id,
           };
+          this.logger.log(`사용자 권한 정보 - employeeNumber: ${user.employeeNumber}, departmentId: ${employeeInfo.departmentId}, rankId: ${employeeInfo.rankId}, positionId: ${employeeInfo.positionId}`);
         }
       } catch (error) {
         this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
@@ -257,23 +258,31 @@ export class UserWikiController {
 
     // 파일: isPublic이 false이면 무조건 비공개
     if (item.type === 'file' && !item.isPublic) {
+      this.logger.debug(`파일 접근 거부 - ${item.name} (isPublic: false)`);
       accessCache.set(item.id, false);
       return false;
     }
 
     // 폴더: isPublic이 false이면 직급/직책/부서 매칭 체크
     if (item.type === 'folder' && !item.isPublic) {
+      this.logger.debug(`폴더 권한 체크 - ${item.name}, isPublic: ${item.isPublic}, permissionDepartmentIds: ${JSON.stringify(item.permissionDepartmentIds)}, 사용자 departmentId: ${employee.departmentId}`);
+      
       const hasDirectAccess = !!(
         (item.permissionRankIds &&
+          item.permissionRankIds.length > 0 &&
           employee.rankId &&
           item.permissionRankIds.includes(employee.rankId)) ||
         (item.permissionPositionIds &&
+          item.permissionPositionIds.length > 0 &&
           employee.positionId &&
           item.permissionPositionIds.includes(employee.positionId)) ||
         (item.permissionDepartmentIds &&
+          item.permissionDepartmentIds.length > 0 &&
           employee.departmentId &&
           item.permissionDepartmentIds.includes(employee.departmentId))
       );
+
+      this.logger.debug(`폴더 접근 권한 - ${item.name}: ${hasDirectAccess}`);
 
       if (!hasDirectAccess) {
         accessCache.set(item.id, false);
@@ -286,11 +295,13 @@ export class UserWikiController {
       const parent = itemMap.get(item.parentId)!;
       const parentAccess = this.항목_접근_가능_여부(parent, itemMap, accessCache, employee);
       if (!parentAccess) {
+        this.logger.debug(`상위 폴더 접근 거부로 인한 접근 거부 - ${item.name} (부모: ${parent.name})`);
         accessCache.set(item.id, false);
         return false;
       }
     }
 
+    this.logger.debug(`항목 접근 허용 - ${item.name}`);
     accessCache.set(item.id, true);
     return true;
   }
@@ -791,6 +802,9 @@ export class UserWikiController {
       dto.parentId || null,
       authenticatedUser.id,
       dto.isPublic,
+      dto.permissionRankIds,
+      dto.permissionPositionIds,
+      dto.permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
   }

@@ -858,6 +858,9 @@ export class WikiController {
         dto.parentId || null,
         user.id,
         dto.isPublic,
+        dto.permissionRankIds,
+        dto.permissionPositionIds,
+        dto.permissionDepartmentIds,
       );
       return WikiResponseDto.from(file);
     } catch (error) {

@@ -73,6 +73,9 @@ export class WikiFileSystemService {
       deletedAt?: Date | null;
     }> | null;
     isPublic?: boolean;
+    permissionRankIds?: string[] | null;
+    permissionPositionIds?: string[] | null;
+    permissionDepartmentIds?: string[] | null;
     order?: number;
     createdBy?: string;
   }): Promise<WikiFileSystem> {
@@ -90,10 +93,9 @@ export class WikiFileSystemService {
       attachments: data.attachments || null,
       // 파일의 isPublic 설정 (기본값: true - 상위 폴더 cascading)
       isPublic: data.isPublic ?? true,
-      // 파일은 나머지 권한 필드 사용 안함
-      permissionRankIds: null,
-      permissionPositionIds: null,
-      permissionDepartmentIds: null,
+      permissionRankIds: data.permissionRankIds || null,
+      permissionPositionIds: data.permissionPositionIds || null,
+      permissionDepartmentIds: data.permissionDepartmentIds || null,
       order: data.order ?? 0,
       createdBy: data.createdBy,
     });
