@@ -43,7 +43,11 @@ import {
   WikiListResponseDto,
   WikiSearchListResponseDto,
   WikiSearchResultDto,
+  CheckWikiAccessDto,
+  CheckWikiAccessResponseDto,
+  WikiAccessWarningDto,
 } from '@interface/common/dto/wiki/wiki.dto';
+import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-system-type.types';
 
 @ApiTags('U-2. 사용자 - Wiki')
 @ApiBearerAuth('Bearer')
@@ -1129,5 +1133,227 @@ export class UserWikiController {
       permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
+  }
+
+  // ==========================================
+  // 접근 가능 여부 확인 (생성 전 프리뷰)
+  // ==========================================
+
+  /**
+   * 파일/폴더 생성 시 현재 사용자가 접근 가능한지 미리 확인한다.
+   * 
+   * 프론트엔드에서 파일/폴더 생성 폼에서 주기적으로 호출하여,
+   * 해당 설정(상위 폴더, 공개 여부, 권한 설정)으로 생성했을 때
+   * 현재 사용자가 접근할 수 있는지 경고를 제공합니다.
+   */
+  @Post('check-access')
+  @ApiOperation({
+    summary: '파일/폴더 생성 시 접근 가능 여부 미리 확인',
+    description:
+      '파일 또는 폴더를 생성하기 전에 현재 설정으로 생성했을 때 ' +
+      '현재 사용자가 해당 항목에 접근할 수 있는지 미리 확인합니다.\n\n' +
+      '**확인 항목**:\n' +
+      '1. 상위 폴더의 권한 체인 (Cascading) 확인\n' +
+      '2. 생성하려는 항목 자체의 권한 설정 확인\n\n' +
+      '**사용 시나리오**: 프론트엔드에서 생성 폼의 설정이 변경될 때마다 호출하여 경고 UI를 표시합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '접근 가능 여부 확인 결과',
+    type: CheckWikiAccessResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 필요',
+  })
+  async 접근_가능_여부를_확인한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CheckWikiAccessDto,
+  ): Promise<CheckWikiAccessResponseDto> {
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
+
+    // 1. 사용자의 직원 정보 조회
+    let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
+
+    if (authenticatedUser.employeeNumber) {
+      try {
+        const employee = await this.companyContextService.직원_정보를_조회한다(authenticatedUser.employeeNumber);
+        if (employee) {
+          employeeInfo = {
+            rankId: employee.rankId || employee.rank?.id,
+            positionId: employee.positionId || employee.position?.id,
+            departmentId: employee.departmentId || employee.department?.id,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${authenticatedUser.employeeNumber}`, error);
+        return {
+          accessible: false,
+          warning: '사용자 정보를 조회할 수 없어 접근 가능 여부를 확인할 수 없습니다.',
+        };
+      }
+    }
+
+    const warnings: WikiAccessWarningDto[] = [];
+
+    // 2. 상위 폴더 권한 체인 확인
+    if (dto.parentId) {
+      try {
+        // 상위 폴더 경로 조회 (루트부터 현재 상위 폴더까지)
+        const ancestors = await this.wikiBusinessService.위키_경로를_조회한다(dto.parentId);
+
+        for (const ancestor of ancestors) {
+          if (ancestor.type !== WikiFileSystemType.FOLDER) continue;
+
+          // 폴더가 비공개이고 권한 설정이 없는 경우
+          const hasPermissionSettings =
+            (ancestor.permissionRankIds && ancestor.permissionRankIds.length > 0) ||
+            (ancestor.permissionPositionIds && ancestor.permissionPositionIds.length > 0) ||
+            (ancestor.permissionDepartmentIds && ancestor.permissionDepartmentIds.length > 0);
+
+          if (!hasPermissionSettings) {
+            if (!ancestor.isPublic) {
+              warnings.push({
+                folderId: ancestor.id,
+                folderName: ancestor.name,
+                reason: `상위 폴더 '${ancestor.name}'이(가) 비공개(isPublic: false)로 설정되어 있어 접근할 수 없습니다.`,
+              });
+            }
+            continue;
+          }
+
+          // 권한 설정이 있는 경우 매칭 체크
+          const hasAccess = !!(
+            (ancestor.permissionRankIds &&
+              ancestor.permissionRankIds.length > 0 &&
+              employeeInfo.rankId &&
+              ancestor.permissionRankIds.includes(employeeInfo.rankId)) ||
+            (ancestor.permissionPositionIds &&
+              ancestor.permissionPositionIds.length > 0 &&
+              employeeInfo.positionId &&
+              ancestor.permissionPositionIds.includes(employeeInfo.positionId)) ||
+            (ancestor.permissionDepartmentIds &&
+              ancestor.permissionDepartmentIds.length > 0 &&
+              employeeInfo.departmentId &&
+              ancestor.permissionDepartmentIds.includes(employeeInfo.departmentId))
+          );
+
+          if (!hasAccess) {
+            const restrictionParts: string[] = [];
+            if (ancestor.permissionDepartmentIds && ancestor.permissionDepartmentIds.length > 0) {
+              restrictionParts.push('부서');
+            }
+            if (ancestor.permissionRankIds && ancestor.permissionRankIds.length > 0) {
+              restrictionParts.push('직급');
+            }
+            if (ancestor.permissionPositionIds && ancestor.permissionPositionIds.length > 0) {
+              restrictionParts.push('직책');
+            }
+
+            warnings.push({
+              folderId: ancestor.id,
+              folderName: ancestor.name,
+              reason: `상위 폴더 '${ancestor.name}'의 ${restrictionParts.join('/')} 권한에 현재 사용자가 포함되지 않습니다.`,
+            });
+          }
+        }
+      } catch (error) {
+        this.logger.warn(`상위 폴더 조회 실패 - parentId: ${dto.parentId}`, error);
+        // parentId가 잘못된 경우 경고 추가
+        warnings.push({
+          folderId: dto.parentId,
+          folderName: '(알 수 없음)',
+          reason: '상위 폴더를 찾을 수 없습니다. 유효한 폴더 ID인지 확인해주세요.',
+        });
+      }
+    }
+
+    // 3. 생성하려는 항목 자체의 권한 확인
+    const itemIsPublic = dto.isPublic ?? true;
+    const itemType = dto.type;
+
+    if (itemType === WikiFileSystemType.FILE && !itemIsPublic) {
+      // 파일이 isPublic: false → 완전 비공개
+      warnings.push({
+        folderId: '',
+        folderName: '(새로 생성할 파일)',
+        reason: '파일을 비공개(isPublic: false)로 설정하면 누구도 접근할 수 없습니다.',
+      });
+    } else if (itemType === WikiFileSystemType.FOLDER) {
+      // 폴더의 경우: 자체 권한 설정 확인
+      const hasItemPermissions =
+        (dto.permissionRankIds && dto.permissionRankIds.length > 0) ||
+        (dto.permissionPositionIds && dto.permissionPositionIds.length > 0) ||
+        (dto.permissionDepartmentIds && dto.permissionDepartmentIds.length > 0);
+
+      if (!itemIsPublic && !hasItemPermissions) {
+        // 비공개인데 권한 설정이 없으면 아무도 접근 불가
+        warnings.push({
+          folderId: '',
+          folderName: '(새로 생성할 폴더)',
+          reason: '폴더를 비공개(isPublic: false)로 설정하고 권한을 지정하지 않으면 누구도 접근할 수 없습니다.',
+        });
+      } else if (hasItemPermissions) {
+        // 권한이 설정되어 있으면 현재 사용자가 포함되는지 확인
+        const hasAccess = !!(
+          (dto.permissionRankIds &&
+            dto.permissionRankIds.length > 0 &&
+            employeeInfo.rankId &&
+            dto.permissionRankIds.includes(employeeInfo.rankId)) ||
+          (dto.permissionPositionIds &&
+            dto.permissionPositionIds.length > 0 &&
+            employeeInfo.positionId &&
+            dto.permissionPositionIds.includes(employeeInfo.positionId)) ||
+          (dto.permissionDepartmentIds &&
+            dto.permissionDepartmentIds.length > 0 &&
+            employeeInfo.departmentId &&
+            dto.permissionDepartmentIds.includes(employeeInfo.departmentId))
+        );
+
+        if (!hasAccess) {
+          const restrictionParts: string[] = [];
+          if (dto.permissionDepartmentIds && dto.permissionDepartmentIds.length > 0) {
+            restrictionParts.push('부서');
+          }
+          if (dto.permissionRankIds && dto.permissionRankIds.length > 0) {
+            restrictionParts.push('직급');
+          }
+          if (dto.permissionPositionIds && dto.permissionPositionIds.length > 0) {
+            restrictionParts.push('직책');
+          }
+
+          warnings.push({
+            folderId: '',
+            folderName: '(새로 생성할 폴더)',
+            reason: `설정한 ${restrictionParts.join('/')} 권한에 현재 사용자가 포함되지 않습니다.`,
+          });
+        }
+      }
+    }
+
+    // 4. 응답 구성
+    const isAccessible = warnings.length === 0;
+
+    if (isAccessible) {
+      return { accessible: true };
+    }
+
+    // 경고 메시지 구성
+    const warningMessages: string[] = [];
+    const parentWarnings = warnings.filter(w => w.folderId !== '');
+    const selfWarnings = warnings.filter(w => w.folderId === '');
+
+    if (parentWarnings.length > 0) {
+      warningMessages.push('상위 폴더의 권한 설정으로 인해 접근이 제한됩니다.');
+    }
+    if (selfWarnings.length > 0) {
+      warningMessages.push('현재 설정한 권한으로 인해 생성 후 접근할 수 없습니다.');
+    }
+
+    return {
+      accessible: false,
+      warning: warningMessages.join(' ') || '이 설정으로 생성하면 현재 사용자가 해당 항목에 접근할 수 없습니다.',
+      details: warnings,
+    };
   }
 }

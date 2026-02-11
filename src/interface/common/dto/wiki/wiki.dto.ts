@@ -719,3 +719,117 @@ export class WikiListResponseDto {
   @ApiProperty({ description: '전체 개수', example: 10 })
   total: number;
 }
+
+/**
+ * Wiki 접근 가능 여부 확인 요청 DTO
+ * 
+ * 파일/폴더 생성 전에 해당 설정으로 생성했을 때 현재 사용자가 접근 가능한지 미리 확인합니다.
+ * 프론트엔드에서 주기적으로 호출하여 경고 UI를 제공하는 데 사용됩니다.
+ */
+export class CheckWikiAccessDto {
+  @ApiPropertyOptional({
+    description: '부모 폴더 ID (없으면 최상위 생성으로 간주)',
+    example: 'uuid-of-parent-folder',
+  })
+  @IsOptional()
+  @IsUUID(undefined, { message: 'parentId는 유효한 UUID여야 합니다.' })
+  parentId?: string | null;
+
+  @ApiProperty({
+    description: '생성할 항목 타입 (folder 또는 file)',
+    enum: WikiFileSystemType,
+    example: WikiFileSystemType.FOLDER,
+  })
+  @IsEnum(WikiFileSystemType, { message: 'type은 folder 또는 file이어야 합니다.' })
+  type: WikiFileSystemType;
+
+  @ApiPropertyOptional({
+    description: '공개 여부 (기본값: true)',
+    example: true,
+    default: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean({ message: 'isPublic은 boolean 값이어야 합니다.' })
+  isPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: '접근 가능한 직급 ID 목록 (UUID)',
+    example: ['a1b2c3d4-e5f6-7890-abcd-ef1234567890'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionRankIds?: string[];
+
+  @ApiPropertyOptional({
+    description: '접근 가능한 직책 ID 목록 (UUID)',
+    example: ['c3d4e5f6-a7b8-9012-cdef-123456789012'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionPositionIds?: string[];
+
+  @ApiPropertyOptional({
+    description: '접근 가능한 부서 ID 목록 (UUID)',
+    example: ['e2b3b884-833c-4fdb-ba00-ede1a45b8160'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  permissionDepartmentIds?: string[];
+}
+
+/**
+ * Wiki 접근 가능 여부 경고 정보
+ */
+export class WikiAccessWarningDto {
+  @ApiProperty({
+    description: '접근 제한을 유발하는 폴더 ID',
+    example: 'uuid-of-blocking-folder',
+  })
+  folderId: string;
+
+  @ApiProperty({
+    description: '접근 제한을 유발하는 폴더 이름',
+    example: '경영전략팀 전용',
+  })
+  folderName: string;
+
+  @ApiProperty({
+    description: '경고 사유',
+    example: '상위 폴더의 부서 권한에 현재 사용자의 부서가 포함되지 않습니다.',
+  })
+  reason: string;
+}
+
+/**
+ * Wiki 접근 가능 여부 확인 응답 DTO
+ */
+export class CheckWikiAccessResponseDto {
+  @ApiProperty({
+    description: '현재 사용자의 접근 가능 여부',
+    example: true,
+  })
+  accessible: boolean;
+
+  @ApiPropertyOptional({
+    description: '접근 불가 시 경고 메시지',
+    example: '이 설정으로 생성하면 현재 사용자가 해당 항목에 접근할 수 없습니다.',
+  })
+  warning?: string;
+
+  @ApiPropertyOptional({
+    description: '접근 불가 상세 사유 목록',
+    type: [WikiAccessWarningDto],
+  })
+  details?: WikiAccessWarningDto[];
+}
