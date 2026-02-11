@@ -39,7 +39,7 @@ npm run backup:list
 | 타입 | 주기 | 보관 기간 | 실행 시간 |
 |------|------|-----------|----------|
 | 4시간 | 4시간마다 | 7일 | 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 |
-| 일간 | 매일 | 30일 | 01:00 |
+| 일간 | 매일 | 10일 | 01:00 |
 | 주간 | 매주 일요일 | 90일 | 01:30 |
 | 월간 | 매월 1일 | 1년 | 02:00 |
 | 분기 | 분기 첫날 | 2년 | 03:00 |
@@ -72,11 +72,11 @@ npm run backup:cleanup      # 만료된 백업 삭제
 
 ## 🔄 복구 방법
 
-압축된 SQL 파일을 `gunzip`으로 압축 해제 후 `psql`로 복구:
+압축된 SQL 파일을 `xz`로 압축 해제 후 `psql`로 복구:
 
 ```bash
 # 1. 압축 해제
-gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz > backup.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz > backup.sql
 
 # 2. 복구
 PGPASSWORD="$DATABASE_PASSWORD" psql \
@@ -87,7 +87,7 @@ PGPASSWORD="$DATABASE_PASSWORD" psql \
   -f backup.sql
 
 # 또는 한 번에 (Windows에서는 7zip 사용)
-gunzip -c backup_daily_20260121_010000.sql.gz | psql -h localhost -U postgres -d lumir_cms
+xz -dc backup_daily_20260121_010000.sql.xz | psql -h localhost -U postgres -d lumir_cms
 ```
 
 ---
@@ -108,7 +108,7 @@ gunzip -c backup_daily_20260121_010000.sql.gz | psql -h localhost -U postgres -d
 
 - ✅ **설치 불필요**: pg_dump 없이 TypeORM으로 백업
 - ✅ **자동 실행**: 스케줄러가 자동으로 백업
-- ✅ **고효율 압축**: gzip으로 70-90% 용량 절감
+- ✅ **고효율 압축**: xz로 70-90% 용량 절감
 - ✅ **SQL 파일**: 텍스트로 확인 가능, 편집 가능
 - ✅ **크로스 플랫폼**: Windows, Linux, Mac 모두 지원
 - ✅ **타입 안전**: TypeScript로 구현

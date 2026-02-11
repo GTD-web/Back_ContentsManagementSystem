@@ -2,7 +2,7 @@
 
 ## 개요
 
-백업 시스템은 **gzip 압축**을 사용하여 백업 파일의 크기를 70-90% 줄입니다. 이는 특히 제한된 스토리지 환경에서 매우 유용합니다.
+백업 시스템은 **xz 압축**을 사용하여 백업 파일의 크기를 70-90% 줄입니다. xz는 gzip보다 일반적으로 더 높은 압축률을 달성합니다. 이는 특히 제한된 스토리지 환경에서 매우 유용합니다.
 
 ---
 
@@ -77,11 +77,11 @@ pm2 restart lumir-cms-backend
 ls -lh ./backups/database/daily/
 
 # 압축률 확인
-gzip -l backup_daily_20260121_010000.sql.gz
+xz -l backup_daily_20260121_010000.sql.xz
 
 # 출력 예시:
-#   compressed  uncompressed  ratio  uncompressed_name
-#      2621440      10485760  75.0%  backup_daily_20260121_010000.sql
+#   Strms  Blocks   Compressed Uncompressed  Ratio  Check   Filename
+#       1       1    2,621,440   10,485,760  25.0%  CRC64   backup_daily_20260121_010000.sql.xz
 ```
 
 ### 압축 해제
@@ -90,14 +90,14 @@ gzip -l backup_daily_20260121_010000.sql.gz
 
 ```bash
 # 압축 해제 (원본 파일 생성)
-gunzip backup_daily_20260121_010000.sql.gz
+xz -d backup_daily_20260121_010000.sql.xz
 # 결과: backup_daily_20260121_010000.sql
 
 # 압축 파일 유지하면서 해제
-gunzip -k backup_daily_20260121_010000.sql.gz
+xz -dk backup_daily_20260121_010000.sql.xz
 
 # 표준 출력으로 압축 해제 (파일 생성 안 함)
-gunzip -c backup_daily_20260121_010000.sql.gz > backup.sql
+xz -dc backup_daily_20260121_010000.sql.xz > backup.sql
 ```
 
 #### Windows
@@ -109,31 +109,31 @@ gunzip -c backup_daily_20260121_010000.sql.gz > backup.sql
 # GUI: 파일 우클릭 > 7-Zip > Extract Here
 
 # 명령줄:
-7z x backup_daily_20260121_010000.sql.gz
+7z x backup_daily_20260121_010000.sql.xz
 ```
 
 **방법 2: Git Bash**
 
 ```bash
 # Git Bash 터미널에서
-gunzip backup_daily_20260121_010000.sql.gz
+xz -d backup_daily_20260121_010000.sql.xz
 ```
 
 **방법 3: PowerShell 7+ (내장)**
 
 ```powershell
-# PowerShell 7 이상
-tar -xzf backup_daily_20260121_010000.sql.gz
+# PowerShell 7 이상 (xz가 PATH에 있는 경우)
+xz -d backup_daily_20260121_010000.sql.xz
 ```
 
 ### 내용 미리보기
 
 ```bash
 # 압축 파일의 처음 100줄 확인
-gunzip -c backup_daily_20260121_010000.sql.gz | head -n 100
+xz -dc backup_daily_20260121_010000.sql.xz | head -n 100
 
 # 특정 테이블 검색
-gunzip -c backup_daily_20260121_010000.sql.gz | grep "CREATE TABLE users"
+xz -dc backup_daily_20260121_010000.sql.xz | grep "CREATE TABLE users"
 ```
 
 ---
@@ -146,11 +146,11 @@ gunzip -c backup_daily_20260121_010000.sql.gz | grep "CREATE TABLE users"
 
 ```bash
 # Linux/Mac
-gunzip -c backup_daily_20260121_010000.sql.gz | \
+xz -dc backup_daily_20260121_010000.sql.xz | \
   PGPASSWORD="password" psql -h localhost -U postgres -d lumir_cms
 
 # Windows (Git Bash)
-gunzip -c backup_daily_20260121_010000.sql.gz | \
+xz -dc backup_daily_20260121_010000.sql.xz | \
   PGPASSWORD="password" psql -h localhost -U postgres -d lumir_cms
 ```
 
@@ -160,7 +160,7 @@ gunzip -c backup_daily_20260121_010000.sql.gz | \
 
 ```bash
 # 1. 압축 해제
-gunzip backup_daily_20260121_010000.sql.gz
+xz -d backup_daily_20260121_010000.sql.xz
 
 # 2. 복구
 psql -h localhost -U postgres -d lumir_cms -f backup_daily_20260121_010000.sql
@@ -238,7 +238,7 @@ fi
 
 ### Q: 압축으로 인한 성능 저하는 없나요?
 
-A: **거의 없습니다**. gzip 압축은:
+A: **거의 없습니다**. xz 압축은:
 - CPU 사용량: 매우 낮음 (백업 중 5-10% 증가)
 - 백업 시간: 오히려 감소 (I/O 병목 감소)
 - 전체 시스템 성능에 영향 없음
@@ -259,27 +259,27 @@ A: **매우 빠릅니다**:
 
 ### Q: 압축된 파일을 직접 확인할 수 있나요?
 
-A: 네, `gunzip -c`로 가능합니다:
+A: 네, `xz -dc`로 가능합니다:
 ```bash
 # 처음 100줄 확인
-gunzip -c backup.sql.gz | head -n 100
+xz -dc backup.sql.xz | head -n 100
 
 # 특정 패턴 검색
-gunzip -c backup.sql.gz | grep "users"
+xz -dc backup.sql.xz | grep "users"
 ```
 
-### Q: Windows에서 gunzip을 사용할 수 없는데요?
+### Q: Windows에서 xz를 사용할 수 없는데요?
 
 A: 3가지 방법이 있습니다:
 1. **7-Zip** 설치 (권장)
-2. **Git Bash** 사용 (git 설치 시 포함)
-3. **PowerShell 7+** 사용 (`tar -xzf`)
+2. **Git Bash** 사용 (git 설치 시 포함, xz 포함 여부 확인)
+3. **PowerShell 7+** 사용 (7z x 또는 xz 설치 시)
 
 ### Q: 압축을 나중에 활성화할 수 있나요?
 
 A: 네, 언제든지 가능합니다:
 - 기존 백업: 압축되지 않은 `.sql` 파일로 유지
-- 새 백업: 압축된 `.sql.gz` 파일로 생성
+- 새 백업: 압축된 `.sql.xz` 파일로 생성
 - 두 형식 모두 복구 가능
 
 ---
@@ -302,14 +302,14 @@ A: 네, 언제든지 가능합니다:
 3. **압축 파일 직접 복구**
    ```bash
    # 임시 파일 생성 없이 바로 복구
-   gunzip -c backup.sql.gz | psql -d database
+   xz -dc backup.sql.xz | psql -d database
    ```
 
 4. **복구 테스트**
    ```bash
    # 월 1회 복구 테스트
    createdb test_restore
-   gunzip -c latest_backup.sql.gz | psql -d test_restore
+   xz -dc latest_backup.sql.xz | psql -d test_restore
    dropdb test_restore
    ```
 
@@ -326,10 +326,10 @@ A: 네, 언제든지 가능합니다:
 3. **압축 해제 후 원본 삭제**
    ```bash
    # 잘못된 방법
-   gunzip backup.sql.gz  # 원본 삭제됨
+   xz -d backup.sql.xz  # 원본 삭제됨
    
    # 올바른 방법
-   gunzip -k backup.sql.gz  # 원본 유지
+   xz -dk backup.sql.xz  # 원본 유지
    ```
 
 ---
@@ -343,4 +343,4 @@ A: 네, 언제든지 가능합니다:
 ---
 
 **마지막 업데이트**: 2026-01-21  
-**버전**: 2.0.0 (gzip 압축 지원)
+**버전**: 2.0.0 (xz 압축 지원)

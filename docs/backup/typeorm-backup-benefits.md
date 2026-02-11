@@ -273,11 +273,13 @@ private anonymizeData(tableName: string, data: any[]) {
 
 #### 4. 압축
 ```typescript
-import * as zlib from 'zlib';
+import { execSync } from 'child_process';
+import * as fs from 'fs';
 
-// 백업 파일 압축
-const compressed = zlib.gzipSync(sqlContent);
-await fs.writeFile(`${backupPath}.gz`, compressed);
+// 백업 파일 압축 (child_process로 xz 명령 실행)
+fs.writeFileSync(backupPath, sqlContent);
+execSync(`xz -z "${backupPath}"`);
+// 결과: backupPath.xz 파일 생성
 ```
 
 ---

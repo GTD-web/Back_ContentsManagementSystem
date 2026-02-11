@@ -88,8 +88,8 @@ export class BackupRetentionService {
       results.total = files.length;
 
       for (const file of files) {
-        // .sql 또는 .sql.gz 파일만 처리
-        if (!file.endsWith('.sql') && !file.endsWith('.sql.gz')) {
+        // .sql 또는 .sql.xz 파일만 처리
+        if (!file.endsWith('.sql') && !file.endsWith('.sql.xz')) {
           continue;
         }
 
@@ -151,8 +151,8 @@ export class BackupRetentionService {
         const files = await fs.readdir(typeDir);
 
         for (const file of files) {
-          // .sql 또는 .sql.gz 파일만 처리
-          if (!file.endsWith('.sql') && !file.endsWith('.sql.gz')) {
+          // .sql 또는 .sql.xz 파일만 처리
+          if (!file.endsWith('.sql') && !file.endsWith('.sql.xz')) {
             continue;
           }
 
@@ -216,8 +216,8 @@ export class BackupRetentionService {
         const files = await fs.readdir(typeDir);
 
         for (const file of files) {
-          // .sql 또는 .sql.gz 파일만 처리
-          if (!file.endsWith('.sql') && !file.endsWith('.sql.gz')) {
+          // .sql 또는 .sql.xz 파일만 처리
+          if (!file.endsWith('.sql') && !file.endsWith('.sql.xz')) {
             continue;
           }
 

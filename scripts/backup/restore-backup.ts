@@ -3,17 +3,39 @@ import { AppModule } from '@/app.module';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as zlib from 'zlib';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 
-const gunzip = promisify(zlib.gunzip);
+/**
+ * xz 압축을 해제합니다 (child_process를 통해 xz CLI 사용)
+ */
+function xzDecompress(input: Buffer): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('xz', ['-d', '--stdout']);
+    const chunks: Buffer[] = [];
+
+    proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    proc.stderr.on('data', (data: Buffer) => {
+      reject(new Error(`xz 압축 해제 오류: ${data.toString()}`));
+    });
+    proc.on('error', (err) => {
+      reject(new Error(`xz 실행 실패 (xz-utils가 설치되어 있는지 확인하세요): ${err.message}`));
+    });
+    proc.on('close', (code) => {
+      if (code === 0) resolve(Buffer.concat(chunks));
+      else reject(new Error(`xz 압축 해제 실패 (exit code: ${code})`));
+    });
+
+    proc.stdin.write(input);
+    proc.stdin.end();
+  });
+}
 
 /**
  * 백업 파일 복원 스크립트 (TypeORM 사용, psql 불필요)
  * 
  * 사용법:
  * npm run backup:restore -- <백업파일명>
- * 예: npm run backup:restore -- backup_daily_20260126_165358.sql.gz
+ * 예: npm run backup:restore -- backup_daily_20260126_165358.sql.xz
  */
 
 async function restoreBackup() {
@@ -26,7 +48,7 @@ async function restoreBackup() {
     if (!backupFileName) {
       console.error('❌ 백업 파일명을 지정해주세요.');
       console.log('사용법: npm run backup:restore -- <백업파일명>');
-      console.log('예: npm run backup:restore -- backup_daily_20260126_165358.sql.gz');
+      console.log('예: npm run backup:restore -- backup_daily_20260126_165358.sql.xz');
       process.exit(1);
     }
 
@@ -56,15 +78,23 @@ async function restoreBackup() {
 
     console.log(`📦 백업 파일: ${backupFilePath}`);
 
-    // .gz 압축 해제
+    // xz 압축 해제
     console.log('\n🔓 압축 해제 중...');
     const compressedData = await fs.readFile(backupFilePath);
     let sqlContent: string;
 
-    if (backupFilePath.endsWith('.gz')) {
-      const decompressed = await gunzip(compressedData);
+    if (backupFilePath.endsWith('.xz')) {
+      const decompressed = await xzDecompress(compressedData);
       sqlContent = decompressed.toString('utf8');
       console.log('✅ 압축 해제 완료');
+    } else if (backupFilePath.endsWith('.gz')) {
+      // 레거시 gz 백업 파일 호환성 지원
+      const zlib = await import('zlib');
+      const { promisify } = await import('util');
+      const gunzip = promisify(zlib.gunzip);
+      const decompressed = await gunzip(compressedData);
+      sqlContent = decompressed.toString('utf8');
+      console.log('✅ 압축 해제 완료 (레거시 gz 형식)');
     } else {
       sqlContent = compressedData.toString('utf8');
     }

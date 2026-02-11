@@ -3,11 +3,33 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as zlib from 'zlib';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { BackupType, BackupResult, BackupConfig } from './backup.types';
 
-const gzip = promisify(zlib.gzip);
+/**
+ * xz 압축을 수행합니다 (child_process를 통해 xz CLI 사용)
+ */
+function xzCompress(input: string | Buffer): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('xz', ['-6', '--stdout']);
+    const chunks: Buffer[] = [];
+
+    proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+    proc.stderr.on('data', (data: Buffer) => {
+      reject(new Error(`xz 압축 오류: ${data.toString()}`));
+    });
+    proc.on('error', (err) => {
+      reject(new Error(`xz 실행 실패 (xz-utils가 설치되어 있는지 확인하세요): ${err.message}`));
+    });
+    proc.on('close', (code) => {
+      if (code === 0) resolve(Buffer.concat(chunks));
+      else reject(new Error(`xz 압축 실패 (exit code: ${code})`));
+    });
+
+    proc.stdin.write(input);
+    proc.stdin.end();
+  });
+}
 
 /**
  * 데이터베이스 백업 서비스
@@ -73,9 +95,9 @@ export class BackupService {
       let compressedSize = originalSize;
 
       if (this.config.compress) {
-        // gzip 압축
-        const compressed = await gzip(sqlContent);
-        finalPath = `${backupPath}.gz`;
+        // xz 압축
+        const compressed = await xzCompress(sqlContent);
+        finalPath = `${backupPath}.xz`;
         await fs.writeFile(finalPath, compressed);
         compressedSize = compressed.length;
 
@@ -421,7 +443,7 @@ export class BackupService {
     const minute = String(timestamp.getMinutes()).padStart(2, '0');
     const second = String(timestamp.getSeconds()).padStart(2, '0');
 
-    // 압축 여부에 따라 확장자 결정 (.sql 또는 .sql.gz)
+    // 압축 여부에 따라 확장자 결정 (.sql 또는 .sql.xz)
     // 실제 압축은 나중에 수행되므로 여기서는 .sql만 반환
     return `backup_${type}_${year}${month}${day}_${hour}${minute}${second}.sql`;
   }

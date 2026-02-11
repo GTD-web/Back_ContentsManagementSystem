@@ -793,16 +793,29 @@ export class CheckWikiAccessDto {
  */
 export class WikiAccessWarningDto {
   @ApiProperty({
-    description: '접근 제한을 유발하는 폴더 ID',
+    description: '경고 출처 (ancestor: 상위 폴더 권한, self: 생성 항목 자체 권한)',
+    enum: ['ancestor', 'self'],
+    example: 'ancestor',
+  })
+  source: 'ancestor' | 'self';
+
+  @ApiProperty({
+    description: '접근 제한을 유발하는 폴더 ID (self인 경우 빈 문자열)',
     example: 'uuid-of-blocking-folder',
   })
   folderId: string;
 
   @ApiProperty({
-    description: '접근 제한을 유발하는 폴더 이름',
+    description: '접근 제한을 유발하는 폴더 이름 (self인 경우 생성할 항목 설명)',
     example: '경영전략팀 전용',
   })
   folderName: string;
+
+  @ApiProperty({
+    description: '해당 폴더의 계층 깊이 (0=루트, self인 경우 -1)',
+    example: 2,
+  })
+  depth: number;
 
   @ApiProperty({
     description: '경고 사유',
@@ -812,20 +825,48 @@ export class WikiAccessWarningDto {
 }
 
 /**
+ * 조상 폴더 경로 정보
+ */
+export class AncestorPathItemDto {
+  @ApiProperty({ description: '폴더 ID', example: 'uuid' })
+  id: string;
+
+  @ApiProperty({ description: '폴더 이름', example: '회의록' })
+  name: string;
+
+  @ApiProperty({ description: '계층 깊이 (0=루트)', example: 0 })
+  depth: number;
+
+  @ApiProperty({ description: '해당 폴더의 접근 가능 여부', example: true })
+  accessible: boolean;
+}
+
+/**
  * Wiki 접근 가능 여부 확인 응답 DTO
  */
 export class CheckWikiAccessResponseDto {
   @ApiProperty({
-    description: '현재 사용자의 접근 가능 여부',
+    description: '현재 사용자의 접근 가능 여부 (상위 폴더 체인 + 자체 권한 모두 통과해야 true)',
     example: true,
   })
   accessible: boolean;
 
   @ApiPropertyOptional({
-    description: '접근 불가 시 경고 메시지',
+    description: '접근 불가 시 경고 메시지 요약',
     example: '이 설정으로 생성하면 현재 사용자가 해당 항목에 접근할 수 없습니다.',
   })
   warning?: string;
+
+  @ApiPropertyOptional({
+    description: '상위 폴더 경로 (루트 → 직접 상위 폴더 순서, 각 폴더의 접근 가능 여부 포함)',
+    type: [AncestorPathItemDto],
+    example: [
+      { id: 'uuid-root', name: '전사 문서', depth: 0, accessible: true },
+      { id: 'uuid-dept', name: '경영전략팀', depth: 1, accessible: false },
+      { id: 'uuid-sub', name: '기밀 문서', depth: 2, accessible: false },
+    ],
+  })
+  ancestorPath?: AncestorPathItemDto[];
 
   @ApiPropertyOptional({
     description: '접근 불가 상세 사유 목록',

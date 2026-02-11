@@ -27,7 +27,7 @@
 | 백업 타입 | 실행 주기 | 보관 기간 | 용도 |
 |-----------|----------|-----------|------|
 | **4시간** | 4시간마다 | 7일 | 최근 변경사항 빠른 복구 |
-| **일간** | 매일 새벽 1시 | 30일 | 지난 한 달 내 특정 시점 복구 |
+| **일간** | 매일 새벽 1시 | 10일 | 최근 10일 내 특정 시점 복구 |
 | **주간** | 매주 일요일 새벽 1시 30분 | 90일 (약 3개월) | 분기별 복구 포인트 |
 | **월간** | 매월 1일 새벽 2시 | 365일 (1년) | 1년 내 특정 월 복구 |
 | **분기** | 분기 첫날 새벽 3시 | 730일 (2년) | 2년 간 분기별 복구 |
@@ -37,7 +37,7 @@
 
 - 각 백업 타입은 독립적인 보관 기간을 가집니다
 - 매일 새벽 5시에 만료된 백업이 자동으로 삭제됩니다
-- 백업 파일은 **gzip 압축된 SQL 형식** (`.sql.gz`)으로 저장됩니다
+- 백업 파일은 **xz 압축된 SQL 형식** (`.sql.xz`)으로 저장됩니다
 - 압축률: 평균 70-90% (10MB → 1-3MB)
 
 ### 디렉토리 구조
@@ -72,7 +72,7 @@ DATABASE_NAME=lumir_cms
 # 백업 설정
 BACKUP_ENABLED=true                          # 백업 활성화 여부 (true/false)
 BACKUP_PATH=./backups/database               # 백업 저장 경로
-BACKUP_COMPRESS=true                         # gzip 압축 활성화 (기본값: true)
+BACKUP_COMPRESS=true                         # xz 압축 활성화 (기본값: true)
 BACKUP_MAX_RETRIES=3                         # 백업 실패 시 재시도 횟수
 BACKUP_RETRY_DELAY_MS=5000                   # 재시도 간격 (밀리초)
 ```
@@ -99,7 +99,7 @@ BACKUP_RETRY_DELAY_MS=10000
 - ✅ PostgreSQL 클라이언트 설치 불필요
 - ✅ pg_dump 설치 불필요
 - ✅ Node.js만 있으면 실행 가능
-- ✅ gzip 압축으로 70-90% 용량 절감
+- ✅ xz 압축으로 70-90% 용량 절감
 - ✅ 크로스 플랫폼 지원 (Windows, Linux, Mac)
 
 ### 디렉토리 권한
@@ -384,7 +384,7 @@ tail -f logs/application.log | grep -i backup
 
 ## 백업 복구
 
-백업 파일은 gzip 압축된 SQL 형식이므로 압축 해제 후 `psql` 명령어로 복구할 수 있습니다.
+백업 파일은 xz 압축된 SQL 형식이므로 압축 해제 후 `psql` 명령어로 복구할 수 있습니다.
 
 ### psql을 사용한 복구
 
@@ -392,7 +392,7 @@ tail -f logs/application.log | grep -i backup
 
 ```bash
 # 1단계: 압축 해제
-gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz > backup_temp.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz > backup_temp.sql
 
 # 2단계: 환경변수 설정
 export PGPASSWORD="your_password"
@@ -413,7 +413,7 @@ rm backup_temp.sql
 
 ```bash
 # 압축 해제와 복구를 동시에 수행
-gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz | \
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | \
   PGPASSWORD="your_password" psql -h localhost -p 5432 -U postgres -d lumir_cms
 ```
 
@@ -424,7 +424,7 @@ gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz | \
 createdb -h localhost -p 5432 -U postgres lumir_cms_restore
 
 # 압축 해제 및 복구
-gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz | \
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | \
   PGPASSWORD="your_password" psql -h localhost -p 5432 -U postgres -d lumir_cms_restore
 ```
 
@@ -435,7 +435,7 @@ gunzip -c ./backups/database/daily/backup_daily_20260121_010000.sql.gz | \
 source .env
 
 # 압축 해제 및 복구
-gunzip -c "./backups/database/daily/backup_daily_20260121_010000.sql.gz" | \
+xz -dc "./backups/database/daily/backup_daily_20260121_010000.sql.xz" | \
   PGPASSWORD="$DATABASE_PASSWORD" psql \
     -h "$DATABASE_HOST" \
     -p "$DATABASE_PORT" \
@@ -449,7 +449,7 @@ Windows에서는 `7-Zip`을 사용하여 압축 해제:
 
 ```powershell
 # 7-Zip으로 압축 해제
-7z x backup_daily_20260121_010000.sql.gz
+7z x backup_daily_20260121_010000.sql.xz
 
 # psql로 복구
 $env:PGPASSWORD="your_password"
@@ -464,7 +464,7 @@ psql -h localhost -p 5432 -U postgres -d lumir_cms -f backup_daily_20260121_0100
 #!/bin/bash
 
 # 백업 복구 스크립트
-# 사용법: ./scripts/restore-backup.sh <backup-file.sql.gz>
+# 사용법: ./scripts/restore-backup.sh <backup-file.sql.xz>
 
 set -e
 
@@ -478,8 +478,8 @@ fi
 
 # 백업 파일 확인
 if [ -z "$1" ]; then
-  echo "Usage: $0 <backup-file.sql.gz>"
-  echo "Example: $0 ./backups/database/daily/backup_daily_20260121_010000.sql.gz"
+  echo "Usage: $0 <backup-file.sql.xz>"
+  echo "Example: $0 ./backups/database/daily/backup_daily_20260121_010000.sql.xz"
   exit 1
 fi
 
@@ -503,18 +503,13 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-# gzip 압축 해제 및 psql 실행
-gunzip -c "$BACKUP_FILE" | \
+# xz 압축 해제 및 psql 실행
+xz -dc "$BACKUP_FILE" | \
   PGPASSWORD="$DATABASE_PASSWORD" psql \
     -h "$DATABASE_HOST" \
     -p "$DATABASE_PORT" \
     -U "$DATABASE_USERNAME" \
     -d "$DATABASE_NAME"
-  -h "$DATABASE_HOST" \
-  -p "$DATABASE_PORT" \
-  -U "$DATABASE_USERNAME" \
-  -d "$DATABASE_NAME" \
-  -f "$BACKUP_FILE"
 
 echo ""
 echo "백업 복구가 완료되었습니다."
@@ -529,7 +524,7 @@ chmod +x scripts/restore-backup.sh
 사용:
 
 ```bash
-./scripts/restore-backup.sh ./backups/database/daily/backup_daily_20260121_010000.sql
+./scripts/restore-backup.sh ./backups/database/daily/backup_daily_20260121_010000.sql.xz
 ```
 
 > **상세 가이드**: [SQL 복구 가이드](./sql-restore-guide.md)를 참조하세요.
@@ -609,8 +604,8 @@ find ./backups/database/four_hourly -name "*.sql" -mtime +1 -delete
 **해결 방법**:
 
 ```bash
-# 백업 파일 압축 추가 (향후 개선 사항)
-# SQL 파일은 텍스트 형식이므로 gzip 등으로 압축 가능
+# 백업 파일 압축은 기본 활성화됨 (xz)
+# SQL 파일은 텍스트 형식이므로 xz로 고효율 압축
 
 # 백업 통계로 크기 확인
 curl -X GET http://localhost:3000/admin/backup/statistics \
@@ -628,28 +623,19 @@ curl -X GET http://localhost:3000/admin/backup/statistics \
 
 ```bash
 # 1. 백업 파일 내용 확인
-head -n 50 ./backups/database/daily/backup_daily_20260121_010000.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | head -n 50
 
 # 2. SQL 파일이 올바른지 확인
-grep "CREATE TABLE" ./backups/database/daily/backup_daily_20260121_010000.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | grep "CREATE TABLE"
 
 # 3. 새 데이터베이스로 복구 시도
 createdb -h localhost -p 5432 -U postgres lumir_cms_restore
-psql \
-  -h localhost \
-  -p 5432 \
-  -U postgres \
-  -d lumir_cms_restore \
-  -f ./backups/database/daily/backup_daily_20260121_010000.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | \
+  PGPASSWORD="your_password" psql -h localhost -p 5432 -U postgres -d lumir_cms_restore
 
 # 4. 에러 발생 시 계속 진행
-psql \
-  -h localhost \
-  -p 5432 \
-  -U postgres \
-  -d lumir_cms \
-  -v ON_ERROR_STOP=0 \
-  -f ./backups/database/daily/backup_daily_20260121_010000.sql
+xz -dc ./backups/database/daily/backup_daily_20260121_010000.sql.xz | \
+  psql -h localhost -p 5432 -U postgres -d lumir_cms -v ON_ERROR_STOP=0
 ```
 
 ---
