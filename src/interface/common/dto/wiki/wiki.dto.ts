@@ -437,14 +437,38 @@ export class WikiSearchResultDto {
   @ApiProperty({ description: '타입', enum: ['folder', 'file'], example: 'file' })
   type: string;
 
+  @ApiPropertyOptional({ description: '부모 폴더 ID', example: 'uuid-of-parent-folder' })
+  parentId?: string | null;
+
   @ApiPropertyOptional({ description: '문서 제목', example: '2024년 1월 전사 회의록' })
   title?: string;
 
   @ApiPropertyOptional({ description: '문서 본문 미리보기', example: '## 회의 안건\n\n1. 신제품...' })
   contentPreview?: string;
 
-  @ApiProperty({ description: '경로 정보 (루트부터 순서대로)', type: [WikiPathDto] })
+  @ApiProperty({
+    description: '상위 폴더 경로 상세 (루트부터 순서대로, 파일 자신 제외)',
+    type: [WikiPathDto],
+    example: [
+      { id: 'uuid-root', name: '전사 문서', depth: 0 },
+      { id: 'uuid-dept', name: '개발팀', depth: 1 },
+    ],
+  })
   path: WikiPathDto[];
+
+  @ApiProperty({
+    description: '상위 폴더 이름 배열 (루트부터 순서대로, 파일 자신 제외). 예: ["전사 문서", "개발팀", "회의록"]',
+    example: ['전사 문서', '개발팀', '회의록'],
+    type: [String],
+  })
+  pathNames: string[];
+
+  @ApiProperty({
+    description: '상위 폴더 ID 배열 (루트부터 순서대로, 파일 자신 제외)',
+    example: ['uuid-root', 'uuid-dept', 'uuid-folder'],
+    type: [String],
+  })
+  pathIds: string[];
 
   @ApiProperty({ description: '생성일', example: '2024-01-01T00:00:00.000Z' })
   createdAt: Date;
@@ -457,13 +481,24 @@ export class WikiSearchResultDto {
     dto.id = wiki.id;
     dto.name = wiki.name;
     dto.type = wiki.type;
+    dto.parentId = wiki.parentId;
     dto.title = wiki.title || undefined;
     dto.contentPreview = wiki.content ? wiki.content.substring(0, 200) : undefined;
-    dto.path = ancestors.map(a => ({
+
+    // ancestors는 depth DESC (루트=큰 depth → 자신=depth 0)로 정렬되어 있음
+    // 파일 자신(depth=0)을 제외한 상위 폴더만 추출
+    const parentFolders = ancestors
+      .filter(a => a.depth > 0)
+      .sort((a, b) => b.depth - a.depth); // 루트(큰 depth)부터 직접 부모(depth=1)까지
+
+    dto.path = parentFolders.map(a => ({
       id: a.wiki.id,
       name: a.wiki.name,
-      depth: a.depth,
+      depth: a.wiki.depth, // 엔티티의 절대 깊이 사용
     }));
+    dto.pathNames = parentFolders.map(a => a.wiki.name);
+    dto.pathIds = parentFolders.map(a => a.wiki.id);
+
     dto.createdAt = wiki.createdAt;
     dto.updatedAt = wiki.updatedAt;
     return dto;
