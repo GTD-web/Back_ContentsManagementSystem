@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -147,6 +148,17 @@ export class UserWikiController {
     const rootParentId =
       items.length > 0 && items[0].parentId ? items[0].parentId : null;
     return buildChildren(rootParentId);
+  }
+
+  /**
+   * 인증된 사용자인지 확인하고 반환한다.
+   * @Public() 데코레이터로 인해 user가 undefined일 수 있으므로, 인증이 필수인 엔드포인트에서 사용.
+   */
+  private 인증된_사용자를_확인한다(user: AuthenticatedUser | undefined): AuthenticatedUser {
+    if (!user) {
+      throw new UnauthorizedException('이 작업을 수행하려면 로그인이 필요합니다.');
+    }
+    return user;
   }
 
   /**
@@ -400,7 +412,7 @@ export class UserWikiController {
     @Body() dto: CreateFolderDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요 (부모 폴더 생성 권한)
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const folder = await this.wikiBusinessService.폴더를_생성한다({
       name: dto.name,
       parentId: dto.parentId,
@@ -409,7 +421,7 @@ export class UserWikiController {
       permissionPositionIds: dto.permissionPositionIds,
       permissionDepartmentIds: dto.permissionDepartmentIds,
       order: dto.order,
-      createdBy: user.id,
+      createdBy: authenticatedUser.id,
     });
     
     // 사용자 이름 조회
@@ -437,7 +449,7 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    // TODO: 사용자 권한 확인 로직 구현 필요 (작성자 확인 또는 관리 권한)
+    this.인증된_사용자를_확인한다(user);
     const success = await this.wikiBusinessService.폴더를_삭제한다(id);
     return { success };
   }
@@ -461,7 +473,7 @@ export class UserWikiController {
     @Body() dto: UpdateFolderDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const folder = await this.wikiBusinessService.폴더를_수정한다(id, {
       name: dto.name,
       isPublic: dto.isPublic,
@@ -469,7 +481,7 @@ export class UserWikiController {
       permissionPositionIds: dto.permissionPositionIds,
       permissionDepartmentIds: dto.permissionDepartmentIds,
       order: dto.order,
-      updatedBy: user.id,
+      updatedBy: authenticatedUser.id,
     });
     return WikiResponseDto.from(folder);
   }
@@ -493,10 +505,10 @@ export class UserWikiController {
     @Body() dto: UpdateWikiPathDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const folder = await this.wikiBusinessService.폴더_경로를_수정한다(id, {
       parentId: dto.parentId,
-      updatedBy: user.id,
+      updatedBy: authenticatedUser.id,
     });
     return WikiResponseDto.from(folder);
   }
@@ -520,10 +532,10 @@ export class UserWikiController {
     @Body() dto: UpdateFolderNameDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const folder = await this.wikiBusinessService.폴더_이름을_수정한다(id, {
       name: dto.name,
-      updatedBy: user.id,
+      updatedBy: authenticatedUser.id,
     });
     return WikiResponseDto.from(folder);
   }
@@ -545,7 +557,7 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    this.인증된_사용자를_확인한다(user);
     const success = await this.wikiBusinessService.파일을_삭제한다(id);
     return { success };
   }
@@ -595,7 +607,7 @@ export class UserWikiController {
     @Param('id') id: string,
     @Query('fileUrl') fileUrl: string,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    this.인증된_사용자를_확인한다(user);
     const wiki =
       await this.wikiBusinessService.위키_첨부파일을_삭제한다(
         id,
@@ -624,10 +636,10 @@ export class UserWikiController {
     @Body() dto: UpdateWikiPathDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const file = await this.wikiBusinessService.파일_경로를_수정한다(id, {
       parentId: dto.parentId,
-      updatedBy: user.id,
+      updatedBy: authenticatedUser.id,
     });
     return WikiResponseDto.from(file);
   }
@@ -764,6 +776,8 @@ export class UserWikiController {
     @Body() dto: CreateEmptyFileDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<WikiResponseDto> {
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
+
     if (typeof dto.name !== 'string') {
       throw new BadRequestException('name 필드는 문자열이어야 합니다.');
     }
@@ -772,11 +786,10 @@ export class UserWikiController {
       throw new BadRequestException('isPublic 필드는 boolean 값이어야 합니다.');
     }
 
-    // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.빈_파일을_생성한다(
       dto.name,
       dto.parentId || null,
-      user.id,
+      authenticatedUser.id,
       dto.isPublic,
     );
     return WikiResponseDto.from(file);
@@ -858,13 +871,13 @@ export class UserWikiController {
     @Body() dto: CreateFileDto,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const file = await this.wikiBusinessService.파일을_생성한다(
       dto.name,
       dto.parentId || null,
       dto.title || null,
       dto.content || null,
-      user.id,
+      authenticatedUser.id,
       files,
       dto.isPublic,
       dto.permissionRankIds,
@@ -948,6 +961,8 @@ export class UserWikiController {
     @Body() body: any,
     @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
+    const authenticatedUser = this.인증된_사용자를_확인한다(user);
+
     const { 
       name, 
       title, 
@@ -962,13 +977,12 @@ export class UserWikiController {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
 
-    // TODO: 사용자 권한 확인 로직 구현 필요
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
       name,
       title || null,
       content || null,
-      user.id,
+      authenticatedUser.id,
       files,
       isPublic,
       permissionRankIds,

@@ -32,12 +32,30 @@ export class JwtAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    if (isPublic) {
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
+
+    // @Public() 엔드포인트: 토큰이 있으면 사용자 정보를 주입하되, 없어도 통과
+    if (isPublic) {
+      if (token) {
+        try {
+          const result = await this.authContextService.토큰을_검증한다(token);
+          request['user'] = {
+            id: result.user.id,
+            externalId: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            employeeNumber: result.user.employeeNumber,
+            roles: result.user.roles,
+            status: result.user.status || 'ACTIVE',
+          };
+        } catch {
+          // Public 엔드포인트이므로 토큰 검증 실패해도 통과
+          this.logger.debug('Public 엔드포인트 토큰 검증 실패 (무시하고 계속)');
+        }
+      }
+      return true;
+    }
 
     if (!token) {
       throw new UnauthorizedException('인증 토큰이 필요합니다.');
