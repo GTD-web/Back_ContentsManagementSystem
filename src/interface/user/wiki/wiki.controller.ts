@@ -23,6 +23,7 @@ import {
   ApiParam,
   ApiConsumes,
   ApiBody,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
@@ -52,6 +53,7 @@ import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-syste
 
 @ApiTags('U-2. 사용자 - Wiki')
 @ApiBearerAuth('Bearer')
+@ApiExtraModels(CheckWikiAccessDto, CheckWikiAccessResponseDto, WikiAccessWarningDto, AncestorPathItemDto)
 @Public()
 @Controller('user/wiki')
 export class UserWikiController {
@@ -1171,10 +1173,98 @@ export class UserWikiController {
     status: 200,
     description: '접근 가능 여부 확인 결과',
     type: CheckWikiAccessResponseDto,
+    content: {
+      'application/json': {
+        examples: {
+          accessible: {
+            summary: '접근 가능',
+            description: '모든 상위 폴더와 자체 권한을 통과한 경우',
+            value: {
+              accessible: true,
+              ancestorPath: [
+                { id: 'uuid-root', name: '전사 문서', depth: 0, accessible: true },
+                { id: 'uuid-parent', name: '개발팀', depth: 1, accessible: true },
+              ],
+            },
+          },
+          blockedByAncestor: {
+            summary: '상위 폴더 권한으로 접근 불가',
+            description: '상위 폴더 체인 중 접근 불가한 폴더가 있는 경우 (Cascading 차단)',
+            value: {
+              accessible: false,
+              warning: "상위 폴더 '경영전략팀 전용'의 권한 설정으로 인해 접근이 제한됩니다.",
+              ancestorPath: [
+                { id: 'uuid-root', name: '전사 문서', depth: 0, accessible: true },
+                { id: 'uuid-dept', name: '경영전략팀 전용', depth: 1, accessible: false },
+                { id: 'uuid-sub', name: '기밀 문서', depth: 2, accessible: false },
+              ],
+              details: [
+                {
+                  source: 'ancestor',
+                  folderId: 'uuid-dept',
+                  folderName: '경영전략팀 전용',
+                  depth: 1,
+                  reason: "폴더 '경영전략팀 전용'의 부서 권한에 현재 사용자가 포함되지 않습니다. (이로 인해 하위 1단계 폴더도 접근 불가)",
+                },
+              ],
+            },
+          },
+          blockedBySelf: {
+            summary: '자체 권한으로 접근 불가',
+            description: '생성하려는 항목의 권한 설정에 현재 사용자가 포함되지 않는 경우',
+            value: {
+              accessible: false,
+              warning: '현재 설정한 권한으로 인해 생성 후 접근할 수 없습니다.',
+              details: [
+                {
+                  source: 'self',
+                  folderId: '',
+                  folderName: '(새로 생성할 폴더)',
+                  depth: -1,
+                  reason: '부서/직급 권한에 현재 사용자가 포함되지 않습니다.',
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
     description: '인증 필요',
+  })
+  @ApiBody({
+    type: CheckWikiAccessDto,
+    examples: {
+      folderInParent: {
+        summary: '상위 폴더 안에 폴더 생성',
+        description: '특정 상위 폴더 안에 부서 제한 폴더를 생성하는 경우',
+        value: {
+          parentId: 'uuid-of-parent-folder',
+          type: 'folder',
+          isPublic: false,
+          permissionDepartmentIds: ['uuid-of-department'],
+        },
+      },
+      fileInParent: {
+        summary: '상위 폴더 안에 파일 생성',
+        description: '특정 상위 폴더 안에 공개 파일을 생성하는 경우',
+        value: {
+          parentId: 'uuid-of-parent-folder',
+          type: 'file',
+          isPublic: true,
+        },
+      },
+      rootFolder: {
+        summary: '최상위에 폴더 생성',
+        description: '최상위 레벨에 전사공개 폴더를 생성하는 경우',
+        value: {
+          type: 'folder',
+          isPublic: true,
+        },
+      },
+    },
   })
   async 접근_가능_여부를_확인한다(
     @CurrentUser() user: AuthenticatedUser,
