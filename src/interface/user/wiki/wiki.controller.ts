@@ -12,6 +12,7 @@ import {
   UploadedFiles,
   BadRequestException,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -244,6 +245,73 @@ export class UserWikiController {
   }
 
   /**
+   * 단일 위키 항목에 대한 접근 가능 여부를 판단한다 (상위 폴더 체인 조회).
+   * 파일 상세 조회 등 단일 항목 조회 시 사용.
+   */
+  private async 단일_항목_접근_가능_여부(
+    item: WikiFileSystem,
+    user?: AuthenticatedUser,
+  ): Promise<boolean> {
+    // 사용자의 직원 정보 조회
+    let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
+
+    if (user?.employeeNumber) {
+      try {
+        const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
+        if (employee) {
+          employeeInfo = {
+            rankId: employee.rankId || employee.rank?.id,
+            positionId: employee.positionId || employee.position?.id,
+            departmentId: employee.departmentId || employee.department?.id,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber}`, error);
+        return false;
+      }
+    }
+
+    // 상위 폴더 체인 조회
+    const ancestors = await this.wikiBusinessService.위키_경로를_조회한다(item.id);
+    
+    // 모든 상위 폴더에 대해 권한 체크 (루트부터 현재 항목까지)
+    for (const ancestor of ancestors) {
+      if (ancestor.type === 'folder') {
+        // 권한 설정이 있는 폴더인지 확인
+        const hasPermissionSettings = 
+          (ancestor.permissionRankIds && ancestor.permissionRankIds.length > 0) ||
+          (ancestor.permissionPositionIds && ancestor.permissionPositionIds.length > 0) ||
+          (ancestor.permissionDepartmentIds && ancestor.permissionDepartmentIds.length > 0);
+
+        if (hasPermissionSettings) {
+          // 권한 설정이 있으면 매칭 체크
+          const hasAccess = !!(
+            (ancestor.permissionRankIds &&
+              ancestor.permissionRankIds.length > 0 &&
+              employeeInfo.rankId &&
+              ancestor.permissionRankIds.includes(employeeInfo.rankId)) ||
+            (ancestor.permissionPositionIds &&
+              ancestor.permissionPositionIds.length > 0 &&
+              employeeInfo.positionId &&
+              ancestor.permissionPositionIds.includes(employeeInfo.positionId)) ||
+            (ancestor.permissionDepartmentIds &&
+              ancestor.permissionDepartmentIds.length > 0 &&
+              employeeInfo.departmentId &&
+              ancestor.permissionDepartmentIds.includes(employeeInfo.departmentId))
+          );
+
+          if (!hasAccess) {
+            this.logger.debug(`접근 거부 - 상위 폴더 권한 없음: ${ancestor.name}`);
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * 개별 위키 항목에 대한 접근 가능 여부를 판단한다 (인메모리 Cascading 체크).
    * 상위 폴더 결과를 캐싱하여 트리 전체를 효율적으로 검사한다.
    */
@@ -347,11 +415,20 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('path') path: string,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
     const folder = await this.wikiBusinessService.경로로_폴더를_조회한다(path);
+    
+    // 사용자 권한 확인
+    const hasAccess = await this.단일_항목_접근_가능_여부(folder, user);
+    if (!hasAccess) {
+      throw new NotFoundException('폴더를 찾을 수 없거나 접근 권한이 없습니다.');
+    }
+    
     const children = await this.wikiBusinessService.폴더_하위_항목을_조회한다(
       folder.id,
     );
+    
+    // 하위 항목도 권한 기반 필터링
+    const filteredChildren = await this.권한_기반으로_필터링한다(children, user);
     
     // 경로 정보 조회 (이미 루트부터 정렬되어 있음)
     const breadcrumb = await this.wikiBusinessService.위키_경로를_조회한다(folder.id);
@@ -361,13 +438,13 @@ export class UserWikiController {
     const pathIds = parents.map(item => item.id);
     
     // 사용자 이름 조회
-    const allUserIds = [folder.createdBy, folder.updatedBy, ...children.flatMap(c => [c.createdBy, c.updatedBy])];
+    const allUserIds = [folder.createdBy, folder.updatedBy, ...filteredChildren.flatMap(c => [c.createdBy, c.updatedBy])];
     const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
     
     const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
     const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
     
-    return WikiResponseDto.from(folder, children, pathNames, pathIds, createdByName, updatedByName);
+    return WikiResponseDto.from(folder, filteredChildren, pathNames, pathIds, createdByName, updatedByName);
   }
 
   /**
@@ -388,20 +465,29 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
     // includeTargetEmployees를 true로 설정하여 대상 직원 정보 포함
     const folder = await this.wikiBusinessService.폴더를_조회한다(id, true);
+    
+    // 사용자 권한 확인
+    const hasAccess = await this.단일_항목_접근_가능_여부(folder, user);
+    if (!hasAccess) {
+      throw new NotFoundException('폴더를 찾을 수 없거나 접근 권한이 없습니다.');
+    }
+    
     const children =
       await this.wikiBusinessService.폴더_하위_항목을_조회한다(id);
     
+    // 하위 항목도 권한 기반 필터링
+    const filteredChildren = await this.권한_기반으로_필터링한다(children, user);
+    
     // 사용자 이름 조회
-    const allUserIds = [folder.createdBy, folder.updatedBy, ...children.flatMap(c => [c.createdBy, c.updatedBy])];
+    const allUserIds = [folder.createdBy, folder.updatedBy, ...filteredChildren.flatMap(c => [c.createdBy, c.updatedBy])];
     const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
     
     const createdByName = folder.createdBy ? userNameMap.get(folder.createdBy) || null : null;
     const updatedByName = folder.updatedBy ? userNameMap.get(folder.updatedBy) || null : null;
     
-    const result = WikiResponseDto.from(folder, children, undefined, undefined, createdByName, updatedByName);
+    const result = WikiResponseDto.from(folder, filteredChildren, undefined, undefined, createdByName, updatedByName);
     
     // 권한 기반 대상 직원 정보 추가
     if (folder.recipients) {
@@ -727,14 +813,24 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('parentId') parentId?: string,
   ): Promise<WikiListResponseDto> {
-    // TODO: 사용자 권한 필터링 로직 구현 필요
     const items = await this.wikiBusinessService.파일들을_조회한다(
       parentId || null,
     );
 
+    // 사용자 권한 기반 필터링
+    const filteredItems = await this.권한_기반으로_필터링한다(items, user);
+
+    // 사용자 이름 조회
+    const allUserIds = filteredItems.flatMap(item => [item.createdBy, item.updatedBy]);
+    const userNameMap = await this.사용자_이름_맵을_조회한다(allUserIds);
+
     return {
-      items: items.map((item) => WikiResponseDto.from(item)),
-      total: items.length,
+      items: filteredItems.map((item) => {
+        const createdByName = item.createdBy ? userNameMap.get(item.createdBy) || null : null;
+        const updatedByName = item.updatedBy ? userNameMap.get(item.updatedBy) || null : null;
+        return WikiResponseDto.from(item, undefined, undefined, undefined, createdByName, updatedByName);
+      }),
+      total: filteredItems.length,
     };
   }
 
@@ -756,9 +852,14 @@ export class UserWikiController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<WikiResponseDto> {
-    // TODO: 사용자 권한 확인 로직 구현 필요
     // includeTargetEmployees를 true로 설정하여 대상 직원 정보 포함
     const file = await this.wikiBusinessService.파일을_조회한다(id, true);
+    
+    // 사용자 권한 확인
+    const hasAccess = await this.단일_항목_접근_가능_여부(file, user);
+    if (!hasAccess) {
+      throw new NotFoundException('파일을 찾을 수 없거나 접근 권한이 없습니다.');
+    }
     
     // 사용자 이름 조회
     const userNameMap = await this.사용자_이름_맵을_조회한다([file.createdBy, file.updatedBy]);
