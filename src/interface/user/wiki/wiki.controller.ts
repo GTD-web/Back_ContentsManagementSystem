@@ -1272,7 +1272,7 @@ export class UserWikiController {
   ): Promise<CheckWikiAccessResponseDto> {
     const authenticatedUser = this.인증된_사용자를_확인한다(user);
 
-    // 1. 사용자의 직원 정보 조회
+    // 1. 사용자의 직원 정보 조회 (폴더 구조 조회와 동일한 패턴)
     let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
 
     if (authenticatedUser.employeeNumber) {
@@ -1284,6 +1284,7 @@ export class UserWikiController {
             positionId: employee.positionId || employee.position?.id,
             departmentId: employee.departmentId || employee.department?.id,
           };
+          this.logger.log(`접근 확인 - 사용자 권한 정보: departmentId=${employeeInfo.departmentId}, rankId=${employeeInfo.rankId}, positionId=${employeeInfo.positionId}`);
         }
       } catch (error) {
         this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${authenticatedUser.employeeNumber}`, error);
@@ -1297,9 +1298,16 @@ export class UserWikiController {
     const warnings: WikiAccessWarningDto[] = [];
     const ancestorPath: AncestorPathItemDto[] = [];
 
-    // 2. 상위 폴더 전체 체인 권한 확인 (루트 → 직접 상위 폴더까지 Cascading)
-    //    상위 폴더 중 하나라도 접근 불가하면, 그 아래 폴더들은 모두 접근 불가 (Cascading)
-    let ancestorChainBlocked = false; // 상위 체인에서 이미 차단되었는지 추적
+    // 2. 상위 폴더 전체 체인을 가져와서 항목_접근_가능_여부와 동일한 로직으로 판단
+    //    핵심: 폴더 구조 조회(항목_접근_가능_여부)와 완전히 동일한 방식으로 Cascading 체크
+    //
+    //    - 상위 폴더가 모두 공개(isPublic:true, 권한설정 없음) → 하위 항목 무조건 접근 가능
+    //    - 상위 폴더 중 하나라도 차단 → 그 이하 전부 접근 불가 (Cascading)
+    //    - 파일(parentId 있음): 상위 폴더 접근 가능하면 파일도 접근 가능 (파일 자체 권한 안 봄)
+    //    - 폴더: 상위 폴더 접근 가능 + 자체 권한 체크
+    //    - 루트 항목(parentId 없음): 자체 권한만 체크
+
+    let parentAccessible = true; // 상위 폴더 체인의 최종 접근 가능 여부
 
     if (dto.parentId) {
       try {
@@ -1311,66 +1319,63 @@ export class UserWikiController {
           `[${ancestors.map(a => `${a.name}(depth:${a.depth})`).join(' → ')}]`,
         );
 
-        for (let i = 0; i < ancestors.length; i++) {
-          const ancestor = ancestors[i];
+        // 항목_접근_가능_여부와 동일한 방식으로 인메모리 맵 구성 후 Cascading 체크
+        const itemMap = new Map<string, WikiFileSystem>();
+        for (const ancestor of ancestors) {
+          itemMap.set(ancestor.id, ancestor);
+        }
+        const accessCache = new Map<string, boolean>();
 
-          // 파일 타입은 건너뛴다 (폴더만 권한 체크)
-          if (ancestor.type !== WikiFileSystemType.FOLDER) continue;
-
-          // 이미 상위에서 차단된 경우: 하위 폴더는 자동으로 접근 불가 (Cascading)
-          if (ancestorChainBlocked) {
-            ancestorPath.push({
-              id: ancestor.id,
-              name: ancestor.name,
-              depth: ancestor.depth,
-              accessible: false,
-            });
-
-            this.logger.debug(
-              `접근 확인 - '${ancestor.name}' (depth: ${ancestor.depth}): 상위 폴더 차단으로 인한 Cascading 접근 불가`,
-            );
-            continue;
-          }
-
-          // 폴더별 접근 가능 여부 개별 판단
-          const folderAccess = this.폴더_접근_가능_여부를_판단한다(ancestor, employeeInfo);
+        // 모든 조상 폴더에 대해 항목_접근_가능_여부 실행 (동일한 로직 재사용)
+        for (const ancestor of ancestors) {
+          const accessible = this.항목_접근_가능_여부(ancestor, itemMap, accessCache, employeeInfo);
 
           ancestorPath.push({
             id: ancestor.id,
             name: ancestor.name,
             depth: ancestor.depth,
-            accessible: folderAccess.accessible,
+            accessible,
           });
+        }
 
-          if (!folderAccess.accessible) {
-            ancestorChainBlocked = true; // 이 폴더 아래 모든 항목 Cascading 차단
+        // 직접 상위 폴더(parentId)의 접근 가능 여부가 최종 결과
+        const parentFolder = ancestors.find(a => a.id === dto.parentId);
+        if (parentFolder) {
+          parentAccessible = accessCache.get(parentFolder.id) ?? true;
+        }
 
-            // 이 폴더에서 차단되었을 때 하위 폴더가 몇 단계 남아있는지 계산
-            const remainingAncestors = ancestors.slice(i + 1).filter(a => a.type === WikiFileSystemType.FOLDER);
-            const cascadeNote = remainingAncestors.length > 0
-              ? ` (이로 인해 하위 ${remainingAncestors.length}단계 폴더도 접근 불가)`
-              : '';
+        // 접근 불가한 조상 폴더들에 대한 경고 수집
+        if (!parentAccessible) {
+          // Cascading 차단: 처음 차단된 폴더를 찾아서 경고 생성
+          let firstBlockedIndex = -1;
+          for (let i = 0; i < ancestors.length; i++) {
+            const ancestor = ancestors[i];
+            const accessible = accessCache.get(ancestor.id) ?? true;
+            if (!accessible) {
+              if (firstBlockedIndex === -1) firstBlockedIndex = i;
 
-            warnings.push({
-              source: 'ancestor',
-              folderId: ancestor.id,
-              folderName: ancestor.name,
-              depth: ancestor.depth,
-              reason: `${folderAccess.reason}${cascadeNote}`,
-            });
+              // 처음 차단된 폴더만 상세 사유를 제공 (나머지는 Cascading)
+              if (i === firstBlockedIndex) {
+                const reason = this.항목_차단_사유를_구한다(ancestor, itemMap, employeeInfo);
+                const remainingCount = ancestors.length - i - 1;
+                const cascadeNote = remainingCount > 0
+                  ? ` (이로 인해 하위 ${remainingCount}단계도 접근 불가)`
+                  : '';
 
-            this.logger.log(
-              `접근 확인 - '${ancestor.name}' (depth: ${ancestor.depth}): 접근 차단 - ${folderAccess.reason}`,
-            );
-          } else {
-            this.logger.debug(
-              `접근 확인 - '${ancestor.name}' (depth: ${ancestor.depth}): 접근 허용`,
-            );
+                warnings.push({
+                  source: 'ancestor',
+                  folderId: ancestor.id,
+                  folderName: ancestor.name,
+                  depth: ancestor.depth,
+                  reason: `${reason}${cascadeNote}`,
+                });
+              }
+            }
           }
         }
       } catch (error) {
         this.logger.warn(`상위 폴더 조회 실패 - parentId: ${dto.parentId}`, error);
-        ancestorChainBlocked = true;
+        parentAccessible = false;
         warnings.push({
           source: 'ancestor',
           folderId: dto.parentId,
@@ -1381,61 +1386,85 @@ export class UserWikiController {
       }
     }
 
-    // 3. 생성하려는 항목 자체의 권한 확인
-    const itemIsPublic = dto.isPublic ?? true;
-    const itemType = dto.type;
+    // 3. 생성하려는 항목 자체의 접근 가능 여부 판단
+    //    항목_접근_가능_여부와 동일한 로직:
+    //    - 상위 폴더가 차단됨 → 무조건 접근 불가 (이미 warnings에 추가됨)
+    //    - 파일(parentId 있음): 상위 폴더가 접근 가능하면 → 파일도 접근 가능 (자체 권한 안 봄)
+    //    - 폴더 또는 루트 항목: 자체 권한 설정 체크
+    let selfAccessible = true;
 
-    if (itemType === WikiFileSystemType.FILE) {
-      // 파일: isPublic false → 완전 비공개
-      if (!itemIsPublic) {
-        warnings.push({
-          source: 'self',
-          folderId: '',
-          folderName: '(새로 생성할 파일)',
-          depth: -1,
-          reason: '파일을 비공개(isPublic: false)로 설정하면 누구도 접근할 수 없습니다.',
-        });
-      }
-      // 파일: isPublic true → 상위 폴더 권한에 따름 (위 체인 체크에서 이미 확인됨)
-    } else if (itemType === WikiFileSystemType.FOLDER) {
-      // 폴더: 자체 권한 설정 확인
+    if (!parentAccessible) {
+      // 상위 폴더가 이미 차단됨 → 어떤 설정이든 접근 불가
+      selfAccessible = false;
+    } else if (dto.type === WikiFileSystemType.FILE && dto.parentId) {
+      // 파일(parentId 있음): 상위 폴더가 접근 가능하면 → 파일도 접근 가능
+      // 항목_접근_가능_여부에서 "일반 파일은 상위 폴더 권한을 따름"과 동일
+      selfAccessible = true;
+      this.logger.debug('접근 확인 - 파일: 상위 폴더가 접근 가능하므로 파일도 접근 가능');
+    } else {
+      // 폴더 또는 루트 항목(parentId 없음): 자체 권한 설정 체크
+      // 항목_접근_가능_여부의 "폴더 또는 루트 파일: 권한 설정 체크"와 동일
+      const itemIsPublic = dto.isPublic ?? true;
       const hasItemPermissions =
         (dto.permissionRankIds && dto.permissionRankIds.length > 0) ||
         (dto.permissionPositionIds && dto.permissionPositionIds.length > 0) ||
         (dto.permissionDepartmentIds && dto.permissionDepartmentIds.length > 0);
 
-      if (!itemIsPublic && !hasItemPermissions) {
-        // 비공개인데 권한 설정 없음 → 아무도 접근 불가
-        warnings.push({
-          source: 'self',
-          folderId: '',
-          folderName: '(새로 생성할 폴더)',
-          depth: -1,
-          reason: '폴더를 비공개(isPublic: false)로 설정하고 권한을 지정하지 않으면 누구도 접근할 수 없습니다.',
-        });
-      } else if (hasItemPermissions) {
-        // 권한이 설정됨 → 현재 사용자가 포함되는지 확인
-        const selfAccess = this.권한_목록에_사용자가_포함되는지_확인한다(
-          dto.permissionRankIds || null,
-          dto.permissionPositionIds || null,
-          dto.permissionDepartmentIds || null,
-          employeeInfo,
-        );
-
-        if (!selfAccess.accessible) {
+      if (!hasItemPermissions) {
+        // 권한 설정 없음 → isPublic으로 판단
+        if (itemIsPublic) {
+          selfAccessible = true;
+        } else {
+          selfAccessible = false;
+          const typeName = dto.type === WikiFileSystemType.FOLDER ? '폴더' : '파일';
           warnings.push({
             source: 'self',
             folderId: '',
-            folderName: '(새로 생성할 폴더)',
+            folderName: `(새로 생성할 ${typeName})`,
             depth: -1,
-            reason: selfAccess.reason,
+            reason: `${typeName}을(를) 비공개(isPublic: false)로 설정하고 권한을 지정하지 않으면 누구도 접근할 수 없습니다.`,
+          });
+        }
+      } else {
+        // 권한 설정 있음 → 직급/직책/부서 매칭 체크 (OR 조건)
+        const hasDirectAccess = !!(
+          (dto.permissionRankIds &&
+            dto.permissionRankIds.length > 0 &&
+            employeeInfo.rankId &&
+            dto.permissionRankIds.includes(employeeInfo.rankId)) ||
+          (dto.permissionPositionIds &&
+            dto.permissionPositionIds.length > 0 &&
+            employeeInfo.positionId &&
+            dto.permissionPositionIds.includes(employeeInfo.positionId)) ||
+          (dto.permissionDepartmentIds &&
+            dto.permissionDepartmentIds.length > 0 &&
+            employeeInfo.departmentId &&
+            dto.permissionDepartmentIds.includes(employeeInfo.departmentId))
+        );
+
+        if (hasDirectAccess) {
+          selfAccessible = true;
+        } else {
+          selfAccessible = false;
+          const restrictionParts: string[] = [];
+          if (dto.permissionDepartmentIds && dto.permissionDepartmentIds.length > 0) restrictionParts.push('부서');
+          if (dto.permissionRankIds && dto.permissionRankIds.length > 0) restrictionParts.push('직급');
+          if (dto.permissionPositionIds && dto.permissionPositionIds.length > 0) restrictionParts.push('직책');
+
+          const typeName = dto.type === WikiFileSystemType.FOLDER ? '폴더' : '파일';
+          warnings.push({
+            source: 'self',
+            folderId: '',
+            folderName: `(새로 생성할 ${typeName})`,
+            depth: -1,
+            reason: `설정한 ${restrictionParts.join('/')} 권한에 현재 사용자가 포함되지 않습니다.`,
           });
         }
       }
     }
 
     // 4. 응답 구성
-    const isAccessible = warnings.length === 0;
+    const isAccessible = parentAccessible && selfAccessible;
 
     if (isAccessible) {
       return {
@@ -1468,88 +1497,49 @@ export class UserWikiController {
   }
 
   // ==========================================
-  // 접근 가능 여부 판단 헬퍼 메서드
+  // 접근 확인 헬퍼: 차단 사유 추출
   // ==========================================
 
   /**
-   * 개별 폴더에 대한 접근 가능 여부를 판단한다.
-   * 
-   * 권한 정책:
-   * - isPublic: true && 권한 설정 없음 → 접근 허용
-   * - isPublic: false && 권한 설정 없음 → 접근 불가
-   * - 권한 설정이 있으면 → 직급/직책/부서 매칭 체크 (OR 조건)
+   * 항목이 차단된 사유를 구한다.
+   * 항목_접근_가능_여부 로직을 기반으로 왜 차단되었는지 사유를 반환한다.
    */
-  private 폴더_접근_가능_여부를_판단한다(
-    folder: WikiFileSystem,
+  private 항목_차단_사유를_구한다(
+    item: WikiFileSystem,
+    itemMap: Map<string, WikiFileSystem>,
     employee: { rankId?: string; positionId?: string; departmentId?: string },
-  ): { accessible: boolean; reason: string } {
-    const hasPermissionSettings =
-      (folder.permissionRankIds && folder.permissionRankIds.length > 0) ||
-      (folder.permissionPositionIds && folder.permissionPositionIds.length > 0) ||
-      (folder.permissionDepartmentIds && folder.permissionDepartmentIds.length > 0);
-
-    // 권한 설정이 없는 경우 isPublic으로 판단
-    if (!hasPermissionSettings) {
-      if (folder.isPublic) {
-        return { accessible: true, reason: '' };
+  ): string {
+    // 상위 폴더가 차단되어 Cascading으로 차단된 경우
+    if (item.parentId && itemMap.has(item.parentId)) {
+      const parentCache = new Map<string, boolean>();
+      const parentAccessible = this.항목_접근_가능_여부(
+        itemMap.get(item.parentId)!, itemMap, parentCache, employee,
+      );
+      if (!parentAccessible) {
+        return `상위 폴더가 접근 불가하여 Cascading으로 차단되었습니다.`;
       }
-      return {
-        accessible: false,
-        reason: `폴더 '${folder.name}'이(가) 비공개(isPublic: false)로 설정되어 있어 접근할 수 없습니다.`,
-      };
     }
 
-    // 권한 설정이 있는 경우 매칭 체크
-    const result = this.권한_목록에_사용자가_포함되는지_확인한다(
-      folder.permissionRankIds,
-      folder.permissionPositionIds,
-      folder.permissionDepartmentIds,
-      employee,
-    );
+    // 자체 권한으로 차단된 경우
+    if (item.type === 'folder' || !item.parentId) {
+      const hasPermissionSettings =
+        (item.permissionRankIds && item.permissionRankIds.length > 0) ||
+        (item.permissionPositionIds && item.permissionPositionIds.length > 0) ||
+        (item.permissionDepartmentIds && item.permissionDepartmentIds.length > 0);
 
-    if (result.accessible) {
-      return { accessible: true, reason: '' };
+      if (!hasPermissionSettings) {
+        if (!item.isPublic) {
+          return `폴더 '${item.name}'이(가) 비공개(isPublic: false)로 설정되어 있어 접근할 수 없습니다.`;
+        }
+      } else {
+        const restrictionParts: string[] = [];
+        if (item.permissionDepartmentIds && item.permissionDepartmentIds.length > 0) restrictionParts.push('부서');
+        if (item.permissionRankIds && item.permissionRankIds.length > 0) restrictionParts.push('직급');
+        if (item.permissionPositionIds && item.permissionPositionIds.length > 0) restrictionParts.push('직책');
+        return `폴더 '${item.name}'의 ${restrictionParts.join('/')} 권한에 현재 사용자가 포함되지 않습니다.`;
+      }
     }
 
-    return {
-      accessible: false,
-      reason: `폴더 '${folder.name}'의 ${result.reason}`,
-    };
-  }
-
-  /**
-   * 직급/직책/부서 권한 목록에 현재 사용자가 포함되는지 확인한다.
-   * 
-   * OR 조건: 직급, 직책, 부서 중 하나라도 매칭되면 접근 허용
-   */
-  private 권한_목록에_사용자가_포함되는지_확인한다(
-    permissionRankIds: string[] | null | undefined,
-    permissionPositionIds: string[] | null | undefined,
-    permissionDepartmentIds: string[] | null | undefined,
-    employee: { rankId?: string; positionId?: string; departmentId?: string },
-  ): { accessible: boolean; reason: string } {
-    const hasRankPermission = permissionRankIds && permissionRankIds.length > 0;
-    const hasPositionPermission = permissionPositionIds && permissionPositionIds.length > 0;
-    const hasDepartmentPermission = permissionDepartmentIds && permissionDepartmentIds.length > 0;
-
-    // 매칭 체크 (OR 조건)
-    const rankMatch = hasRankPermission && employee.rankId && permissionRankIds.includes(employee.rankId);
-    const positionMatch = hasPositionPermission && employee.positionId && permissionPositionIds.includes(employee.positionId);
-    const departmentMatch = hasDepartmentPermission && employee.departmentId && permissionDepartmentIds.includes(employee.departmentId);
-
-    if (rankMatch || positionMatch || departmentMatch) {
-      return { accessible: true, reason: '' };
-    }
-
-    // 접근 불가: 어떤 권한 때문에 차단되었는지 상세 사유 구성
-    const restrictionParts: string[] = [];
-    if (hasDepartmentPermission) restrictionParts.push('부서');
-    if (hasRankPermission) restrictionParts.push('직급');
-    if (hasPositionPermission) restrictionParts.push('직책');
-
-    return {
-      accessible: false,
-      reason: `${restrictionParts.join('/')} 권한에 현재 사용자가 포함되지 않습니다.`,
-    };
+    return `항목 '${item.name}'에 접근할 수 없습니다.`;
   }
 }
