@@ -91,15 +91,17 @@ export class UserWikiController {
   ): Promise<WikiListResponseDto> {
     const excludeRoot = excludeRootParam === 'true';
 
-    // TODO: 사용자 권한 필터링 로직 구현 필요
     const items =
       await this.wikiBusinessService.폴더_구조를_가져온다(ancestorId, excludeRoot);
 
-    const tree = await this.buildTree(items);
+    // 사용자 권한 기반 필터링
+    const filteredItems = await this.권한_기반으로_필터링한다(items, user);
+
+    const tree = await this.buildTree(filteredItems);
 
     return {
       items: tree,
-      total: items.length,
+      total: filteredItems.length,
     };
   }
 
@@ -179,6 +181,102 @@ export class UserWikiController {
     }
 
     return nameMap;
+  }
+
+  /**
+   * 사용자의 권한 정보(직급/직책/부서)를 기반으로 위키 항목을 필터링한다.
+   * 
+   * 권한 정책 (Cascading):
+   * - 폴더: isPublic이 false이면 permissionRankIds/positionIds/departmentIds 중 하나라도 매칭되어야 접근 가능
+   * - 파일: isPublic이 false이면 무조건 비공개, true이면 상위 폴더의 권한을 상속
+   * - 상위 폴더가 접근 불가하면 하위 항목도 모두 접근 불가
+   */
+  private async 권한_기반으로_필터링한다(
+    items: WikiFileSystem[],
+    user: AuthenticatedUser,
+  ): Promise<WikiFileSystem[]> {
+    // 사용자의 직원 정보 조회 (직급/직책/부서 정보 포함)
+    let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
+
+    try {
+      const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
+      if (employee) {
+        employeeInfo = {
+          rankId: employee.rankId || employee.rank?.id,
+          positionId: employee.positionId || employee.position?.id,
+          departmentId: employee.departmentId || employee.department?.id,
+        };
+      }
+    } catch (error) {
+      this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
+    }
+
+    // 아이템 ID → 아이템 맵 구성
+    const itemMap = new Map<string, WikiFileSystem>();
+    for (const item of items) {
+      itemMap.set(item.id, item);
+    }
+
+    // 접근 가능 여부 캐시 (중복 계산 방지)
+    const accessCache = new Map<string, boolean>();
+
+    return items.filter(item =>
+      this.항목_접근_가능_여부(item, itemMap, accessCache, employeeInfo),
+    );
+  }
+
+  /**
+   * 개별 위키 항목에 대한 접근 가능 여부를 판단한다 (인메모리 Cascading 체크).
+   * 상위 폴더 결과를 캐싱하여 트리 전체를 효율적으로 검사한다.
+   */
+  private 항목_접근_가능_여부(
+    item: WikiFileSystem,
+    itemMap: Map<string, WikiFileSystem>,
+    accessCache: Map<string, boolean>,
+    employee: { rankId?: string; positionId?: string; departmentId?: string },
+  ): boolean {
+    if (accessCache.has(item.id)) {
+      return accessCache.get(item.id)!;
+    }
+
+    // 파일: isPublic이 false이면 무조건 비공개
+    if (item.type === 'file' && !item.isPublic) {
+      accessCache.set(item.id, false);
+      return false;
+    }
+
+    // 폴더: isPublic이 false이면 직급/직책/부서 매칭 체크
+    if (item.type === 'folder' && !item.isPublic) {
+      const hasDirectAccess = !!(
+        (item.permissionRankIds &&
+          employee.rankId &&
+          item.permissionRankIds.includes(employee.rankId)) ||
+        (item.permissionPositionIds &&
+          employee.positionId &&
+          item.permissionPositionIds.includes(employee.positionId)) ||
+        (item.permissionDepartmentIds &&
+          employee.departmentId &&
+          item.permissionDepartmentIds.includes(employee.departmentId))
+      );
+
+      if (!hasDirectAccess) {
+        accessCache.set(item.id, false);
+        return false;
+      }
+    }
+
+    // 상위 폴더 접근 권한 체크 (Cascading)
+    if (item.parentId && itemMap.has(item.parentId)) {
+      const parent = itemMap.get(item.parentId)!;
+      const parentAccess = this.항목_접근_가능_여부(parent, itemMap, accessCache, employee);
+      if (!parentAccess) {
+        accessCache.set(item.id, false);
+        return false;
+      }
+    }
+
+    accessCache.set(item.id, true);
+    return true;
   }
 
   /**
