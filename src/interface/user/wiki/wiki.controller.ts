@@ -202,7 +202,9 @@ export class UserWikiController {
    * 권한 정책 (Cascading):
    * - 폴더: permissionRankIds/positionIds/departmentIds 중 하나라도 매칭되면 접근 가능
    *   - 권한 설정이 비어있으면 전체 공개로 간주하여 접근 가능
-   * - 파일: 상위 폴더의 권한을 상속받음
+   * - 루트 파일 (parentId가 null): 자체 권한 설정(permissionRankIds/positionIds/departmentIds)으로 판단
+   *   - 권한 설정이 비어있으면 전체 공개로 간주하여 접근 가능
+   * - 일반 파일 (parentId가 있는 경우): 상위 폴더의 권한을 상속받음
    * - 상위 폴더가 접근 불가하면 하위 항목도 모두 접근 불가
    */
   private async 권한_기반으로_필터링한다(
@@ -314,6 +316,11 @@ export class UserWikiController {
   /**
    * 개별 위키 항목에 대한 접근 가능 여부를 판단한다 (인메모리 Cascading 체크).
    * 상위 폴더 결과를 캐싱하여 트리 전체를 효율적으로 검사한다.
+   * 
+   * 권한 체크 순서:
+   * 1. 상위 폴더 체크 (parentId가 있는 경우)
+   * 2. 폴더 또는 루트 파일: 자체 권한 설정 체크
+   * 3. 일반 파일: 상위 폴더 권한 상속
    */
   private 항목_접근_가능_여부(
     item: WikiFileSystem,
@@ -336,8 +343,8 @@ export class UserWikiController {
       }
     }
 
-    // 폴더: 권한 설정 체크
-    if (item.type === 'folder') {
+    // 폴더 또는 루트 파일: 권한 설정 체크
+    if (item.type === 'folder' || !item.parentId) {
       // 권한 설정이 모두 비어있으면 전체 공개로 간주
       const hasPermissionSettings = 
         (item.permissionRankIds && item.permissionRankIds.length > 0) ||
@@ -346,13 +353,13 @@ export class UserWikiController {
 
       if (!hasPermissionSettings) {
         // 권한 설정이 없으면 전체 공개
-        this.logger.debug(`폴더 접근 허용 (전체 공개) - ${item.name}`);
+        this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 접근 허용 (전체 공개) - ${item.name}`);
         accessCache.set(item.id, true);
         return true;
       }
 
       // 권한 설정이 있으면 직급/직책/부서 매칭 체크
-      this.logger.debug(`폴더 권한 체크 - ${item.name}, permissionDepartmentIds: ${JSON.stringify(item.permissionDepartmentIds)}, 사용자 departmentId: ${employee.departmentId}`);
+      this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 권한 체크 - ${item.name}, permissionDepartmentIds: ${JSON.stringify(item.permissionDepartmentIds)}, 사용자 departmentId: ${employee.departmentId}`);
       
       const hasDirectAccess = !!(
         (item.permissionRankIds &&
@@ -369,7 +376,7 @@ export class UserWikiController {
           item.permissionDepartmentIds.includes(employee.departmentId))
       );
 
-      this.logger.debug(`폴더 접근 권한 - ${item.name}: ${hasDirectAccess}`);
+      this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 접근 권한 - ${item.name}: ${hasDirectAccess}`);
 
       if (!hasDirectAccess) {
         accessCache.set(item.id, false);
@@ -377,7 +384,7 @@ export class UserWikiController {
       }
     }
 
-    // 파일: 상위 폴더 권한을 따름 (여기까지 왔으면 상위 폴더가 접근 가능하므로 허용)
+    // 일반 파일 (parentId가 있는 경우): 상위 폴더 권한을 따름 (여기까지 왔으면 상위 폴더가 접근 가능하므로 허용)
     this.logger.debug(`항목 접근 허용 - ${item.name} (type: ${item.type})`);
     accessCache.set(item.id, true);
     return true;
