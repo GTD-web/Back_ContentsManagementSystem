@@ -200,10 +200,12 @@ export class UserWikiController {
    * 사용자의 권한 정보(직급/직책/부서)를 기반으로 위키 항목을 필터링한다.
    * 
    * 권한 정책 (Cascading):
-   * - 폴더: permissionRankIds/positionIds/departmentIds 중 하나라도 매칭되면 접근 가능
-   *   - 권한 설정이 비어있으면 전체 공개로 간주하여 접근 가능
-   * - 루트 파일 (parentId가 null): 자체 권한 설정(permissionRankIds/positionIds/departmentIds)으로 판단
-   *   - 권한 설정이 비어있으면 전체 공개로 간주하여 접근 가능
+   * - 폴더: 
+   *   - 권한 설정(permissionRankIds/positionIds/departmentIds)이 있으면 매칭 체크
+   *   - 권한 설정이 없으면 isPublic 값으로 판단 (true: 접근 가능, false: 접근 불가)
+   * - 루트 파일 (parentId가 null):
+   *   - 권한 설정(permissionRankIds/positionIds/departmentIds)이 있으면 매칭 체크
+   *   - 권한 설정이 없으면 isPublic 값으로 판단 (true: 접근 가능, false: 접근 불가)
    * - 일반 파일 (parentId가 있는 경우): 상위 폴더의 권한을 상속받음
    * - 상위 폴더가 접근 불가하면 하위 항목도 모두 접근 불가
    */
@@ -345,17 +347,23 @@ export class UserWikiController {
 
     // 폴더 또는 루트 파일: 권한 설정 체크
     if (item.type === 'folder' || !item.parentId) {
-      // 권한 설정이 모두 비어있으면 전체 공개로 간주
+      // 권한 설정이 모두 비어있는지 확인
       const hasPermissionSettings = 
         (item.permissionRankIds && item.permissionRankIds.length > 0) ||
         (item.permissionPositionIds && item.permissionPositionIds.length > 0) ||
         (item.permissionDepartmentIds && item.permissionDepartmentIds.length > 0);
 
       if (!hasPermissionSettings) {
-        // 권한 설정이 없으면 전체 공개
-        this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 접근 허용 (전체 공개) - ${item.name}`);
-        accessCache.set(item.id, true);
-        return true;
+        // 권한 설정이 없으면 isPublic 값으로 판단
+        if (item.isPublic) {
+          this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 접근 허용 (isPublic: true) - ${item.name}`);
+          accessCache.set(item.id, true);
+          return true;
+        } else {
+          this.logger.debug(`${item.type === 'folder' ? '폴더' : '루트 파일'} 접근 거부 (isPublic: false) - ${item.name}`);
+          accessCache.set(item.id, false);
+          return false;
+        }
       }
 
       // 권한 설정이 있으면 직급/직책/부서 매칭 체크
