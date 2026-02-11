@@ -800,16 +800,48 @@ export class UserWikiController {
       return { items: [], total: 0 };
     }
 
-    // TODO: 사용자 권한 필터링 로직 구현 필요
     const results = await this.wikiBusinessService.파일들을_검색한다(
       query.trim(),
     );
 
+    // 사용자 권한 기반 필터링 (폴더 구조 조회와 동일한 패턴)
+    // 각 검색 결과의 상위 폴더 경로를 기반으로 접근 가능 여부를 판단한다
+    let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
+
+    if (user?.employeeNumber) {
+      try {
+        const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
+        if (employee) {
+          employeeInfo = {
+            rankId: employee.rankId || employee.rank?.id,
+            positionId: employee.positionId || employee.position?.id,
+            departmentId: employee.departmentId || employee.department?.id,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
+      }
+    }
+
+    const filteredResults = results.filter((result) => {
+      // 상위 경로의 폴더들로 itemMap 구성 (항목_접근_가능_여부와 동일한 방식)
+      const ancestorFolders = result.path.map(p => p.wiki);
+      const allItems = [...ancestorFolders, result.wiki];
+
+      const itemMap = new Map<string, WikiFileSystem>();
+      for (const item of allItems) {
+        itemMap.set(item.id, item);
+      }
+
+      const accessCache = new Map<string, boolean>();
+      return this.항목_접근_가능_여부(result.wiki, itemMap, accessCache, employeeInfo);
+    });
+
     return {
-      items: results.map((result) =>
+      items: filteredResults.map((result) =>
         WikiSearchResultDto.from(result.wiki, result.path),
       ),
-      total: results.length,
+      total: filteredResults.length,
     };
   }
 
