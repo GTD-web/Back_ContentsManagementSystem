@@ -193,22 +193,26 @@ export class UserWikiController {
    */
   private async 권한_기반으로_필터링한다(
     items: WikiFileSystem[],
-    user: AuthenticatedUser,
+    user?: AuthenticatedUser,
   ): Promise<WikiFileSystem[]> {
     // 사용자의 직원 정보 조회 (직급/직책/부서 정보 포함)
     let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
 
-    try {
-      const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
-      if (employee) {
-        employeeInfo = {
-          rankId: employee.rankId || employee.rank?.id,
-          positionId: employee.positionId || employee.position?.id,
-          departmentId: employee.departmentId || employee.department?.id,
-        };
+    if (user?.employeeNumber) {
+      try {
+        const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
+        if (employee) {
+          employeeInfo = {
+            rankId: employee.rankId || employee.rank?.id,
+            positionId: employee.positionId || employee.position?.id,
+            departmentId: employee.departmentId || employee.department?.id,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
       }
-    } catch (error) {
-      this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
+    } else {
+      this.logger.warn('인증 정보 없음 - 공개 항목만 표시');
     }
 
     // 아이템 ID → 아이템 맵 구성
