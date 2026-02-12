@@ -1376,6 +1376,67 @@ export class WikiController {
   }
 
   /**
+   * 현재 관리자가 "다시 보지 않기" 처리한 미해결 권한 로그를 조회한다
+   */
+  @Get('permission-logs/dismissed')
+  @ApiOperation({
+    summary: '위키 권한 로그 무시 목록 조회',
+    description:
+      '현재 관리자가 "다시 보지 않기"를 설정한 미해결 권한 로그를 조회합니다.\n\n' +
+      '미열람 조회(모달용)에서 제외된 로그들을 확인하고, 필요시 무시 해제할 수 있습니다.\n\n' +
+      '각 로그에는 비활성화된 부서/직급/직책의 실제 이름과 무시한 일시가 포함됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '무시된 권한 로그 목록 조회 성공',
+  })
+  async 위키_무시된_권한_로그를_조회한다(
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    // 1. 현재 관리자가 무시한 로그 조회
+    const dismissedRecords = await this.dismissedLogRepository.find({
+      where: {
+        logType: DismissedPermissionLogType.WIKI,
+        dismissedBy: user.id,
+      },
+      order: { dismissedAt: 'DESC' },
+    });
+
+    if (dismissedRecords.length === 0) {
+      return [];
+    }
+
+    // 2. 무시된 로그 ID로 실제 권한 로그 조회 (미해결 상태만)
+    const dismissedLogIds = dismissedRecords.map((r) => r.permissionLogId);
+    const permissionLogs = await this.permissionLogRepository.find({
+      where: dismissedLogIds.map((id) => ({
+        id,
+        action: WikiPermissionAction.DETECTED,
+        resolvedAt: IsNull(),
+      })),
+      order: { detectedAt: 'DESC' },
+      relations: ['wikiFileSystem'],
+    });
+
+    // 3. 이름 보강
+    const enrichedLogs = await this.권한_로그에_이름을_추가한다(permissionLogs);
+
+    // 4. dismissedAt 정보 추가
+    const dismissedAtMap = new Map(
+      dismissedRecords.map((r) => [r.permissionLogId, r.dismissedAt]),
+    );
+    const dismissedIdMap = new Map(
+      dismissedRecords.map((r) => [r.permissionLogId, r.id]),
+    );
+
+    return enrichedLogs.map((log: any) => ({
+      ...log,
+      dismissedLogId: dismissedIdMap.get(log.id) || null,
+      dismissedAt: dismissedAtMap.get(log.id) || null,
+    }));
+  }
+
+  /**
    * 권한 로그를 "다시 보지 않기" 처리한다 (배치)
    */
   @Patch('permission-logs/dismiss')
