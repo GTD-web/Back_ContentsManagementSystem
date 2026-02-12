@@ -39,6 +39,28 @@ export class ReplaceWikiPermissionsDto {
   departments?: PermissionIdMapping[];
 
   @ApiProperty({
+    description: '직급 ID 매핑 목록 (기존 → 새로운)',
+    type: [PermissionIdMapping],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PermissionIdMapping)
+  ranks?: PermissionIdMapping[];
+
+  @ApiProperty({
+    description: '직책 ID 매핑 목록 (기존 → 새로운)',
+    type: [PermissionIdMapping],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PermissionIdMapping)
+  positions?: PermissionIdMapping[];
+
+  @ApiProperty({
     description: '처리 메모 (선택)',
     example: '구 마케팅팀을 신 마케팅팀으로 교체',
     required: false,

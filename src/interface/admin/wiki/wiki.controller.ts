@@ -1461,7 +1461,12 @@ export class WikiController {
   @ApiOperation({
     summary: '위키 권한 ID 교체 및 로그 해결',
     description:
-      '비활성화된 부서 ID를 새로운 ID로 교체합니다. 예: 구 마케팅팀(DEPT_001) → 신 마케팅팀(DEPT_002)\n\n' +
+      '비활성화된 부서/직급/직책 ID를 새로운 ID로 교체합니다.\n\n' +
+      '**예시:**\n' +
+      '- 부서: 구 마케팅팀(DEPT_001) → 신 마케팅팀(DEPT_002)\n' +
+      '- 직급: 구 대리(RANK_001) → 신 대리(RANK_002)\n' +
+      '- 직책: 구 팀장(POS_001) → 신 팀장(POS_002)\n\n' +
+      '`departments`, `ranks`, `positions` 중 필요한 항목만 전달하면 됩니다.\n\n' +
       '권한 교체가 완료되면 자동으로 RESOLVED 로그가 생성됩니다.',
   })
   @ApiParam({

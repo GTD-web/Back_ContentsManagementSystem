@@ -703,6 +703,8 @@ export class WikiBusinessService {
     success: boolean;
     message: string;
     replacedDepartments: number;
+    replacedRanks: number;
+    replacedPositions: number;
   }> {
     this.logger.log(`위키 권한 교체 시작 (트랜잭션) - ID: ${wikiId}`);
 
@@ -724,6 +726,8 @@ export class WikiBusinessService {
       this.logger.log(`위키 잠금 획득 완료 - ID: ${wikiId}`);
 
       let replacedDepartments = 0;
+      let replacedRanks = 0;
+      let replacedPositions = 0;
       const changes: string[] = [];
 
       // 2. 부서 ID 교체
@@ -744,11 +748,47 @@ export class WikiBusinessService {
         wiki.permissionDepartmentIds = newDepartmentIds;
       }
 
-      // 3. 위키 업데이트 (트랜잭션 내에서)
+      // 3. 직급 ID 교체
+      if (dto.ranks && dto.ranks.length > 0) {
+        const currentRankIds = wiki.permissionRankIds || [];
+        const newRankIds = [...currentRankIds];
+
+        for (const mapping of dto.ranks) {
+          const index = newRankIds.indexOf(mapping.oldId);
+          if (index !== -1) {
+            newRankIds[index] = mapping.newId;
+            replacedRanks++;
+            changes.push(`직급 ${mapping.oldId} → ${mapping.newId}`);
+            this.logger.log(`직급 교체: ${mapping.oldId} → ${mapping.newId}`);
+          }
+        }
+
+        wiki.permissionRankIds = newRankIds;
+      }
+
+      // 4. 직책 ID 교체
+      if (dto.positions && dto.positions.length > 0) {
+        const currentPositionIds = wiki.permissionPositionIds || [];
+        const newPositionIds = [...currentPositionIds];
+
+        for (const mapping of dto.positions) {
+          const index = newPositionIds.indexOf(mapping.oldId);
+          if (index !== -1) {
+            newPositionIds[index] = mapping.newId;
+            replacedPositions++;
+            changes.push(`직책 ${mapping.oldId} → ${mapping.newId}`);
+            this.logger.log(`직책 교체: ${mapping.oldId} → ${mapping.newId}`);
+          }
+        }
+
+        wiki.permissionPositionIds = newPositionIds;
+      }
+
+      // 5. 위키 업데이트 (트랜잭션 내에서)
       wiki.updatedAt = new Date();
       await manager.save(WikiFileSystem, wiki);
 
-      // 4. RESOLVED 로그 생성 (트랜잭션 내에서)
+      // 6. RESOLVED 로그 생성 (트랜잭션 내에서)
       let resolvedByValue: string | null = userId;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (userId && !uuidRegex.test(userId)) {
@@ -763,8 +803,8 @@ export class WikiBusinessService {
           invalidRankCodes: null,
           invalidPositionCodes: null,
           snapshotPermissions: {
-            permissionRankIds: wiki.permissionRankIds,
-            permissionPositionIds: wiki.permissionPositionIds,
+            permissionRankCodes: wiki.permissionRankIds,
+            permissionPositionCodes: wiki.permissionPositionIds,
             permissionDepartments: [],
           },
           action: WikiPermissionAction.RESOLVED,
@@ -783,12 +823,16 @@ export class WikiBusinessService {
         throw error;
       }
 
-      this.logger.log(`위키 권한 교체 완료 (트랜잭션 커밋) - 부서: ${replacedDepartments}개`);
+      this.logger.log(
+        `위키 권한 교체 완료 (트랜잭션 커밋) - 부서: ${replacedDepartments}개, 직급: ${replacedRanks}개, 직책: ${replacedPositions}개`,
+      );
 
       return {
         success: true,
         message: '권한 ID가 성공적으로 교체되었습니다',
         replacedDepartments,
+        replacedRanks,
+        replacedPositions,
       };
     });
   }
