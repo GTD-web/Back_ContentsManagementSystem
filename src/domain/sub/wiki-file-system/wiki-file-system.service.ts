@@ -542,6 +542,43 @@ export class WikiFileSystemService {
   }
 
   /**
+   * 위키를 확장 검색한다 (파일 + 폴더)
+   */
+  async 위키를_확장_검색한다(
+    query: string,
+  ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
+    this.logger.log(`위키 확장 검색 시작 - 검색어: ${query}`);
+
+    // 파일과 폴더 모두 검색 (이름, 제목, 본문)
+    const items = await this.wikiRepository
+      .createQueryBuilder('wiki')
+      .where('wiki.deletedAt IS NULL')
+      .andWhere(
+        '(LOWER(wiki.name) LIKE LOWER(:query) OR LOWER(wiki.title) LIKE LOWER(:query) OR LOWER(wiki.content) LIKE LOWER(:query))',
+        { query: `%${query}%` },
+      )
+      .orderBy('wiki.type', 'ASC') // folder가 file보다 먼저 (알파벳순)
+      .addOrderBy('wiki.updatedAt', 'DESC')
+      .getMany();
+
+    this.logger.log(`확장 검색된 항목: ${items.length}개 (파일: ${items.filter(i => i.type === WikiFileSystemType.FILE).length}개, 폴더: ${items.filter(i => i.type === WikiFileSystemType.FOLDER).length}개)`);
+
+    // 각 항목의 경로 정보 조회
+    const results = await Promise.all(
+      items.map(async (item) => {
+        const breadcrumb = await this.상위_경로를_직접_조회한다(item.id);
+        const path = breadcrumb.map((bc, index) => ({
+          wiki: bc,
+          depth: breadcrumb.length - 1 - index,
+        }));
+        return { wiki: item, path };
+      }),
+    );
+
+    return results;
+  }
+
+  /**
    * 경로로 폴더를 조회한다
    * 
    * @param path - 폴더 경로 문자열 (예: "/" 또는 "/폴더1/폴더2" 또는 "폴더1/폴더2")

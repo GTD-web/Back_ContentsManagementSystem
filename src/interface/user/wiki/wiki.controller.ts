@@ -846,6 +846,79 @@ export class UserWikiController {
   }
 
   /**
+   * 위키를 확장 검색한다 (사용자용, 파일 + 폴더)
+   */
+  @Get('search')
+  @ApiOperation({
+    summary: '확장 검색 (사용자용, 파일 + 폴더)',
+    description:
+      '검색 텍스트로 파일과 폴더를 모두 검색합니다. 사용자가 접근 가능한 항목만 검색됩니다.\n\n' +
+      '기존 파일 검색(`GET /files/search`)과 달리 폴더도 함께 검색됩니다.\n\n' +
+      '결과는 폴더가 먼저, 파일이 나중에 표시되며, 각각 수정일 기준 내림차순으로 정렬됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '확장 검색 성공',
+    type: WikiSearchListResponseDto,
+  })
+  @ApiQuery({
+    name: 'query',
+    required: true,
+    description: '검색 텍스트',
+    example: '회의록',
+  })
+  async 위키를_확장_검색한다(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('query') query: string,
+  ): Promise<WikiSearchListResponseDto> {
+    if (!query || query.trim().length === 0) {
+      return { items: [], total: 0 };
+    }
+
+    const results = await this.wikiBusinessService.위키를_확장_검색한다(
+      query.trim(),
+    );
+
+    // 사용자 권한 기반 필터링
+    let employeeInfo: { rankId?: string; positionId?: string; departmentId?: string } = {};
+
+    if (user?.employeeNumber) {
+      try {
+        const employee = await this.companyContextService.직원_정보를_조회한다(user.employeeNumber);
+        if (employee) {
+          employeeInfo = {
+            rankId: employee.rankId || employee.rank?.id,
+            positionId: employee.positionId || employee.position?.id,
+            departmentId: employee.departmentId || employee.department?.id,
+          };
+        }
+      } catch (error) {
+        this.logger.warn(`직원 정보 조회 실패 - employeeNumber: ${user.employeeNumber} (공개 항목만 표시)`, error);
+      }
+    }
+
+    const filteredResults = results.filter((result) => {
+      const ancestorFolders = result.path.map(p => p.wiki);
+      const allItems = [...ancestorFolders, result.wiki];
+
+      const itemMap = new Map<string, WikiFileSystem>();
+      for (const item of allItems) {
+        itemMap.set(item.id, item);
+      }
+
+      const accessCache = new Map<string, boolean>();
+      return this.항목_접근_가능_여부(result.wiki, itemMap, accessCache, employeeInfo);
+    });
+
+    return {
+      items: filteredResults.map((result) =>
+        WikiSearchResultDto.from(result.wiki, result.path),
+      ),
+      total: filteredResults.length,
+    };
+  }
+
+  /**
    * 파일들을 조회한다 (사용자용)
    */
   @Get('files')
@@ -1155,6 +1228,16 @@ export class UserWikiController {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
 
+    // FormData로 전송 시 JSON 문자열을 배열로 파싱
+    const parseJsonArray = (value: any): string[] | undefined => {
+      if (value === undefined || value === null) return undefined;
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : undefined; } catch { return undefined; }
+      }
+      return undefined;
+    };
+
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
       name,
@@ -1162,10 +1245,10 @@ export class UserWikiController {
       content || null,
       authenticatedUser.id,
       files,
-      isPublic,
-      permissionRankIds,
-      permissionPositionIds,
-      permissionDepartmentIds,
+      isPublic === 'true' ? true : isPublic === 'false' ? false : isPublic,
+      parseJsonArray(permissionRankIds),
+      parseJsonArray(permissionPositionIds),
+      parseJsonArray(permissionDepartmentIds),
     );
     return WikiResponseDto.from(file);
   }

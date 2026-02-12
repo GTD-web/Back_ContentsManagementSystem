@@ -734,6 +734,62 @@ export class WikiController {
   }
 
   /**
+   * 위키를 확장 검색한다 (파일 + 폴더)
+   */
+  @Get('search')
+  @ApiOperation({
+    summary: '확장 검색 (파일 + 폴더)',
+    description:
+      '검색 텍스트로 파일과 폴더를 모두 검색합니다. 파일명, 제목, 본문을 검색하며 경로 정보를 포함합니다.\n\n' +
+      '기존 파일 검색(`GET /files/search`)과 달리 폴더도 함께 검색됩니다.\n\n' +
+      '결과는 폴더가 먼저, 파일이 나중에 표시되며, 각각 수정일 기준 내림차순으로 정렬됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '확장 검색 성공',
+    type: WikiSearchListResponseDto,
+  })
+  @ApiQuery({
+    name: 'query',
+    required: true,
+    description: '검색 텍스트',
+    example: '회의록',
+  })
+  async 위키를_확장_검색한다(
+    @Query('query') query: string,
+  ): Promise<WikiSearchListResponseDto> {
+    if (!query || query.trim().length === 0) {
+      return { items: [], total: 0 };
+    }
+
+    const results = await this.wikiBusinessService.위키를_확장_검색한다(
+      query.trim(),
+    );
+
+    // permissionDepartmentIds가 비어있는 항목이 있는지 확인하고 비동기로 권한 검증 배치 실행
+    const hasEmptyPermissionDepartmentIds = results.some(
+      (result) =>
+        !result.wiki.permissionDepartmentIds ||
+        result.wiki.permissionDepartmentIds.length === 0,
+    );
+
+    if (hasEmptyPermissionDepartmentIds) {
+      this.wikiPermissionScheduler
+        .모든_위키_권한을_검증한다()
+        .catch((error) => {
+          console.error('권한 검증 배치 실행 중 오류:', error);
+        });
+    }
+
+    return {
+      items: results.map((result) =>
+        WikiSearchResultDto.from(result.wiki, result.path),
+      ),
+      total: results.length,
+    };
+  }
+
+  /**
    * 파일들을 조회한다
    */
   @Get('files')
@@ -1105,6 +1161,16 @@ export class WikiController {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
 
+    // FormData로 전송 시 JSON 문자열을 배열로 파싱
+    const parseJsonArray = (value: any): string[] | undefined => {
+      if (value === undefined || value === null) return undefined;
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : undefined; } catch { return undefined; }
+      }
+      return undefined;
+    };
+
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
       name,
@@ -1112,10 +1178,10 @@ export class WikiController {
       content || null,
       user.id,
       files,
-      isPublic,
-      permissionRankIds,
-      permissionPositionIds,
-      permissionDepartmentIds,
+      isPublic === 'true' ? true : isPublic === 'false' ? false : isPublic,
+      parseJsonArray(permissionRankIds),
+      parseJsonArray(permissionPositionIds),
+      parseJsonArray(permissionDepartmentIds),
     );
     return WikiResponseDto.from(file);
   }

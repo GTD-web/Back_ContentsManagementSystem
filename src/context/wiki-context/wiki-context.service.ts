@@ -13,6 +13,7 @@ import { GetFolderChildrenQuery } from './handlers/queries/get-folder-children.h
 import { GetFolderStructureQuery } from './handlers/queries/get-folder-structure.handler';
 import { GetWikiBreadcrumbQuery } from './handlers/queries/get-wiki-breadcrumb.handler';
 import { SearchWikiQuery } from './handlers/queries/search-wiki.handler';
+import { SearchWikiExtendedQuery } from './handlers/queries/search-wiki-extended.handler';
 import { GetFolderByPathQuery } from './handlers/queries/get-folder-by-path.handler';
 import {
   CreateFolderDto,
@@ -176,6 +177,16 @@ export class WikiContextService {
     query: string,
   ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
     const searchQuery = new SearchWikiQuery(query);
+    return await this.queryBus.execute(searchQuery);
+  }
+
+  /**
+   * 위키를 확장 검색한다 (파일 + 폴더)
+   */
+  async 위키를_확장_검색한다(
+    query: string,
+  ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
+    const searchQuery = new SearchWikiExtendedQuery(query);
     return await this.queryBus.execute(searchQuery);
   }
 

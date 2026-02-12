@@ -60,6 +60,12 @@ export class CreateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -70,6 +76,12 @@ export class CreateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -80,6 +92,12 @@ export class CreateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
@@ -147,6 +165,12 @@ export class CreateFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -157,6 +181,12 @@ export class CreateFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -167,6 +197,12 @@ export class CreateFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
@@ -218,6 +254,12 @@ export class CreateEmptyFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -228,6 +270,12 @@ export class CreateEmptyFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -238,6 +286,12 @@ export class CreateEmptyFileDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
@@ -271,6 +325,12 @@ export class UpdateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -281,6 +341,12 @@ export class UpdateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -291,6 +357,12 @@ export class UpdateFolderDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
@@ -355,6 +427,12 @@ export class UpdateWikiPublicDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -365,6 +443,12 @@ export class UpdateWikiPublicDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -375,6 +459,12 @@ export class UpdateWikiPublicDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
@@ -783,6 +873,12 @@ export class CheckWikiAccessDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionRankIds?: string[];
@@ -793,6 +889,12 @@ export class CheckWikiAccessDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionPositionIds?: string[];
@@ -803,6 +905,12 @@ export class CheckWikiAccessDto {
     type: [String],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : value; } catch { return value; }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];

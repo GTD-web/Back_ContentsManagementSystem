@@ -412,6 +412,21 @@ export class WikiBusinessService {
   }
 
   /**
+   * 위키를 확장 검색한다 (파일 + 폴더)
+   */
+  async 위키를_확장_검색한다(
+    query: string,
+  ): Promise<Array<{ wiki: WikiFileSystem; path: Array<{ wiki: WikiFileSystem; depth: number }> }>> {
+    this.logger.log(`위키 확장 검색 시작 - 검색어: ${query}`);
+
+    const result = await this.wikiContextService.위키를_확장_검색한다(query);
+
+    this.logger.log(`위키 확장 검색 완료 - 총 ${result.length}개`);
+
+    return result;
+  }
+
+  /**
    * 파일을 조회한다
    */
   async 파일을_조회한다(
