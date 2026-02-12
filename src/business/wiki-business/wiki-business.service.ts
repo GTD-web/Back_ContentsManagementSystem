@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, QueryFailedError, DataSource } from 'typeorm';
+import { Repository, QueryFailedError, DataSource, IsNull } from 'typeorm';
 import { WikiContextService } from '@context/wiki-context/wiki-context.service';
 import { CompanyContextService } from '@context/company-context/company-context.service';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
@@ -705,6 +705,7 @@ export class WikiBusinessService {
     replacedDepartments: number;
     replacedRanks: number;
     replacedPositions: number;
+    resolvedExistingLogs: number;
   }> {
     this.logger.log(`위키 권한 교체 시작 (트랜잭션) - ID: ${wikiId}`);
 
@@ -724,6 +725,7 @@ export class WikiBusinessService {
       }
 
       this.logger.log(`위키 잠금 획득 완료 - ID: ${wikiId}`);
+      this.logger.log(`현재 위키 권한 - 부서: ${JSON.stringify(wiki.permissionDepartmentIds)}, 직급: ${JSON.stringify(wiki.permissionRankIds)}, 직책: ${JSON.stringify(wiki.permissionPositionIds)}`);
 
       let replacedDepartments = 0;
       let replacedRanks = 0;
@@ -742,6 +744,8 @@ export class WikiBusinessService {
             replacedDepartments++;
             changes.push(`부서 ${mapping.oldId} → ${mapping.newId}`);
             this.logger.log(`부서 교체: ${mapping.oldId} → ${mapping.newId}`);
+          } else {
+            this.logger.warn(`부서 ID를 찾을 수 없음: ${mapping.oldId} (현재 목록: ${JSON.stringify(currentDepartmentIds)})`);
           }
         }
 
@@ -760,6 +764,8 @@ export class WikiBusinessService {
             replacedRanks++;
             changes.push(`직급 ${mapping.oldId} → ${mapping.newId}`);
             this.logger.log(`직급 교체: ${mapping.oldId} → ${mapping.newId}`);
+          } else {
+            this.logger.warn(`직급 ID를 찾을 수 없음: ${mapping.oldId} (현재 목록: ${JSON.stringify(currentRankIds)})`);
           }
         }
 
@@ -778,6 +784,8 @@ export class WikiBusinessService {
             replacedPositions++;
             changes.push(`직책 ${mapping.oldId} → ${mapping.newId}`);
             this.logger.log(`직책 교체: ${mapping.oldId} → ${mapping.newId}`);
+          } else {
+            this.logger.warn(`직책 ID를 찾을 수 없음: ${mapping.oldId} (현재 목록: ${JSON.stringify(currentPositionIds)})`);
           }
         }
 
@@ -788,7 +796,7 @@ export class WikiBusinessService {
       wiki.updatedAt = new Date();
       await manager.save(WikiFileSystem, wiki);
 
-      // 6. RESOLVED 로그 생성 (트랜잭션 내에서)
+      // 6. 기존 미해결 DETECTED 로그들을 해결 처리 (트랜잭션 내에서)
       let resolvedByValue: string | null = userId;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (userId && !uuidRegex.test(userId)) {
@@ -796,6 +804,32 @@ export class WikiBusinessService {
         resolvedByValue = null;
       }
 
+      const now = new Date();
+
+      const unresolvedLogs = await manager
+        .getRepository(WikiPermissionLog)
+        .find({
+          where: {
+            wikiFileSystemId: wiki.id,
+            action: WikiPermissionAction.DETECTED,
+            resolvedAt: IsNull(),
+          },
+        });
+
+      if (unresolvedLogs.length > 0) {
+        for (const log of unresolvedLogs) {
+          log.action = WikiPermissionAction.RESOLVED;
+          log.resolvedAt = now;
+          log.resolvedBy = resolvedByValue;
+          log.note = log.note
+            ? `${log.note} | ${dto.note || `관리자가 권한 교체 완료: ${changes.join(', ')}`}`
+            : dto.note || `관리자가 권한 교체 완료: ${changes.join(', ')}`;
+        }
+        await manager.save(WikiPermissionLog, unresolvedLogs);
+        this.logger.log(`기존 미해결 로그 ${unresolvedLogs.length}개를 해결 처리`);
+      }
+
+      // 7. 새 RESOLVED 로그 생성 (트랜잭션 내에서)
       try {
         await manager.save(WikiPermissionLog, {
           wikiFileSystemId: wiki.id,
@@ -809,8 +843,8 @@ export class WikiBusinessService {
           },
           action: WikiPermissionAction.RESOLVED,
           note: dto.note || `관리자가 권한 교체 완료: ${changes.join(', ')}`,
-          detectedAt: new Date(),
-          resolvedAt: new Date(),
+          detectedAt: now,
+          resolvedAt: now,
           resolvedBy: resolvedByValue,
         });
       } catch (error) {
@@ -824,7 +858,7 @@ export class WikiBusinessService {
       }
 
       this.logger.log(
-        `위키 권한 교체 완료 (트랜잭션 커밋) - 부서: ${replacedDepartments}개, 직급: ${replacedRanks}개, 직책: ${replacedPositions}개`,
+        `위키 권한 교체 완료 (트랜잭션 커밋) - 부서: ${replacedDepartments}개, 직급: ${replacedRanks}개, 직책: ${replacedPositions}개, 해결된 기존 로그: ${unresolvedLogs.length}개`,
       );
 
       return {
@@ -833,6 +867,7 @@ export class WikiBusinessService {
         replacedDepartments,
         replacedRanks,
         replacedPositions,
+        resolvedExistingLogs: unresolvedLogs.length,
       };
     });
   }
