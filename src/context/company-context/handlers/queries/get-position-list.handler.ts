@@ -9,7 +9,7 @@ import { PositionListResult } from '../../interfaces/company-context.interface';
  * 직책 목록 조회 쿼리
  */
 export class GetPositionListQuery {
-  constructor() {}
+  constructor(public readonly includeInactive: boolean = false) {}
 }
 
 /**
@@ -45,6 +45,11 @@ export class GetPositionListHandler implements IQueryHandler<GetPositionListQuer
       );
 
       const positionList = response.data as PositionListResult;
+
+      // includeInactive가 true면 필터링하지 않고 전체 반환
+      if (query.includeInactive) {
+        return positionList;
+      }
 
       // isActive가 true인 직책만 필터링 (isActive 필드가 없으면 모두 포함)
       const activePositions = positionList.filter(

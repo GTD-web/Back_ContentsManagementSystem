@@ -9,7 +9,7 @@ import { RankListResult } from '../../interfaces/company-context.interface';
  * 직급 목록 조회 쿼리
  */
 export class GetRankListQuery {
-  constructor() {}
+  constructor(public readonly includeInactive: boolean = false) {}
 }
 
 /**
@@ -47,6 +47,14 @@ export class GetRankListHandler implements IQueryHandler<GetRankListQuery> {
       );
 
       const rankList = response.data as RankListResult;
+
+      // includeInactive가 true면 필터링하지 않고 전체 반환
+      if (query.includeInactive) {
+        this.logger.debug(
+          `직급 목록 조회 완료 (전체: ${rankList.length}개, 비활성 포함)`,
+        );
+        return rankList;
+      }
 
       // isActive가 true인 직급만 필터링 (isActive 필드가 없으면 모두 포함)
       const activeRanks = rankList.filter(

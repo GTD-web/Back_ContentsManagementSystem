@@ -9,7 +9,7 @@ import { DepartmentListResult } from '../../interfaces/company-context.interface
  * 부서 목록 조회 쿼리
  */
 export class GetDepartmentListQuery {
-  constructor() {}
+  constructor(public readonly includeInactive: boolean = false) {}
 }
 
 /**
@@ -45,6 +45,11 @@ export class GetDepartmentListHandler implements IQueryHandler<GetDepartmentList
       );
 
       const deptList = response.data as DepartmentListResult;
+
+      // includeInactive가 true면 필터링하지 않고 전체 반환
+      if (query.includeInactive) {
+        return deptList;
+      }
 
       // isActive가 true인 부서만 필터링
       const activeDepartments = deptList.departments.filter(

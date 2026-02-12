@@ -1187,13 +1187,114 @@ export class WikiController {
   }
 
   /**
+   * 권한 로그 목록에 비활성화된 부서/직급/직책/직원의 실제 이름을 추가한다
+   */
+  private async 권한_로그에_이름을_추가한다(logs: WikiPermissionLog[]) {
+    if (logs.length === 0) return [];
+
+    try {
+      // 비활성 포함하여 부서/직급/직책 전체 조회
+      const [deptResult, allRanks, allPositions] = await Promise.all([
+        this.companyContextService.부서_정보를_가져온다(true),
+        this.companyContextService.직급_정보를_가져온다(true),
+        this.companyContextService.직책_정보를_가져온다(true),
+      ]);
+
+      // 부서 ID → 이름 맵
+      const deptNameMap = new Map<string, string>();
+      for (const dept of deptResult.departments) {
+        deptNameMap.set(dept.id, dept.departmentName);
+      }
+
+      // 직급 코드 → 이름 맵
+      const rankNameMap = new Map<string, string>();
+      for (const rank of allRanks) {
+        rankNameMap.set(rank.rankCode, rank.rankName);
+        rankNameMap.set(rank.id, rank.rankName);
+      }
+
+      // 직책 코드 → 이름 맵
+      const positionNameMap = new Map<string, string>();
+      for (const pos of allPositions) {
+        positionNameMap.set(pos.positionCode, pos.positionTitle);
+        positionNameMap.set(pos.id, pos.positionTitle);
+      }
+
+      // resolvedBy 직원 이름 조회
+      const resolverIds = [...new Set(
+        logs
+          .map((log) => log.resolvedBy)
+          .filter((id): id is string => id !== null && id !== undefined),
+      )];
+      const resolverNameMap = resolverIds.length > 0
+        ? await this.사용자_이름_맵을_조회한다(resolverIds)
+        : new Map<string, string>();
+
+      return logs.map((log) => {
+        // invalidDepartments 이름 보강
+        const invalidDepartments = log.invalidDepartments?.map((dept) => ({
+          ...dept,
+          name: dept.name || deptNameMap.get(dept.id) || null,
+        })) ?? null;
+
+        // invalidRankCodes → 이름 포함 배열로 변환
+        const invalidRanks = log.invalidRankCodes?.map((code) => ({
+          code,
+          name: rankNameMap.get(code) || null,
+        })) ?? null;
+
+        // invalidPositionCodes → 이름 포함 배열로 변환
+        const invalidPositions = log.invalidPositionCodes?.map((code) => ({
+          code,
+          name: positionNameMap.get(code) || null,
+        })) ?? null;
+
+        // snapshotPermissions 이름 보강
+        const snapshotPermissions = log.snapshotPermissions ? {
+          ...log.snapshotPermissions,
+          permissionRanks: log.snapshotPermissions.permissionRankCodes?.map((code) => ({
+            code,
+            name: rankNameMap.get(code) || null,
+          })) ?? null,
+          permissionPositions: log.snapshotPermissions.permissionPositionCodes?.map((code) => ({
+            code,
+            name: positionNameMap.get(code) || null,
+          })) ?? null,
+          permissionDepartments: log.snapshotPermissions.permissionDepartments?.map((dept) => ({
+            ...dept,
+            name: dept.name || deptNameMap.get(dept.id) || null,
+          })) ?? null,
+        } : null;
+
+        // resolvedBy 이름 추가
+        const resolvedByName = log.resolvedBy
+          ? resolverNameMap.get(log.resolvedBy) || null
+          : null;
+
+        return {
+          ...log,
+          invalidDepartments,
+          invalidRanks,
+          invalidPositions,
+          snapshotPermissions,
+          resolvedByName,
+        };
+      });
+    } catch (error) {
+      this.logger.warn('권한 로그 이름 보강 실패 (원본 데이터 반환)', error);
+      return logs;
+    }
+  }
+
+  /**
    * 모든 위키의 권한 로그 목록을 조회한다
    */
   @Get('permission-logs')
   @ApiOperation({
     summary: '위키 권한 로그 전체 조회',
     description:
-      '모든 위키에서 감지된 비활성 부서 목록을 조회합니다. 관리자가 어떤 권한을 교체해야 하는지 확인할 수 있습니다.',
+      '모든 위키에서 감지된 비활성 부서 목록을 조회합니다. 관리자가 어떤 권한을 교체해야 하는지 확인할 수 있습니다.\n\n' +
+      '각 로그에는 비활성화된 부서/직급/직책의 실제 이름이 포함됩니다.',
   })
   @ApiQuery({
     name: 'resolved',
@@ -1219,11 +1320,13 @@ export class WikiController {
       where.resolvedAt = IsNull();
     }
 
-    return await this.permissionLogRepository.find({
+    const logs = await this.permissionLogRepository.find({
       where,
       order: { detectedAt: 'DESC' },
       relations: ['wikiFileSystem'],
     });
+
+    return await this.권한_로그에_이름을_추가한다(logs);
   }
 
   /**
@@ -1234,7 +1337,8 @@ export class WikiController {
     summary: '위키 권한 로그 미열람 조회 (모달용)',
     description:
       '관리자가 "다시 보지 않기"를 설정하지 않은 미해결 권한 로그를 조회합니다. ' +
-      '모달 표시 여부를 결정하는 데 사용됩니다.',
+      '모달 표시 여부를 결정하는 데 사용됩니다.\n\n' +
+      '각 로그에는 비활성화된 부서/직급/직책의 실제 이름이 포함됩니다.',
   })
   @ApiResponse({
     status: 200,
@@ -1266,7 +1370,9 @@ export class WikiController {
     );
 
     // dismissed되지 않은 로그만 필터링
-    return unresolvedLogs.filter((log) => !dismissedLogIds.has(log.id));
+    const filteredLogs = unresolvedLogs.filter((log) => !dismissedLogIds.has(log.id));
+
+    return await this.권한_로그에_이름을_추가한다(filteredLogs);
   }
 
   /**

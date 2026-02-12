@@ -36,25 +36,34 @@ export class CompanyContextService {
 
   /**
    * 부서 정보를 가져온다
+   * @param includeInactive 비활성 부서 포함 여부 (기본값: false)
    */
-  async 부서_정보를_가져온다(): Promise<DepartmentListResult> {
-    const query = new GetDepartmentListQuery();
+  async 부서_정보를_가져온다(
+    includeInactive: boolean = false,
+  ): Promise<DepartmentListResult> {
+    const query = new GetDepartmentListQuery(includeInactive);
     return await this.queryBus.execute(query);
   }
 
   /**
    * 직급 정보를 가져온다
+   * @param includeInactive 비활성 직급 포함 여부 (기본값: false)
    */
-  async 직급_정보를_가져온다(): Promise<RankListResult> {
-    const query = new GetRankListQuery();
+  async 직급_정보를_가져온다(
+    includeInactive: boolean = false,
+  ): Promise<RankListResult> {
+    const query = new GetRankListQuery(includeInactive);
     return await this.queryBus.execute(query);
   }
 
   /**
    * 직책 정보를 가져온다
+   * @param includeInactive 비활성 직책 포함 여부 (기본값: false)
    */
-  async 직책_정보를_가져온다(): Promise<PositionListResult> {
-    const query = new GetPositionListQuery();
+  async 직책_정보를_가져온다(
+    includeInactive: boolean = false,
+  ): Promise<PositionListResult> {
+    const query = new GetPositionListQuery(includeInactive);
     return await this.queryBus.execute(query);
   }
 
