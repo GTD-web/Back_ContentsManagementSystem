@@ -1036,9 +1036,57 @@ export class WikiBusinessService {
     );
 
     // 1. 조직 정보에서 직원 정보 추출 (비활성 부서 포함)
-    const orgInfo = await this.companyContextService.조직_정보를_가져온다(true);
+    const [orgInfo, allRanks, allPositions] = await Promise.all([
+      this.companyContextService.조직_정보를_가져온다(true),
+      this.companyContextService.직급_정보를_가져온다(true),
+      this.companyContextService.직책_정보를_가져온다(true),
+    ]);
+
+    // 2. 비활성 부서/직급/직책 ID 셋 구축
+    const inactiveDeptIds = new Set<string>();
+    const collectInactiveDepts = (dept: any) => {
+      if (dept.isActive === false) {
+        inactiveDeptIds.add(dept.id);
+      }
+      const children = dept.childDepartments || dept.children;
+      if (children) {
+        children.forEach((child: any) => collectInactiveDepts(child));
+      }
+    };
+    if (orgInfo.departments) {
+      orgInfo.departments.forEach((dept) => collectInactiveDepts(dept));
+    }
+
+    const inactiveRankIds = new Set<string>(
+      allRanks
+        .filter((rank) => rank.isActive === false)
+        .map((rank) => rank.id),
+    );
+
+    const inactivePositionIds = new Set<string>(
+      allPositions
+        .filter((pos) => pos.isActive === false)
+        .map((pos) => pos.id),
+    );
+
+    // 위키 권한에서 비활성 ID 교집합 (실제로 위키가 참조하는 비활성 ID들)
+    const wikiInactiveDeptIds = new Set<string>(
+      (wiki.permissionDepartmentIds || []).filter((id) => inactiveDeptIds.has(id)),
+    );
+    const wikiInactiveRankIds = new Set<string>(
+      (wiki.permissionRankIds || []).filter((id) => inactiveRankIds.has(id)),
+    );
+    const wikiInactivePositionIds = new Set<string>(
+      (wiki.permissionPositionIds || []).filter((id) => inactivePositionIds.has(id)),
+    );
+
+    if (wikiInactiveDeptIds.size > 0 || wikiInactiveRankIds.size > 0 || wikiInactivePositionIds.size > 0) {
+      this.logger.warn(
+        `위키 ${wiki.id}에 비활성 권한 참조 발견 - 부서: ${wikiInactiveDeptIds.size}개, 직급: ${wikiInactiveRankIds.size}개, 직책: ${wikiInactivePositionIds.size}개`,
+      );
+    }
     
-    // 2. 직원 맵 생성 (UUID와 employeeNumber 둘 다 키로 사용)
+    // 3. 직원 맵 생성 (UUID와 employeeNumber 둘 다 키로 사용)
     const employeeMapByUuid = new Map<string, any>();
     const employeeMapByNumber = new Map<string, any>();
     
@@ -1050,10 +1098,12 @@ export class WikiBusinessService {
             name: emp.name || '알 수 없음',
             departmentId: dept.id || null,
             departmentName: dept.departmentName || dept.name || '알 수 없음',
+            departmentIsActive: dept.isActive !== false,
             rankId: emp.rankId || null,
             rankName: emp.rankName || null,
             positionId: emp.positionId || null,
             positionName: emp.positionName || null,
+            employeeIsActive: emp.isActive !== false,
           };
           
           // UUID로 매핑
@@ -1081,10 +1131,10 @@ export class WikiBusinessService {
       `조직 정보에서 직원 맵 생성 완료 - UUID 기준: ${employeeMapByUuid.size}명, 사번 기준: ${employeeMapByNumber.size}명`,
     );
 
-    // 3. 대상 직원 employeeNumber 목록 추출
+    // 4. 대상 직원 employeeNumber 목록 추출
     const targetEmployeeNumbers = new Set<string>();
 
-    // 3-1. 부서/직급/직책으로 필터링된 직원들 (employeeNumber)
+    // 4-1. 부서/직급/직책으로 필터링된 직원들 (employeeNumber)
     if (
       wiki.permissionDepartmentIds &&
       wiki.permissionDepartmentIds.length > 0
@@ -1118,7 +1168,7 @@ export class WikiBusinessService {
       employees.forEach((id) => targetEmployeeNumbers.add(id));
     }
 
-    // 3-2. 전사공개이면서 권한 필터가 없는 경우 모든 직원
+    // 4-2. 전사공개이면서 권한 필터가 없는 경우 모든 직원
     const hasPermissionFilters =
       (wiki.permissionRankIds &&
         wiki.permissionRankIds.length > 0) ||
@@ -1137,9 +1187,31 @@ export class WikiBusinessService {
       return [];
     }
 
-    // 4. 각 직원의 상세 정보 조합
+    // 5. 각 직원의 상세 정보 조합 + 비활성 여부 판단
     const targetEmployees = Array.from(targetEmployeeNumbers).map((employeeNumber) => {
       const employeeInfo = employeeMapByNumber.get(employeeNumber);
+
+      // 비활성 여부 판단: 직원이 속한 부서/직급/직책 중 하나라도 비활성이면 true
+      const isInInactiveDept = employeeInfo?.departmentId
+        ? wikiInactiveDeptIds.has(employeeInfo.departmentId)
+        : false;
+      const isInInactiveRank = employeeInfo?.rankId
+        ? wikiInactiveRankIds.has(employeeInfo.rankId)
+        : false;
+      const isInInactivePosition = employeeInfo?.positionId
+        ? wikiInactivePositionIds.has(employeeInfo.positionId)
+        : false;
+      const isEmployeeInactive = employeeInfo?.employeeIsActive === false;
+
+      const isDeactivated =
+        isInInactiveDept || isInInactiveRank || isInInactivePosition || isEmployeeInactive;
+
+      // 비활성 사유 (어떤 항목이 비활성인지 명시)
+      const deactivatedReasons: string[] = [];
+      if (isInInactiveDept) deactivatedReasons.push('부서');
+      if (isInInactiveRank) deactivatedReasons.push('직급');
+      if (isInInactivePosition) deactivatedReasons.push('직책');
+      if (isEmployeeInactive) deactivatedReasons.push('직원');
 
       return {
         employeeNumber, // SSO 사번 (employeeNumber)
@@ -1150,11 +1222,15 @@ export class WikiBusinessService {
         rankName: employeeInfo?.rankName || null,
         positionId: employeeInfo?.positionId || null,
         positionName: employeeInfo?.positionName || null,
+        isDeactivated,
+        ...(isDeactivated && deactivatedReasons.length > 0
+          ? { deactivatedReasons }
+          : {}),
       };
     });
 
     this.logger.log(
-      `Wiki 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명`,
+      `Wiki 대상 직원 상세 정보 조회 완료 - 총 ${targetEmployees.length}명 (비활성: ${targetEmployees.filter(e => e.isDeactivated).length}명)`,
     );
 
     return targetEmployees;

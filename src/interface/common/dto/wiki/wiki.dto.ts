@@ -739,7 +739,7 @@ export class WikiResponseDto {
   };
 
   @ApiPropertyOptional({
-    description: '대상 직원 정보 (권한 기반으로 계산)',
+    description: '대상 직원 정보 (권한 기반으로 계산). 비활성화된 부서/직급/직책을 통해 접근 권한을 받는 직원은 isDeactivated: true로 표시됩니다.',
     example: {
       total: 25,
       employees: [
@@ -752,6 +752,19 @@ export class WikiResponseDto {
           rankName: '대리',
           positionId: 'uuid',
           positionName: '팀장',
+          isDeactivated: false,
+        },
+        {
+          employeeNumber: '2021002',
+          employeeName: '김철수',
+          departmentId: 'uuid',
+          departmentName: '구 마케팅팀',
+          rankId: 'uuid',
+          rankName: '사원',
+          positionId: null,
+          positionName: null,
+          isDeactivated: true,
+          deactivatedReasons: ['부서'],
         },
       ],
     },
@@ -767,6 +780,8 @@ export class WikiResponseDto {
       rankName?: string | null;
       positionId?: string | null;
       positionName?: string | null;
+      isDeactivated: boolean;
+      deactivatedReasons?: string[];
     }>;
   };
 
