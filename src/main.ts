@@ -25,6 +25,7 @@ import { BackupModule } from './interface/admin/backup/backup.module';
 import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
 import { CompanyModule } from './interface/common/company/company.module';
 import { UploadModule } from './interface/admin/upload/upload.module';
+import { UserUploadModule } from './interface/user/upload/user-upload.module';
 import { UserAnnouncementModule } from './interface/user/announcement/announcement.module';
 import { UserWikiModule } from './interface/user/wiki/wiki.module';
 
@@ -98,6 +99,7 @@ async function bootstrap() {
       PermissionValidationModule,
       BackupModule,
       AnalyticsModule,
+      UploadModule,
     ],
     tags: [
       { name: '공통. 인증', description: 'SSO 로그인 및 인증 API' },
@@ -119,6 +121,7 @@ async function bootstrap() {
       { name: 'A-8. 관리자 - 뉴스', description: '뉴스 관리 API' },
       { name: 'A-9. 관리자 - 공지사항', description: '공지사항 관리 API' },
       { name: 'A-10. 관리자 - Wiki', description: 'Wiki 관리 API' },
+      { name: 'A-11. 관리자 - 파일 업로드', description: 'S3 Presigned URL 생성 API' },
       {
         name: '공통. 관리자 - 권한 검증',
         description: '권한 검증 배치 작업 수동 실행 API',
@@ -132,7 +135,7 @@ async function bootstrap() {
     description: '루미르 CMS 사용자 백엔드 API 문서',
     version: '1.0',
     path: 'user/api-docs',
-    includeModules: [UserAnnouncementModule, UserWikiModule, UploadModule],
+    includeModules: [UserUploadModule, UserAnnouncementModule, UserWikiModule],
     tags: [
       { name: 'U-0. 사용자 - 파일 업로드', description: 'S3 Presigned URL 생성 API' },
       { name: 'U-1. 사용자 - 공지사항', description: '공지사항 조회 및 응답 API' },
