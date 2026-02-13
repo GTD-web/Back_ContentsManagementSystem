@@ -470,7 +470,12 @@ export class WikiBusinessService {
     title: string | null,
     content: string | null,
     createdBy?: string,
-    files?: Express.Multer.File[],
+    uploadedAttachments?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+    }>,
     isPublic?: boolean,
     permissionRankIds?: string[],
     permissionPositionIds?: string[],
@@ -478,47 +483,13 @@ export class WikiBusinessService {
   ): Promise<WikiFileSystem> {
     this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
-    // 파일 업로드 처리
-    let attachments:
-      | Array<{
-          fileName: string;
-          fileUrl: string;
-          fileSize: number;
-          mimeType: string;
-          deletedAt?: Date | null;
-        }>
-      | undefined = undefined;
+    // 프론트엔드에서 S3에 직접 업로드한 파일 메타데이터를 사용
+    const attachments = uploadedAttachments && uploadedAttachments.length > 0
+      ? uploadedAttachments
+      : undefined;
 
-    if (files && files.length > 0) {
-      this.logger.log(`${files.length}개의 파일 업로드 시작`);
-      
-      // 폴더 경로 구성
-      let folderPath = 'wiki';
-      if (parentId) {
-        try {
-          const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(parentId);
-          if (breadcrumb && breadcrumb.length > 0) {
-            // 루트부터 현재 폴더까지의 경로를 '/'로 연결
-            const pathSegments = breadcrumb.map(item => item.name);
-            folderPath = `wiki/${pathSegments.join('/')}`;
-            this.logger.log(`S3 업로드 경로: ${folderPath}`);
-          }
-        } catch (error) {
-          this.logger.warn(`폴더 경로 조회 실패, 기본 경로 사용 - parentId: ${parentId}`, error);
-        }
-      }
-      
-      const uploadedFiles = await this.storageService.uploadFiles(
-        files,
-        folderPath,
-      );
-      attachments = uploadedFiles.map((file) => ({
-        fileName: file.fileName,
-        fileUrl: file.url,
-        fileSize: file.fileSize,
-        mimeType: file.mimeType,
-      }));
-      this.logger.log(`파일 업로드 완료: ${attachments.length}개`);
+    if (attachments) {
+      this.logger.log(`첨부파일 ${attachments.length}개 등록`);
     }
 
     const result = await this.wikiContextService.파일을_생성한다({
@@ -581,7 +552,12 @@ export class WikiBusinessService {
     title: string | null,
     content: string | null,
     updatedBy?: string,
-    files?: Express.Multer.File[],
+    uploadedAttachments?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+    }>,
     isPublic?: boolean,
     permissionRankIds?: string[],
     permissionPositionIds?: string[],
@@ -597,46 +573,10 @@ export class WikiBusinessService {
     const activeAttachments = currentAttachments.filter((att: any) => !att.deletedAt);
     this.logger.log(`기존 활성 첨부파일 수: ${activeAttachments.length}개`);
 
-    // 3. 새 파일 업로드 처리
-    let newAttachments: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileSize: number;
-      mimeType: string;
-      deletedAt?: Date | null;
-    }> = [];
-
-    if (files && files.length > 0) {
-      this.logger.log(`${files.length}개의 파일 업로드 시작`);
-      
-      // 폴더 경로 구성
-      let folderPath = 'wiki';
-      const parentId = existingFile.parentId;
-      if (parentId) {
-        try {
-          const breadcrumb = await this.wikiContextService.위키_경로를_직접_조회한다(parentId);
-          if (breadcrumb && breadcrumb.length > 0) {
-            // 루트부터 현재 폴더까지의 경로를 '/'로 연결
-            const pathSegments = breadcrumb.map(item => item.name);
-            folderPath = `wiki/${pathSegments.join('/')}`;
-            this.logger.log(`S3 업로드 경로: ${folderPath}`);
-          }
-        } catch (error) {
-          this.logger.warn(`폴더 경로 조회 실패, 기본 경로 사용 - parentId: ${parentId}`, error);
-        }
-      }
-      
-      const uploadedFiles = await this.storageService.uploadFiles(
-        files,
-        folderPath,
-      );
-      newAttachments = uploadedFiles.map((file) => ({
-        fileName: file.fileName,
-        fileUrl: file.url,
-        fileSize: file.fileSize,
-        mimeType: file.mimeType,
-      }));
-      this.logger.log(`파일 업로드 완료: ${newAttachments.length}개`);
+    // 3. 프론트엔드에서 S3에 직접 업로드한 새 파일 메타데이터
+    const newAttachments = uploadedAttachments || [];
+    if (newAttachments.length > 0) {
+      this.logger.log(`새 첨부파일 ${newAttachments.length}개 등록`);
     }
 
     // 4. 기존 첨부파일 + 새 첨부파일 합치기

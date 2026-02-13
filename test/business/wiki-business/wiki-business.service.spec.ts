@@ -198,11 +198,8 @@ describe('WikiBusinessService', () => {
       // Given
       const createData = {
         name: '새 폴더',
-        parentId: null,
+        parentId: null as string | null,
         isPublic: true,
-        permissionRankIds: null,
-        permissionPositionIds: null,
-        permissionDepartmentIds: null,
         order: 0,
         createdBy: 'user-1',
       };
@@ -217,7 +214,7 @@ describe('WikiBusinessService', () => {
         id: 'new-folder-1',
         ...createData,
         type: 'folder',
-      } as WikiFileSystem;
+      } as unknown as WikiFileSystem;
 
       mockWikiContextService.폴더를_생성한다.mockResolvedValue(
         mockCreateResult as any,
@@ -693,19 +690,10 @@ describe('WikiBusinessService', () => {
       const title = '파일 제목';
       const content = '파일 내용';
       const createdBy = 'user-1';
-      const files = [
-        {
-          originalname: 'test.pdf',
-          buffer: Buffer.from('test'),
-          mimetype: 'application/pdf',
-          size: 1024,
-        } as Express.Multer.File,
-      ];
-
-      const mockUploadedFiles = [
+      const uploadedAttachments = [
         {
           fileName: 'test.pdf',
-          url: 's3://bucket/test.pdf',
+          fileUrl: 's3://bucket/test.pdf',
           fileSize: 1024,
           mimeType: 'application/pdf',
         },
@@ -733,7 +721,6 @@ describe('WikiBusinessService', () => {
         type: 'file',
       } as WikiFileSystem;
 
-      mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockWikiContextService.파일을_생성한다.mockResolvedValue(
         mockCreateResult as any,
       );
@@ -748,11 +735,10 @@ describe('WikiBusinessService', () => {
         title,
         content,
         createdBy,
-        files,
+        uploadedAttachments,
       );
 
       // Then
-      expect(storageService.uploadFiles).toHaveBeenCalledWith(files, 'wiki');
       expect(wikiContextService.파일을_생성한다).toHaveBeenCalledWith({
         name,
         parentId,
@@ -840,19 +826,10 @@ describe('WikiBusinessService', () => {
         ],
       } as WikiFileSystem;
 
-      const files = [
-        {
-          originalname: 'new.pdf',
-          buffer: Buffer.from('new'),
-          mimetype: 'application/pdf',
-          size: 2048,
-        } as Express.Multer.File,
-      ];
-
-      const mockUploadedFiles = [
+      const uploadedAttachments = [
         {
           fileName: 'new.pdf',
-          url: 's3://bucket/new.pdf',
+          fileUrl: 's3://bucket/new.pdf',
           fileSize: 2048,
           mimeType: 'application/pdf',
         },
@@ -869,7 +846,6 @@ describe('WikiBusinessService', () => {
         existingFile,
       );
       mockStorageService.deleteFiles.mockResolvedValue(undefined);
-      mockStorageService.uploadFiles.mockResolvedValue(mockUploadedFiles);
       mockWikiContextService.위키_파일을_수정한다.mockResolvedValue(
         existingFile,
       );
@@ -882,14 +858,10 @@ describe('WikiBusinessService', () => {
         title,
         content,
         updatedBy,
-        files,
+        uploadedAttachments,
       );
 
       // Then
-      expect(storageService.deleteFiles).toHaveBeenCalledWith([
-        's3://bucket/old.pdf',
-      ]);
-      expect(storageService.uploadFiles).toHaveBeenCalledWith(files, 'wiki');
       expect(wikiContextService.위키_파일을_수정한다).toHaveBeenCalledWith(
         fileId,
         {

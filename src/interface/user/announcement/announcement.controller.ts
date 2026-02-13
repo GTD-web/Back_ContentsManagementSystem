@@ -6,11 +6,8 @@ import {
   Param,
   Body,
   Query,
-  UploadedFiles,
-  UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -19,7 +16,6 @@ import {
   ApiQuery,
   ApiParam,
   ApiBody,
-  ApiConsumes,
 } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -37,7 +33,6 @@ import { SubmitSurveyAnswerDto } from '@interface/common/dto/survey/submit-surve
 import { MyAnswersDto } from '@interface/common/dto/survey/survey-response.dto';
 import { SurveyService } from '@domain/sub/survey/survey.service';
 import { Category } from '@domain/common/category/category.entity';
-import { FileUploadService } from '@domain/common/file-upload/file-upload.service';
 
 @ApiTags('U-1. 사용자 - 공지사항')
 @ApiBearerAuth('Bearer')
@@ -48,7 +43,6 @@ export class UserAnnouncementController {
     @InjectRepository(AnnouncementRead)
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
     private readonly surveyService: SurveyService,
-    private readonly fileUploadService: FileUploadService,
   ) {}
 
   /**
@@ -535,13 +529,11 @@ export class UserAnnouncementController {
    * 공지사항 설문에 응답한다
    */
   @Post(':id/survey/answers')
-  @UseInterceptors(FilesInterceptor('files', 20)) // 최대 20개 파일 (여러 질문에 첨부 가능)
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 설문 응답 제출',
     description:
       '공지사항에 연결된 설문에 응답을 제출합니다.\n\n' +
-      '**📋 요청 데이터 형식:**\n\n' +
+      '**📋 요청 데이터 형식 (JSON):**\n\n' +
       '```json\n' +
       '{\n' +
       '  "answers": [\n' +
@@ -549,24 +541,18 @@ export class UserAnnouncementController {
       '    { "questionId": "질문2-UUID", "value": "텍스트 답변" },   // 텍스트 (문자열)\n' +
       '    { "questionId": "질문3-UUID", "value": "옵션1" },        // 선택형 (문자열)\n' +
       '    { "questionId": "질문4-UUID", "value": ["옵션1", "옵션2"] } // 체크박스 (배열)\n' +
+      '  ],\n' +
+      '  "fileAnswers": [\n' +
+      '    {\n' +
+      '      "questionId": "파일질문-UUID",\n' +
+      '      "files": [\n' +
+      '        { "fileUrl": "https://...", "fileName": "보고서.pdf", "fileSize": 1024000, "mimeType": "application/pdf" }\n' +
+      '      ]\n' +
+      '    }\n' +
       '  ]\n' +
       '}\n' +
       '```\n\n' +
-      '**파일 업로드 (백엔드에서 자동으로 S3 업로드):**\n' +
-      '- 파일 첨부 시 `Content-Type: multipart/form-data` 사용\n' +
-      '- `answers`: JSON 문자열로 전송\n' +
-      '- `files`: 실제 파일들 (최대 20개)\n' +
-      '- `fileQuestionIds`: 각 파일이 속한 질문 ID 배열 (JSON 문자열)\n' +
-      '  - 예: `["질문-UUID", "질문-UUID"]`\n' +
-      '  - `files` 배열과 같은 순서로 매칭됩니다\n\n' +
-      '**FormData 예시 (파일 포함):**\n' +
-      '```javascript\n' +
-      'const formData = new FormData();\n' +
-      'formData.append("answers", JSON.stringify([...]));\n' +
-      'formData.append("files", file1);\n' +
-      'formData.append("files", file2);\n' +
-      'formData.append("fileQuestionIds", JSON.stringify(["질문-UUID", "질문-UUID"]));\n' +
-      '```\n\n' +
+      '**파일 업로드 방식**: Presigned URL을 통해 S3에 직접 업로드 후, 파일 메타데이터를 fileAnswers에 포함하여 전송합니다.\n\n' +
       '⚠️ **주의사항:**\n' +
       '- 백엔드에서 질문 타입을 자동 인식하여 적절한 테이블에 저장\n' +
       '- 필수 질문(`isRequired: true`)은 반드시 응답 필요\n' +
@@ -576,82 +562,6 @@ export class UserAnnouncementController {
     name: 'id',
     description: '공지사항 ID',
     type: String,
-  })
-  @ApiBody({
-    description:
-      '설문 응답 데이터 (JSON 또는 FormData)\n\n' +
-      '**중요 사항**:\n' +
-      '1. `answers` 배열에 모든 응답을 담아서 전송\n' +
-      '2. 각 응답의 `value` 타입은 질문 타입에 따라 다름:\n' +
-      '   - 텍스트/선택형: 문자열\n' +
-      '   - 척도형: 숫자\n' +
-      '   - 체크박스: 문자열 배열\n' +
-      '   - 그리드: 객체 배열\n' +
-      '3. 필수 질문(`isRequired: true`)은 반드시 응답해야 함\n' +
-      '4. 파일 첨부 시에는 FormData 사용 필수\n' +
-      '5. 백엔드에서 자동으로 S3에 업로드',
-    examples: {
-      basic: {
-        summary: '기본 설문 응답 (JSON)',
-        description:
-          '텍스트, 선택형, 척도형, 체크박스 등 다양한 질문 타입 응답',
-        value: {
-          answers: [
-            {
-              questionId: 'a27b0d00-f21b-4e77-afe8-995af4ceaa40',
-              value: 8, // 척도형 (1-10)
-            },
-            {
-              questionId: '3bfccccb-3914-4363-90a7-b0be26540189',
-              value: '교육 내용이 유익했습니다.', // 텍스트
-            },
-            {
-              questionId: 'e278ab3c-b52e-486e-a0c2-d6432d6c0e00',
-              value: '매우 만족', // 선택형
-            },
-            {
-              questionId: '854c1290-1f5c-49ec-97eb-a6e244d662d2',
-              value: ['강의 자료', '실습 기회', '강사 역량'], // 체크박스
-            },
-          ],
-        },
-      },
-      'with-files': {
-        summary: '파일 첨부 포함 (FormData)',
-        description:
-          '파일 업로드가 포함된 설문 응답\n\n' +
-          '**FormData 작성 방법:**\n' +
-          '```javascript\n' +
-          'const formData = new FormData();\n' +
-          'formData.append("answers", JSON.stringify([\n' +
-          '  { questionId: "질문1-UUID", value: "답변" },\n' +
-          '  { questionId: "질문2-UUID", value: 5 }\n' +
-          ']));\n' +
-          'formData.append("files", file1);\n' +
-          'formData.append("files", file2);\n' +
-          'formData.append("fileQuestionIds", JSON.stringify([\n' +
-          '  "파일질문-UUID",\n' +
-          '  "파일질문-UUID"\n' +
-          ']));\n' +
-          '```',
-        value: {
-          answers: [
-            {
-              questionId: '85e6bbc6-2839-4477-9672-bb4b381e8919',
-              value: '개선 제안 내용입니다.',
-            },
-            {
-              questionId: '95e6bbc6-2839-4477-9672-bb4b381e8920',
-              value: 7,
-            },
-          ],
-          fileQuestionIds: [
-            '86e6bbc6-2839-4477-9672-bb4b381e8919',
-            '86e6bbc6-2839-4477-9672-bb4b381e8919',
-          ],
-        },
-      },
-    },
   })
   @ApiResponse({
     status: 201,
@@ -670,14 +580,12 @@ export class UserAnnouncementController {
   async 공지사항_설문에_응답한다(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body() dto: any, // FormData로 전송되므로 any 타입으로 받음
-    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: any,
   ): Promise<{ success: boolean }> {
     console.log('📝 설문 응답 제출 시작:', {
       announcementId: id,
       userId: user.id,
       employeeNumber: user.employeeNumber,
-      hasFiles: files ? files.length : 0,
       dto: dto,
     });
 
@@ -688,9 +596,9 @@ export class UserAnnouncementController {
       throw new BadRequestException('마감된 공지사항입니다.');
     }
 
-    // FormData 파싱
+    // JSON body 파싱
     const parsedDto = this.parseFormDataDto(dto);
-    console.log('✅ FormData 파싱 완료:', parsedDto);
+    console.log('✅ 파싱 완료:', parsedDto);
 
     // answers 배열 검증
     if (
@@ -785,7 +693,7 @@ export class UserAnnouncementController {
           break;
 
         case 'file_upload':
-          // 파일은 별도 처리 (아래에서 files로 처리)
+          // 파일은 fileAnswers에서 처리
           break;
 
         default:
@@ -795,84 +703,10 @@ export class UserAnnouncementController {
 
     console.log('✅ 질문 타입별 변환 완료:', answersData);
 
-    // 파일 업로드 처리
-    let fileAnswers: Array<{
-      questionId: string;
-      files: Array<{
-        fileUrl: string;
-        fileName: string;
-        fileSize: number;
-        mimeType: string;
-      }>;
-    }> = [];
-
-    if (files && files.length > 0) {
-      console.log(`📎 파일 ${files.length}개 업로드 시작`);
-
-      // 파일 업로드를 위한 메타데이터 준비
-      // 공지사항명/설문조사질문명/사용자명/ 경로로 저장
-      const announcementTitle = announcement.title || '제목없음';
-      const userName = user.name || user.employeeNumber || '사용자';
-
-      // fileQuestionIds가 있으면 각 파일을 해당 질문에 매핑
-      if (
-        parsedDto.fileQuestionIds &&
-        Array.isArray(parsedDto.fileQuestionIds)
-      ) {
-        const fileQuestionMap = new Map<string, typeof files>();
-
-        // 각 파일을 질문 ID별로 그룹화
-        files.forEach((file, index) => {
-          const questionId = parsedDto.fileQuestionIds[index];
-          if (!questionId) {
-            console.warn(
-              `⚠️ 파일 인덱스 ${index}에 대한 questionId가 없습니다`,
-            );
-            return;
-          }
-
-          const existing = fileQuestionMap.get(questionId) || [];
-          existing.push(file);
-          fileQuestionMap.set(questionId, existing);
-        });
-
-        // 각 질문별로 파일 업로드 및 fileAnswers 형식으로 변환
-        for (const [questionId, questionFiles] of fileQuestionMap.entries()) {
-          // 질문 정보 조회
-          const question = survey.questions.find((q) => q.id === questionId);
-          const questionTitle = question?.title || '질문';
-
-          // 경로 세그먼트: [공지사항명, 질문명, 사용자명]
-          const pathSegments = [announcementTitle, questionTitle, userName];
-
-          // 파일 업로드
-          const uploadedFiles = await this.fileUploadService.uploadFilesWithPath(
-            questionFiles,
-            pathSegments,
-          );
-
-          fileAnswers.push({
-            questionId,
-            files: uploadedFiles,
-          });
-        }
-
-        console.log('✅ 파일-질문 매핑 및 업로드 완료:', fileAnswers);
-      } else {
-        // fileQuestionIds가 없는 경우 (레거시 지원)
-        // 모든 파일을 기본 경로로 업로드
-        const pathSegments = [announcementTitle, '설문조사', userName];
-        const uploadedFiles = await this.fileUploadService.uploadFilesWithPath(
-          files,
-          pathSegments,
-        );
-        console.log('✅ 파일 업로드 완료 (기본 경로):', uploadedFiles);
-      }
-    }
-
-    // 파일 응답 추가
-    if (fileAnswers.length > 0) {
-      answersData.fileAnswers = fileAnswers;
+    // 프론트엔드에서 S3에 직접 업로드한 파일 응답 처리
+    if (parsedDto.fileAnswers && Array.isArray(parsedDto.fileAnswers) && parsedDto.fileAnswers.length > 0) {
+      answersData.fileAnswers = parsedDto.fileAnswers;
+      console.log(`📎 파일 응답 ${parsedDto.fileAnswers.length}개 등록`);
     }
 
     console.log(

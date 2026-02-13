@@ -6,6 +6,7 @@ import {
   DeleteObjectCommand,
   PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import { IStorageService, UploadedFile } from './interfaces/storage.interface';
 
@@ -164,5 +165,86 @@ export class S3Service implements IStorageService {
   async deleteFiles(fileUrls: string[]): Promise<void> {
     const deletePromises = fileUrls.map((url) => this.deleteFile(url));
     await Promise.all(deletePromises);
+  }
+
+  /**
+   * Presigned PUT URL을 생성합니다.
+   * 프론트엔드에서 이 URL로 직접 S3에 파일을 업로드할 수 있습니다.
+   * 
+   * @param fileName 원본 파일명
+   * @param mimeType 파일 MIME 타입
+   * @param folder S3 폴더 (예: 'wiki', 'announcements')
+   * @param expiresIn URL 만료 시간(초) (기본값: 600초 = 10분)
+   * @returns presignedUrl (PUT 업로드용), fileUrl (최종 접근 URL), key (S3 키)
+   */
+  async generatePresignedUrl(
+    fileName: string,
+    mimeType: string,
+    folder: string = 'uploads',
+    expiresIn: number = 600,
+  ): Promise<{
+    presignedUrl: string;
+    fileUrl: string;
+    key: string;
+  }> {
+    const fileExtension = fileName.split('.').pop() || '';
+    const filePath = `${this.envPrefix}/${folder}/${uuidv4()}.${fileExtension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: filePath,
+      ContentType: mimeType,
+    });
+
+    const presignedUrl = await getSignedUrl(this.s3Client, command, {
+      expiresIn,
+    });
+
+    const fileUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${filePath}`;
+
+    this.logger.log(
+      `Presigned URL 생성 완료 - 파일명: ${fileName}, 경로: ${filePath}, 만료: ${expiresIn}초`,
+    );
+
+    return {
+      presignedUrl,
+      fileUrl,
+      key: filePath,
+    };
+  }
+
+  /**
+   * 여러 파일에 대한 Presigned PUT URL을 일괄 생성합니다.
+   */
+  async generatePresignedUrls(
+    files: Array<{ fileName: string; mimeType: string }>,
+    folder: string = 'uploads',
+    expiresIn: number = 600,
+  ): Promise<
+    Array<{
+      presignedUrl: string;
+      fileUrl: string;
+      key: string;
+      fileName: string;
+      mimeType: string;
+    }>
+  > {
+    const results = await Promise.all(
+      files.map(async (file) => {
+        const result = await this.generatePresignedUrl(
+          file.fileName,
+          file.mimeType,
+          folder,
+          expiresIn,
+        );
+        return {
+          ...result,
+          fileName: file.fileName,
+          mimeType: file.mimeType,
+        };
+      }),
+    );
+
+    return results;
   }
 }

@@ -9,10 +9,12 @@ import {
   IsEnum,
   IsNotEmpty,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { WikiFileSystem } from '@domain/sub/wiki-file-system/wiki-file-system.entity';
 import { WikiFileSystemType } from '@domain/sub/wiki-file-system/wiki-file-system-type.types';
+import { AttachmentDto } from '@interface/common/dto/common/attachment.dto';
 
 /**
  * 폴더 생성 DTO
@@ -206,6 +208,27 @@ export class CreateFileDto {
   @IsArray()
   @IsString({ each: true })
   permissionDepartmentIds?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      '첨부파일 목록 (S3 Presigned URL로 업로드 완료 후 전달). ' +
+      'POST /admin/upload/presigned-url API로 presigned URL을 먼저 발급받고, ' +
+      '프론트에서 S3에 직접 업로드한 뒤 반환된 fileUrl을 포함하여 전달합니다.',
+    type: [AttachmentDto],
+    example: [
+      {
+        fileName: '회의록.pdf',
+        fileUrl: 'https://bucket.s3.ap-northeast-2.amazonaws.com/dev/wiki/uuid.pdf',
+        fileSize: 1024000,
+        mimeType: 'application/pdf',
+      },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
 
   @ApiPropertyOptional({ description: '정렬 순서', example: 0, default: 0 })
   @IsOptional()

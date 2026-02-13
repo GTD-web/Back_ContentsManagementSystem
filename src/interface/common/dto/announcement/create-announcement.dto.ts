@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsBoolean,
@@ -11,9 +11,14 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { CreateSurveyWithoutAnnouncementDto } from '../survey/create-survey.dto';
+import { AttachmentDto } from '../common/attachment.dto';
 
 /**
- * 공지사항 생성 DTO (FormData용)
+ * 공지사항 생성 DTO (JSON body)
+ *
+ * 파일 업로드는 Presigned URL 방식으로 전환되었습니다.
+ * 프론트엔드에서 POST /admin/upload/presigned-url로 URL을 발급받아
+ * S3에 직접 업로드 후, 파일 메타데이터를 attachments에 포함하여 전송합니다.
  */
 export class CreateAnnouncementDto {
   @ApiProperty({
@@ -163,16 +168,26 @@ export class CreateAnnouncementDto {
   @IsOptional()
   permissionDepartmentIds?: string | string[];
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      '첨부 파일 목록\n\n' +
-      'multipart/form-data의 files 필드로 전송합니다.\n' +
-      '최대 10개 파일을 업로드할 수 있습니다.',
-    type: 'array',
-    items: { type: 'string', format: 'binary' },
-    required: false,
+      '첨부파일 목록 (S3 Presigned URL로 업로드 완료 후 전달)\n\n' +
+      'POST /admin/upload/presigned-url API로 presigned URL을 먼저 발급받고,\n' +
+      '프론트에서 S3에 직접 업로드한 뒤 반환된 fileUrl을 포함하여 전달합니다.',
+    type: [AttachmentDto],
+    example: [
+      {
+        fileName: '공지사항_첨부.pdf',
+        fileUrl: 'https://bucket.s3.ap-northeast-2.amazonaws.com/dev/announcements/uuid.pdf',
+        fileSize: 1024000,
+        mimeType: 'application/pdf',
+      },
+    ],
   })
-  files?: any;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AttachmentDto)
+  attachments?: AttachmentDto[];
 
   @ApiProperty({
     description:

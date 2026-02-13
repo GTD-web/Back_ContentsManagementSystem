@@ -8,11 +8,8 @@ import {
   Param,
   Query,
   Patch,
-  UploadedFiles,
-  UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -21,13 +18,11 @@ import {
   ApiQuery,
   ApiParam,
   ApiBody,
-  ApiConsumes,
   ApiExtraModels,
 } from '@nestjs/swagger';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { AnnouncementBusinessService } from '@business/announcement-business/announcement-business.service';
-import { FileUploadService } from '@domain/common/file-upload/file-upload.service';
 import { AnnouncementPermissionScheduler } from '@context/announcement-context/announcement-permission.scheduler';
 import { CreateAnnouncementDto } from '@interface/common/dto/announcement/create-announcement.dto';
 import {
@@ -81,7 +76,6 @@ import { DismissedPermissionLogType } from '@domain/common/dismissed-permission-
 export class AnnouncementController {
   constructor(
     private readonly announcementBusinessService: AnnouncementBusinessService,
-    private readonly fileUploadService: FileUploadService,
     private readonly announcementPermissionScheduler: AnnouncementPermissionScheduler,
     @InjectRepository(AnnouncementPermissionLog)
     private readonly permissionLogRepository: Repository<AnnouncementPermissionLog>,
@@ -876,13 +870,12 @@ export class AnnouncementController {
    * 공지사항을 생성한다
    */
   @Post()
-  @UseInterceptors(FilesInterceptor('files', 10)) // 최대 10개 파일
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 생성',
     description:
       '새로운 공지사항을 생성합니다.\n\n' +
-      '**📋 FormData 작성 가이드:**\n\n' +
+      '**파일 업로드 방식**: Presigned URL을 통해 S3에 직접 업로드 후, 반환된 fileUrl을 attachments에 포함하여 전송합니다.\n\n' +
+      '**📋 JSON body 작성 가이드:**\n\n' +
       '1. **기본 정보** (필수)\n' +
       '   - `title`: 공지사항 제목\n' +
       '   - `content`: 공지사항 내용 (HTML 지원)\n\n' +
@@ -894,18 +887,14 @@ export class AnnouncementController {
       '   - `mustRead`: 필독 여부\n' +
       '   - `releasedAt`, `expiredAt`: 공개 기간 (ISO 8601 형식)\n\n' +
       '4. **권한 설정** (제한공개 시)\n' +
-      '   - `permissionEmployeeIds`: 특정 직원 ID 배열 (JSON 문자열)\n' +
-      '   - `permissionDepartmentIds`: 부서 ID 배열 (JSON 문자열)\n' +
-      '   - `permissionRankIds`: 직급 ID 배열 (JSON 문자열)\n' +
-      '   - `permissionPositionIds`: 직책 ID 배열 (JSON 문자열)\n\n' +
-      '5. **파일 업로드**\n' +
-      '   - `files`: 첨부할 파일들 (최대 10개)\n\n' +
+      '   - `permissionEmployeeIds`: 특정 직원 ID 배열\n' +
+      '   - `permissionDepartmentIds`: 부서 ID 배열\n' +
+      '   - `permissionRankIds`: 직급 ID 배열\n' +
+      '   - `permissionPositionIds`: 직책 ID 배열\n\n' +
+      '5. **첨부파일**\n' +
+      '   - `attachments`: S3에 업로드한 파일 메타데이터 배열\n\n' +
       '6. **설문조사 추가** (선택사항)\n' +
-      '   - `survey`: 설문 정보 (JSON 문자열)\n\n' +
-      '⚠️ **주의사항:**\n' +
-      '- Content-Type은 multipart/form-data를 사용합니다\n' +
-      '- 배열과 객체는 JSON 문자열로 전송해야 합니다\n' +
-      '- 날짜는 ISO 8601 형식 (예: `2024-01-01T00:00:00Z`)\n\n' +
+      '   - `survey`: 설문 정보\n\n' +
       '**참고**: `createdBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiResponse({
@@ -915,10 +904,9 @@ export class AnnouncementController {
   })
   async 공지사항을_생성한다(
     @Body() dto: CreateAnnouncementDto,
-    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
-    // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
+    // DTO 파싱 (JSON body에서 전송된 데이터)
     const parsedDto = this.parseFormDataDto(dto);
 
     // 카테고리 필수 체크
@@ -926,19 +914,8 @@ export class AnnouncementController {
       throw new BadRequestException('카테고리를 선택해주세요.');
     }
 
-    // 파일 업로드 처리 (/announcements/공지사항명/업로드파일들/ 경로로 저장)
-    let attachments: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileSize: number;
-      mimeType: string;
-    }> = [];
-    if (files && files.length > 0) {
-      // 공지사항 제목을 경로에 포함
-      const announcementTitle = parsedDto.title || '제목없음';
-      const pathSegments = ['announcements', announcementTitle, '업로드파일들'];
-      attachments = await this.fileUploadService.uploadFilesWithPath(files, pathSegments);
-    }
+    // 프론트엔드에서 S3에 직접 업로드한 파일 메타데이터 사용
+    const attachments = parsedDto.attachments || [];
 
     // 날짜 변환
     const data = {
@@ -1218,13 +1195,12 @@ export class AnnouncementController {
    * 공지사항을 수정한다
    */
   @Put(':id')
-  @UseInterceptors(FilesInterceptor('files', 10)) // 최대 10개 파일
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '공지사항 수정',
     description:
       '공지사항을 수정합니다. (비공개 상태에서만 가능)\n\n' +
-      '**📋 FormData 작성 가이드:**\n\n' +
+      '**파일 업로드 방식**: Presigned URL을 통해 S3에 직접 업로드 후, 반환된 fileUrl을 attachments에 포함하여 전송합니다.\n\n' +
+      '**📋 JSON body 작성 가이드:**\n\n' +
       '1. **수정 가능한 필드** (선택사항)\n' +
       '   - `categoryId`: 공지사항 카테고리 ID (UUID)\n' +
       '   - `title`: 공지사항 제목\n' +
@@ -1234,20 +1210,17 @@ export class AnnouncementController {
       '   - `releasedAt`, `expiredAt`: 공개 기간\n\n' +
       '2. **권한 설정 수정**\n' +
       '   - `isPublic`: 공개 방식 변경\n' +
-      '   - `permissionEmployeeIds`: 특정 직원 권한 (JSON 문자열)\n' +
-      '   - `permissionDepartmentIds`: 부서 권한 (JSON 문자열)\n' +
-      '   - `permissionRankIds`: 직급 권한 (JSON 문자열)\n' +
-      '   - `permissionPositionIds`: 직책 권한 (JSON 문자열)\n\n' +
-      '3. **파일 업로드**\n' +
-      '   - `files`: 새로 첨부할 파일들 (최대 10개)\n' +
-      '   - 기존 파일은 자동으로 교체됩니다\n\n' +
+      '   - `permissionEmployeeIds`: 특정 직원 권한\n' +
+      '   - `permissionDepartmentIds`: 부서 권한\n' +
+      '   - `permissionRankIds`: 직급 권한\n' +
+      '   - `permissionPositionIds`: 직책 권한\n\n' +
+      '3. **첨부파일**\n' +
+      '   - `attachments`: S3에 업로드한 파일 메타데이터 배열\n\n' +
       '4. **설문조사 수정/추가**\n' +
-      '   - `survey`: 설문 정보 (JSON 문자열)\n\n' +
+      '   - `survey`: 설문 정보\n\n' +
       '⚠️ **주의사항:**\n' +
-      '- Content-Type은 multipart/form-data를 사용합니다\n' +
       '- 공개된 공지사항은 수정 불가 (먼저 비공개로 전환 필요)\n' +
-      '- 수정하지 않을 필드는 생략 가능합니다\n' +
-      '- 날짜는 ISO 8601 형식 사용\n\n' +
+      '- 수정하지 않을 필드는 생략 가능합니다\n\n' +
       '**참고**: `updatedBy`는 토큰에서 자동으로 추출됩니다.',
   })
   @ApiParam({
@@ -1271,28 +1244,13 @@ export class AnnouncementController {
   async 공지사항을_수정한다(
     @Param('id') id: string,
     @Body() dto: UpdateAnnouncementDto,
-    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AnnouncementResponseDto> {
-    // DTO 파싱 (FormData에서 전송된 JSON 문자열 파싱)
+    // DTO 파싱
     const parsedDto = this.parseFormDataDto(dto);
 
-    // 파일 업로드 처리 (/announcements/공지사항명/업로드파일들/ 경로로 저장)
-    let attachments:
-      | Array<{
-          fileName: string;
-          fileUrl: string;
-          fileSize: number;
-          mimeType: string;
-        }>
-      | undefined = undefined;
-    if (files && files.length > 0) {
-      // 공지사항 제목 조회 (수정 전의 제목 또는 새로운 제목)
-      const existingAnnouncement = await this.announcementBusinessService.공지사항을_조회한다(id);
-      const announcementTitle = parsedDto.title || existingAnnouncement.title || '제목없음';
-      const pathSegments = ['announcements', announcementTitle, '업로드파일들'];
-      attachments = await this.fileUploadService.uploadFilesWithPath(files, pathSegments);
-    }
+    // 프론트엔드에서 S3에 직접 업로드한 파일 메타데이터 사용
+    const attachments = parsedDto.attachments || undefined;
 
     // 날짜 변환
     const data: any = { ...parsedDto, updatedBy: user.id };

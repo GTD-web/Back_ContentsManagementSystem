@@ -58,9 +58,9 @@ describe('WikiContextService', () => {
         name: '새 폴더',
         parentId: null,
         isPublic: true,
-        permissionRankIds: null,
-        permissionPositionIds: null,
-        permissionDepartmentIds: null,
+        permissionRankIds: undefined,
+        permissionPositionIds: undefined,
+        permissionDepartmentIds: undefined,
         order: 0,
         createdBy: 'user-1',
       };

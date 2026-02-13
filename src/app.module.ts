@@ -22,6 +22,7 @@ import { PermissionValidationModule } from './interface/admin/permission-validat
 import { BackupModule } from './interface/admin/backup/backup.module';
 import { AnalyticsModule } from './interface/admin/analytics/analytics.module';
 import { AdminManagementModule } from './interface/admin/admin-management/admin-management.module';
+import { UploadModule } from './interface/admin/upload/upload.module';
 import { UserAnnouncementModule } from './interface/user/announcement/announcement.module';
 import { UserWikiModule } from './interface/user/wiki/wiki.module';
 import { HealthModule } from './interface/common/health/health.module';
@@ -81,6 +82,7 @@ import { AdminGuard } from '@interface/common/guards/admin.guard';
     BackupModule,
     AnalyticsModule,
     AdminManagementModule,
+    UploadModule,
     CompanyModule,
 
     // User Interface Layer 모듈

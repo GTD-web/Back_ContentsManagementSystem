@@ -8,8 +8,6 @@ import {
   Body,
   Param,
   Query,
-  UseInterceptors,
-  UploadedFiles,
   BadRequestException,
   UnauthorizedException,
   NotFoundException,
@@ -21,11 +19,9 @@ import {
   ApiBearerAuth,
   ApiQuery,
   ApiParam,
-  ApiConsumes,
-  ApiBody,
   ApiExtraModels,
+  ApiBody,
 } from '@nestjs/swagger';
-import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@interface/common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@interface/common/decorators/current-user.decorator';
 import { Public } from '@interface/common/decorators/public.decorator';
@@ -1050,67 +1046,12 @@ export class UserWikiController {
    * 파일을 생성한다 (사용자용)
    */
   @Post('files')
-  @UseInterceptors(
-    FilesInterceptor('files', undefined, {
-      fileFilter: (req, file, callback) => {
-        callback(null, true);
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '파일 생성 (사용자용)',
-    description: '새로운 파일을 생성합니다. 첨부파일 업로드 가능.\n\n⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
-  })
-  @ApiBody({
-    description: 'name은 필수입니다.',
-    schema: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          description: '파일명',
-          example: '2024년 회의록',
-        },
-        parentId: {
-          type: 'string',
-          description: '부모 폴더 ID (선택, 없으면 루트 폴더 하위)',
-        },
-        title: {
-          type: 'string',
-          description: '문서 제목 (선택)',
-        },
-        content: {
-          type: 'string',
-          description: '문서 본문 (선택)',
-        },
-        isPublic: {
-          type: 'boolean',
-          description: '공개 여부 (선택, 기본값: true)',
-        },
-        permissionRankIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 직급 ID 목록 (선택)',
-        },
-        permissionPositionIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 직책 ID 목록 (선택)',
-        },
-        permissionDepartmentIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 부서 ID 목록 (선택)',
-        },
-        files: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-          description: '첨부파일 목록 (선택)',
-        },
-      },
-      required: ['name'],
-    },
+    description:
+      '새로운 파일을 생성합니다.\n\n' +
+      '**파일 업로드 방식**: Presigned URL을 통해 S3에 직접 업로드 후, 반환된 fileUrl을 attachments에 포함하여 전송합니다.\n\n' +
+      '⚠️ **parentId**: 없으면 자동으로 루트 폴더 하위에 생성됩니다.',
   })
   @ApiResponse({
     status: 201,
@@ -1120,7 +1061,6 @@ export class UserWikiController {
   async 파일을_생성한다(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateFileDto,
-    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
     const authenticatedUser = this.인증된_사용자를_확인한다(user);
     const file = await this.wikiBusinessService.파일을_생성한다(
@@ -1129,7 +1069,7 @@ export class UserWikiController {
       dto.title || null,
       dto.content || null,
       authenticatedUser.id,
-      files,
+      dto.attachments,
       dto.isPublic,
       dto.permissionRankIds,
       dto.permissionPositionIds,
@@ -1142,63 +1082,15 @@ export class UserWikiController {
    * 파일을 수정한다 (사용자용)
    */
   @Put('files/:id')
-  @UseInterceptors(
-    FilesInterceptor('files', undefined, {
-      fileFilter: (req, file, callback) => {
-        callback(null, true);
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: '파일 수정 (사용자용)',
-    description: '파일 정보를 수정합니다. 첨부파일 업로드 가능.',
-  })
-  @ApiBody({
-    description: 'name은 필수입니다.',
-    schema: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          description: '파일명',
-        },
-        title: {
-          type: 'string',
-          description: '문서 제목 (선택)',
-        },
-        content: {
-          type: 'string',
-          description: '문서 본문 (선택)',
-        },
-        isPublic: {
-          type: 'boolean',
-          description: '공개 여부 (선택, true: 상위 폴더 권한 cascading, false: 완전 비공개)',
-          example: true,
-        },
-        permissionRankIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 직급 ID 목록 (선택)',
-        },
-        permissionPositionIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 직책 ID 목록 (선택)',
-        },
-        permissionDepartmentIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: '접근 가능한 부서 ID 목록 (선택)',
-        },
-        files: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-          description: '첨부파일 목록 (선택)',
-        },
-      },
-      required: ['name'],
-    },
+    description:
+      '파일 정보를 수정합니다.\n\n' +
+      '**파일 업로드 방식**: Presigned URL을 통해 S3에 직접 업로드 후, 반환된 fileUrl을 attachments에 포함하여 전송합니다.\n\n' +
+      '**파일 관리 방식**:\n' +
+      '- `attachments`를 전송하면: 기존 첨부파일 유지 + 새 파일들 추가\n' +
+      '- `attachments`를 전송하지 않으면: 기존 첨부파일 유지 (변경 없음)\n' +
+      '- 개별 파일 삭제는 별도 엔드포인트(`DELETE /files/:id/attachments`) 사용',
   })
   @ApiResponse({
     status: 200,
@@ -1206,11 +1098,39 @@ export class UserWikiController {
     type: WikiResponseDto,
   })
   @ApiParam({ name: 'id', description: '파일 ID' })
+  @ApiBody({
+    description: '파일 수정 데이터 (JSON)',
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: { type: 'string', description: '파일명', example: '수정된 파일명' },
+        title: { type: 'string', description: '문서 제목', nullable: true },
+        content: { type: 'string', description: '문서 본문', nullable: true },
+        isPublic: { type: 'boolean', description: '공개 여부' },
+        permissionRankIds: { type: 'array', items: { type: 'string' }, description: '직급 ID 목록' },
+        permissionPositionIds: { type: 'array', items: { type: 'string' }, description: '직책 ID 목록' },
+        permissionDepartmentIds: { type: 'array', items: { type: 'string' }, description: '부서 ID 목록' },
+        attachments: {
+          type: 'array',
+          description: 'S3 Presigned URL로 업로드 완료 후 전달할 첨부파일 메타데이터',
+          items: {
+            type: 'object',
+            properties: {
+              fileName: { type: 'string', example: '회의록.pdf' },
+              fileUrl: { type: 'string', example: 'https://bucket.s3.ap-northeast-2.amazonaws.com/dev/wiki/uuid.pdf' },
+              fileSize: { type: 'number', example: 1024000 },
+              mimeType: { type: 'string', example: 'application/pdf' },
+            },
+          },
+        },
+      },
+    },
+  })
   async 파일을_수정한다(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: any,
-    @UploadedFiles() files?: Express.Multer.File[],
   ): Promise<WikiResponseDto> {
     const authenticatedUser = this.인증된_사용자를_확인한다(user);
 
@@ -1222,21 +1142,12 @@ export class UserWikiController {
       permissionRankIds,
       permissionPositionIds,
       permissionDepartmentIds,
+      attachments,
     } = body;
 
     if (!name) {
       throw new BadRequestException('name 필드는 필수입니다.');
     }
-
-    // FormData로 전송 시 JSON 문자열을 배열로 파싱
-    const parseJsonArray = (value: any): string[] | undefined => {
-      if (value === undefined || value === null) return undefined;
-      if (Array.isArray(value)) return value;
-      if (typeof value === 'string') {
-        try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : undefined; } catch { return undefined; }
-      }
-      return undefined;
-    };
 
     const file = await this.wikiBusinessService.파일을_수정한다(
       id,
@@ -1244,11 +1155,11 @@ export class UserWikiController {
       title || null,
       content || null,
       authenticatedUser.id,
-      files,
-      isPublic === 'true' ? true : isPublic === 'false' ? false : isPublic,
-      parseJsonArray(permissionRankIds),
-      parseJsonArray(permissionPositionIds),
-      parseJsonArray(permissionDepartmentIds),
+      attachments,
+      isPublic,
+      permissionRankIds,
+      permissionPositionIds,
+      permissionDepartmentIds,
     );
     return WikiResponseDto.from(file);
   }
