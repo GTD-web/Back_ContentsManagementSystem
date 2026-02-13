@@ -98,7 +98,6 @@ async function bootstrap() {
       PermissionValidationModule,
       BackupModule,
       AnalyticsModule,
-      UploadModule,
     ],
     tags: [
       { name: '공통. 인증', description: 'SSO 로그인 및 인증 API' },
@@ -120,7 +119,6 @@ async function bootstrap() {
       { name: 'A-8. 관리자 - 뉴스', description: '뉴스 관리 API' },
       { name: 'A-9. 관리자 - 공지사항', description: '공지사항 관리 API' },
       { name: 'A-10. 관리자 - Wiki', description: 'Wiki 관리 API' },
-      { name: 'A-11. 관리자 - 파일 업로드', description: 'S3 Presigned URL 생성 API' },
       {
         name: '공통. 관리자 - 권한 검증',
         description: '권한 검증 배치 작업 수동 실행 API',
@@ -136,9 +134,9 @@ async function bootstrap() {
     path: 'user/api-docs',
     includeModules: [UserAnnouncementModule, UserWikiModule, UploadModule],
     tags: [
+      { name: 'U-0. 사용자 - 파일 업로드', description: 'S3 Presigned URL 생성 API' },
       { name: 'U-1. 사용자 - 공지사항', description: '공지사항 조회 및 응답 API' },
       { name: 'U-2. 사용자 - Wiki', description: 'Wiki 파일 및 폴더 관리 API' },
-      { name: 'A-11. 관리자 - 파일 업로드', description: 'S3 Presigned URL 생성 API' },
     ],
   });
 

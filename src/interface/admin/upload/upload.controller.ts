@@ -11,9 +11,9 @@ import {
   GeneratePresignedUrlResponseDto,
 } from './dto/presigned-url.dto';
 
-@ApiTags('A-11. 관리자 - 파일 업로드')
+@ApiTags('U-0. 사용자 - 파일 업로드')
 @ApiBearerAuth('Bearer')
-@Controller('admin/upload')
+@Controller('user/upload')
 export class UploadController {
   constructor(private readonly s3Service: S3Service) {}
 
