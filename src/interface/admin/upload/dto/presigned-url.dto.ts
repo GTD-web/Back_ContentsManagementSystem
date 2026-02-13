@@ -54,9 +54,12 @@ export class GeneratePresignedUrlDto {
   files: PresignedUrlFileItemDto[];
 
   @ApiPropertyOptional({
-    description: 'S3 폴더 경로 (예: wiki, announcements, brochures)',
-    example: 'wiki',
-    default: 'uploads',
+    description:
+      '(더 이상 사용되지 않음) 모든 파일은 temp/ 폴더에 업로드됩니다. ' +
+      '실제 제출(위키/공지사항/설문 등) 시 자동으로 보관용 폴더로 이동됩니다.',
+    example: 'temp',
+    default: 'temp',
+    deprecated: true,
   })
   @IsOptional()
   @IsString()
@@ -86,14 +89,16 @@ export class PresignedUrlResponseItemDto {
   presignedUrl: string;
 
   @ApiProperty({
-    description: '업로드 완료 후 파일에 접근할 수 있는 URL (DB에 저장할 URL)',
-    example: 'https://bucket.s3.ap-northeast-2.amazonaws.com/dev/wiki/uuid.pdf',
+    description:
+      '업로드 완료 후 파일에 접근할 수 있는 URL (temp/ 폴더). ' +
+      '실제 제출 시 보관용 폴더로 이동되어 URL이 변경됩니다.',
+    example: 'https://bucket.s3.ap-northeast-2.amazonaws.com/dev/temp/uuid.pdf',
   })
   fileUrl: string;
 
   @ApiProperty({
-    description: 'S3 파일 키',
-    example: 'dev/wiki/uuid.pdf',
+    description: 'S3 파일 키 (temp/ 폴더)',
+    example: 'dev/temp/uuid.pdf',
   })
   key: string;
 }

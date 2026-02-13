@@ -16,6 +16,7 @@ import { SurveyResponseScale } from './responses/survey-response-scale.entity';
 import { SurveyResponseGrid } from './responses/survey-response-grid.entity';
 import { SurveyResponseFile } from './responses/survey-response-file.entity';
 import { SurveyResponseDatetime } from './responses/survey-response-datetime.entity';
+import { S3Service } from '@libs/storage/s3.service';
 
 /**
  * 설문조사 서비스
@@ -46,6 +47,7 @@ export class SurveyService {
     private readonly fileResponseRepository: Repository<SurveyResponseFile>,
     @InjectRepository(SurveyResponseDatetime)
     private readonly datetimeResponseRepository: Repository<SurveyResponseDatetime>,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -1134,9 +1136,16 @@ export class SurveyService {
       }
 
       // 2-6. 파일 응답 저장 (기존 파일 유지, 새 파일만 추가)
+      // temp/ 폴더에 있는 파일을 surveys/ 보관용 폴더로 이동
       if (answers.fileAnswers && answers.fileAnswers.length > 0) {
         for (const answer of answers.fileAnswers) {
-          for (const file of answer.files) {
+          // temp/ 폴더에 있는 파일들을 surveys/ 보관용 폴더로 이동
+          const movedFiles = await this.s3Service.moveFiles(
+            answer.files,
+            'surveys',
+          );
+
+          for (const file of movedFiles) {
             // 파일은 항상 새로 추가 (중복 체크는 fileUrl 기준)
             const existing = await queryRunner.manager.findOne(
               SurveyResponseFile,
@@ -1173,7 +1182,7 @@ export class SurveyService {
           }
         }
         this.logger.debug(
-          `파일 응답 ${answers.fileAnswers.length}개 저장 완료`,
+          `파일 응답 ${answers.fileAnswers.length}개 저장 완료 (temp → surveys/ 이동됨)`,
         );
       }
 

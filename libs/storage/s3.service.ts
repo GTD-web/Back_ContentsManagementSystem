@@ -4,6 +4,8 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  CopyObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -171,16 +173,20 @@ export class S3Service implements IStorageService {
    * Presigned PUT URL을 생성합니다.
    * 프론트엔드에서 이 URL로 직접 S3에 파일을 업로드할 수 있습니다.
    * 
+   * 모든 파일은 temp/ 폴더에 업로드됩니다.
+   * 실제 제출(위키/공지사항/설문 등) 시 보관용 폴더로 이동됩니다.
+   * 미제출 파일은 스케줄러에 의해 자동 정리됩니다.
+   * 
    * @param fileName 원본 파일명
    * @param mimeType 파일 MIME 타입
-   * @param folder S3 폴더 (예: 'wiki', 'announcements')
+   * @param _folder (미사용) 기존 호환성을 위해 유지. 실제로는 항상 temp/ 폴더 사용
    * @param expiresIn URL 만료 시간(초) (기본값: 600초 = 10분)
    * @returns presignedUrl (PUT 업로드용), fileUrl (최종 접근 URL), key (S3 키)
    */
   async generatePresignedUrl(
     fileName: string,
     mimeType: string,
-    folder: string = 'uploads',
+    _folder: string = 'uploads',
     expiresIn: number = 600,
   ): Promise<{
     presignedUrl: string;
@@ -188,7 +194,8 @@ export class S3Service implements IStorageService {
     key: string;
   }> {
     const fileExtension = fileName.split('.').pop() || '';
-    const filePath = `${this.envPrefix}/${folder}/${uuidv4()}.${fileExtension}`;
+    // 항상 temp/ 폴더에 업로드 (실제 제출 시 보관용 폴더로 이동됨)
+    const filePath = `${this.envPrefix}/temp/${uuidv4()}.${fileExtension}`;
 
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
@@ -246,5 +253,166 @@ export class S3Service implements IStorageService {
     );
 
     return results;
+  }
+
+  /**
+   * 파일 URL이 temp 폴더에 있는지 확인합니다.
+   */
+  isTempFile(fileUrl: string): boolean {
+    try {
+      const url = new URL(fileUrl);
+      const key = url.pathname.substring(1); // 맨 앞 '/' 제거
+      return key.includes('/temp/');
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * S3 파일 URL에서 키를 추출합니다.
+   */
+  private extractKeyFromUrl(fileUrl: string): string {
+    const url = new URL(fileUrl);
+    return url.pathname.substring(1); // 맨 앞 '/' 제거
+  }
+
+  /**
+   * S3 파일을 한 위치에서 다른 위치로 이동합니다.
+   * (CopyObject + DeleteObject)
+   *
+   * @param sourceUrl 원본 파일 URL (temp/ 폴더)
+   * @param destFolder 대상 폴더 (예: 'wiki', 'announcements', 'surveys')
+   * @returns 이동된 파일의 새 URL
+   */
+  async moveFile(sourceUrl: string, destFolder: string): Promise<string> {
+    try {
+      const sourceKey = this.extractKeyFromUrl(sourceUrl);
+      const fileName = sourceKey.split('/').pop(); // uuid.ext
+
+      if (!fileName) {
+        throw new Error(`파일명을 추출할 수 없습니다: ${sourceUrl}`);
+      }
+
+      const destKey = `${this.envPrefix}/${destFolder}/${fileName}`;
+
+      // 1. 복사
+      await this.s3Client.send(
+        new CopyObjectCommand({
+          Bucket: this.bucketName,
+          CopySource: `${this.bucketName}/${sourceKey}`,
+          Key: destKey,
+        }),
+      );
+
+      // 2. 원본 삭제
+      await this.s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: sourceKey,
+        }),
+      );
+
+      const newUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${destKey}`;
+
+      this.logger.log(
+        `파일 이동 완료: ${sourceKey} → ${destKey}`,
+      );
+
+      return newUrl;
+    } catch (error) {
+      this.logger.error(`파일 이동 실패: ${sourceUrl} → ${destFolder}`, error);
+      throw new Error(`파일 이동에 실패했습니다: ${error.message}`);
+    }
+  }
+
+  /**
+   * 여러 첨부파일을 temp 폴더에서 보관용 폴더로 이동합니다.
+   * temp 폴더에 있는 파일만 이동하며, 이미 보관용 폴더에 있는 파일은 건너뜁니다.
+   *
+   * @param attachments 첨부파일 메타데이터 배열 (fileUrl 필드 필수)
+   * @param destFolder 대상 폴더 (예: 'wiki', 'announcements', 'surveys')
+   * @returns fileUrl이 업데이트된 첨부파일 배열
+   */
+  async moveFiles<T extends { fileUrl: string }>(
+    attachments: T[],
+    destFolder: string,
+  ): Promise<T[]> {
+    const movedAttachments = await Promise.all(
+      attachments.map(async (attachment) => {
+        if (this.isTempFile(attachment.fileUrl)) {
+          const newUrl = await this.moveFile(attachment.fileUrl, destFolder);
+          return { ...attachment, fileUrl: newUrl };
+        }
+        // temp 폴더가 아닌 파일은 그대로 유지
+        return attachment;
+      }),
+    );
+
+    const movedCount = movedAttachments.filter(
+      (a, i) => a.fileUrl !== attachments[i].fileUrl,
+    ).length;
+
+    if (movedCount > 0) {
+      this.logger.log(
+        `${movedCount}개 파일을 temp → ${destFolder}로 이동 완료`,
+      );
+    }
+
+    return movedAttachments;
+  }
+
+  /**
+   * temp 폴더에서 지정된 시간보다 오래된 파일을 삭제합니다.
+   *
+   * @param olderThanHours 삭제 기준 시간 (시간 단위, 기본값: 24시간)
+   * @returns 삭제된 파일 수
+   */
+  async deleteOldTempFiles(olderThanHours: number = 24): Promise<number> {
+    const prefix = `${this.envPrefix}/temp/`;
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - olderThanHours);
+
+    let deletedCount = 0;
+    let continuationToken: string | undefined;
+
+    try {
+      do {
+        const listResponse = await this.s3Client.send(
+          new ListObjectsV2Command({
+            Bucket: this.bucketName,
+            Prefix: prefix,
+            ContinuationToken: continuationToken,
+          }),
+        );
+
+        if (listResponse.Contents) {
+          for (const obj of listResponse.Contents) {
+            if (obj.LastModified && obj.LastModified < cutoff && obj.Key) {
+              await this.s3Client.send(
+                new DeleteObjectCommand({
+                  Bucket: this.bucketName,
+                  Key: obj.Key,
+                }),
+              );
+              deletedCount++;
+              this.logger.debug(`오래된 temp 파일 삭제: ${obj.Key}`);
+            }
+          }
+        }
+
+        continuationToken = listResponse.NextContinuationToken;
+      } while (continuationToken);
+
+      if (deletedCount > 0) {
+        this.logger.log(
+          `오래된 temp 파일 정리 완료 - ${deletedCount}개 삭제 (기준: ${olderThanHours}시간)`,
+        );
+      }
+
+      return deletedCount;
+    } catch (error) {
+      this.logger.error('오래된 temp 파일 정리 실패', error);
+      throw new Error(`temp 파일 정리에 실패했습니다: ${error.message}`);
+    }
   }
 }

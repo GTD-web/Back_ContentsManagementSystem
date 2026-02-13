@@ -8,6 +8,7 @@ import { WikiPermissionLog } from '@domain/sub/wiki-file-system/wiki-permission-
 import { WikiPermissionAction } from '@domain/sub/wiki-file-system/wiki-permission-action.types';
 import { STORAGE_SERVICE } from '@libs/storage/storage.module';
 import type { IStorageService } from '@libs/storage/interfaces/storage.interface';
+import { S3Service } from '@libs/storage/s3.service';
 import { ReplaceWikiPermissionsDto } from '@interface/admin/wiki/dto/replace-wiki-permissions.dto';
 
 /**
@@ -26,6 +27,7 @@ export class WikiBusinessService {
     private readonly companyContextService: CompanyContextService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
+    private readonly s3Service: S3Service,
     @InjectRepository(WikiPermissionLog)
     private readonly permissionLogRepository: Repository<WikiPermissionLog>,
     @InjectDataSource()
@@ -484,12 +486,15 @@ export class WikiBusinessService {
     this.logger.log(`파일 생성 시작 - 이름: ${name}`);
 
     // 프론트엔드에서 S3에 직접 업로드한 파일 메타데이터를 사용
-    const attachments = uploadedAttachments && uploadedAttachments.length > 0
+    // temp/ 폴더에 있는 파일을 wiki/ 보관용 폴더로 이동
+    let attachments = uploadedAttachments && uploadedAttachments.length > 0
       ? uploadedAttachments
       : undefined;
 
     if (attachments) {
-      this.logger.log(`첨부파일 ${attachments.length}개 등록`);
+      this.logger.log(`첨부파일 ${attachments.length}개 - temp → wiki/ 이동 시작`);
+      attachments = await this.s3Service.moveFiles(attachments, 'wiki');
+      this.logger.log(`첨부파일 wiki/ 이동 완료`);
     }
 
     const result = await this.wikiContextService.파일을_생성한다({
@@ -574,9 +579,12 @@ export class WikiBusinessService {
     this.logger.log(`기존 활성 첨부파일 수: ${activeAttachments.length}개`);
 
     // 3. 프론트엔드에서 S3에 직접 업로드한 새 파일 메타데이터
-    const newAttachments = uploadedAttachments || [];
+    // temp/ 폴더에 있는 새 파일을 wiki/ 보관용 폴더로 이동
+    let newAttachments = uploadedAttachments || [];
     if (newAttachments.length > 0) {
-      this.logger.log(`새 첨부파일 ${newAttachments.length}개 등록`);
+      this.logger.log(`새 첨부파일 ${newAttachments.length}개 - temp → wiki/ 이동 시작`);
+      newAttachments = await this.s3Service.moveFiles(newAttachments, 'wiki');
+      this.logger.log(`새 첨부파일 wiki/ 이동 완료`);
     }
 
     // 4. 기존 첨부파일 + 새 첨부파일 합치기

@@ -33,6 +33,7 @@ import {
 } from '@context/company-context/interfaces/company-context.interface';
 import { ReplaceAnnouncementPermissionsDto } from '@interface/admin/announcement/dto/replace-announcement-permissions.dto';
 import { AnnouncementListItemDto } from '@interface/common/dto/announcement/announcement-response.dto';
+import { S3Service } from '@libs/storage/s3.service';
 
 /**
  * 공지사항 비즈니스 서비스
@@ -56,6 +57,7 @@ export class AnnouncementBusinessService {
     private readonly categoryService: CategoryService,
     private readonly ssoService: SsoService,
     private readonly configService: ConfigService,
+    private readonly s3Service: S3Service,
     @InjectRepository(AnnouncementRead)
     private readonly announcementReadRepository: Repository<AnnouncementRead>,
     @InjectRepository(AnnouncementPermissionLog)
@@ -693,8 +695,18 @@ export class AnnouncementBusinessService {
   ): Promise<Announcement> {
     this.logger.log(`공지사항 생성 시작 - 제목: ${data.title}`);
 
-    // 1. 공지사항 생성 (survey 필드 제외)
+    // 0. 첨부파일이 있으면 temp/ → announcements/ 보관용 폴더로 이동
     const { survey, ...announcementData } = data;
+    if (announcementData.attachments && announcementData.attachments.length > 0) {
+      this.logger.log(`첨부파일 ${announcementData.attachments.length}개 - temp → announcements/ 이동 시작`);
+      announcementData.attachments = await this.s3Service.moveFiles(
+        announcementData.attachments,
+        'announcements',
+      );
+      this.logger.log(`첨부파일 announcements/ 이동 완료`);
+    }
+
+    // 1. 공지사항 생성 (survey 필드 제외)
     const result =
       await this.announcementContextService.공지사항을_생성한다(
         announcementData,
@@ -740,8 +752,18 @@ export class AnnouncementBusinessService {
       throw new NotFoundException(`공지사항을 찾을 수 없습니다. ID: ${id}`);
     }
 
-    // 1. 공지사항 수정 (survey 필드 제외)
+    // 0.5. 첨부파일이 있으면 temp/ → announcements/ 보관용 폴더로 이동
     const { survey, ...announcementData } = data;
+    if (announcementData.attachments && announcementData.attachments.length > 0) {
+      this.logger.log(`첨부파일 ${announcementData.attachments.length}개 - temp → announcements/ 이동 시작`);
+      announcementData.attachments = await this.s3Service.moveFiles(
+        announcementData.attachments,
+        'announcements',
+      );
+      this.logger.log(`첨부파일 announcements/ 이동 완료`);
+    }
+
+    // 1. 공지사항 수정 (survey 필드 제외)
     const result = await this.announcementContextService.공지사항을_수정한다(
       id,
       announcementData,

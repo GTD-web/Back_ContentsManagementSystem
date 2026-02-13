@@ -31,7 +31,9 @@ export class UploadController {
       '**사용 방법:**\n' +
       '1. 이 API를 호출하여 presignedUrl과 fileUrl을 받습니다.\n' +
       '2. presignedUrl에 PUT 요청으로 파일을 직접 업로드합니다.\n' +
-      '3. 업로드 성공 후, fileUrl을 사용하여 생성/수정 API에 전달합니다.\n\n' +
+      '3. 업로드 성공 후, fileUrl을 사용하여 생성/수정 API에 전달합니다.\n' +
+      '4. 실제 제출 시 파일이 temp/ → 보관용 폴더로 자동 이동됩니다.\n' +
+      '5. 미제출 파일은 24시간 후 자동 삭제됩니다.\n\n' +
       '**프론트엔드 업로드 예시:**\n' +
       '```javascript\n' +
       'const response = await fetch(presignedUrl, {\n' +
@@ -54,14 +56,14 @@ export class UploadController {
   async presignedUrl을_생성한다(
     @Body() dto: GeneratePresignedUrlDto,
   ): Promise<GeneratePresignedUrlResponseDto> {
-    const folder = dto.folder || 'uploads';
-
+    // 모든 파일은 temp/ 폴더에 업로드됨
+    // 실제 제출(위키/공지사항/설문 등) 시 보관용 폴더로 이동됨
     const results = await this.s3Service.generatePresignedUrls(
       dto.files.map((f) => ({
         fileName: f.fileName,
         mimeType: f.mimeType,
       })),
-      folder,
+      'temp', // 항상 temp 폴더 사용
     );
 
     return {

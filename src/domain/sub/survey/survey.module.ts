@@ -11,6 +11,7 @@ import { SurveyResponseGrid } from './responses/survey-response-grid.entity';
 import { SurveyResponseFile } from './responses/survey-response-file.entity';
 import { SurveyResponseDatetime } from './responses/survey-response-datetime.entity';
 import { SurveyService } from './survey.service';
+import { StorageModule } from '@libs/storage/storage.module';
 
 /**
  * 설문조사 모듈
@@ -30,6 +31,7 @@ import { SurveyService } from './survey.service';
       SurveyResponseFile,
       SurveyResponseDatetime,
     ]),
+    StorageModule,
   ],
   providers: [SurveyService],
   exports: [SurveyService],
